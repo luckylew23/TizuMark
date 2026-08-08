@@ -9,6 +9,62 @@ const HEAD_RENDER_CHAR_CAP = 1.5 * 1024 * 1024;
 const PREVIEW_WINDOW_LINES = 1200;  // 窗口源码行数上限
 const PREVIEW_WINDOW_LEAD = 200;    // 焦点行前预留行数（让焦点不至于贴顶）
 
+// 系统字体由 Rust 命令 list_system_fonts 精确枚举（fontdb，跨平台），
+// 不内置任何字体文件（等线/微软雅黑/苹方等版权字体绝不打包分发）。
+// 下拉框仅展示白名单内、且本机确实已安装的字体（避免几百个系统字体刷屏）；
+// 白名单外的已选中字体仍会保留显示（见 refreshFontSelectors）。
+const SYSTEM_FONT_WHITELIST = [
+  // 中文黑体（Windows / macOS / Linux）
+  'Microsoft YaHei', 'Microsoft YaHei UI', 'DengXian', 'SimHei',
+  'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'STHeiti',
+  'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', 'Noto Sans SC',
+  // 中文宋体 / 楷体
+  'SimSun', 'NSimSun', 'Songti SC', 'STSong',
+  'KaiTi', 'Kaiti SC', 'STKaiti', 'FangSong',
+  // 等宽（拉丁为主）
+  'Consolas', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Source Code Pro',
+  'Menlo', 'Monaco', 'Courier New', 'Courier', 'DejaVu Sans Mono', 'Liberation Mono',
+  // 无衬线
+  'Segoe UI', 'Tahoma', 'Arial', 'Helvetica Neue', 'Roboto', 'Ubuntu', 'DejaVu Sans', 'Noto Sans',
+  // 衬线
+  'Times New Roman', 'Georgia', 'DejaVu Serif', 'Liberation Serif', 'Cambria',
+];
+const SYSTEM_FONT_WHITELIST_SET = new Set(SYSTEM_FONT_WHITELIST.map((s) => s.toLowerCase()));
+
+// CJK 字体中英文族名映射：英文族名 → 中文显示名（拉丁字体中英文同名，无需映射）。
+// fontdb 枚举返回中英文两套族名（如「Microsoft YaHei」与「微软雅黑」），
+// 显示层按 UI 语言取对应名；存储 value 始终用英文族名（旧设置兼容、CSS 渲染最稳）。
+const FONT_NAME_LOCALE = {
+  // Windows
+  'Microsoft YaHei': '微软雅黑',
+  'DengXian': '等线',
+  'SimHei': '黑体',
+  'SimSun': '宋体',
+  'NSimSun': '新宋体',
+  'KaiTi': '楷体',
+  'FangSong': '仿宋',
+  // macOS
+  'PingFang SC': '苹方-简',
+  'PingFang TC': '苹方-繁',
+  'Hiragino Sans GB': '冬青黑体简体中文',
+  'STHeiti': '华文黑体',
+  'Songti SC': '宋体-简',
+  'STSong': '华文宋体',
+  'Kaiti SC': '楷体-简',
+  'STKaiti': '华文楷体',
+  // Linux
+  'WenQuanYi Micro Hei': '文泉驿微米黑',
+  'Noto Sans CJK SC': '思源黑体',
+  'Source Han Sans SC': '思源黑体',
+};
+// 归一映射（小写中文名/变体名 → 主族英文 value）：
+// ① 把枚举返回的中文名条目（微软雅黑/宋体…）归一为英文 value，与英文条目合并去重；
+// ② 视觉一致的变体（微软雅黑 UI 中文名同为「微软雅黑」）合并进主族，避免下拉重复。
+const FONT_LOCALE_REV = new Map([
+  ...Object.entries(FONT_NAME_LOCALE).map(([en, zh]) => [zh.toLowerCase(), en]),
+  ['microsoft yahei ui', 'Microsoft YaHei'],
+]);
+
 async function dialogOpen(options = {}) {
   // 注意：tauriApi.dialogOpen 内部已包一层 { options }（Tauri dialog 插件约定
   // 底层的 IPC 命令 'plugin:dialog|open' 收 { options }），这里必须透传，
@@ -205,21 +261,23 @@ const I18N = {
     closeActionMinimize: '最小化到托盘',
     followSystem: '跟随系统',
     resetDefault: '恢复默认',
-    done: '完成',
     confirm: '确认',
+    confirmMessage: '确定要执行此操作吗？',
     themeSwitched: '已切换到{theme}主题',
     basic: '基本',
-    fontScheme: '字体方案',
-    fontSchemeSystemSans: '简约风格',
-    fontSchemeClassicSerif: '印刷风格',
     customFonts: '自定义字体',
+    systemFonts: '系统字体',
     addFont: '添加字体',
     editorFont: '编辑器字体',
     previewFont: '预览字体',
-    followScheme: '跟随方案',
+    codeFont: '代码块字体',
+    defaultFont: '默认',
     fontPreview: '字体预览',
     deleteFont: '删除',
     noCustomFont: '尚未添加自定义字体',
+    systemFontsLoadFailed: '系统字体列表加载失败',
+    systemFontsRetry: '重试',
+    noMatchingFonts: '无匹配字体',
     importingFonts: '正在导入字体 ({n}/{total})…',
     confirmDeleteFont: '确定要删除字体「{name}」吗？此操作不可恢复。',
     importSuccess: '成功导入 {n} 个字体',
@@ -327,11 +385,11 @@ const I18N = {
     depHtml2canvas: '截图导出',
     depTauri: '桌面应用框架',
     spaces: '空格',
-    settingsReset: '已恢复默认设置',
-    settingsApplying: '正在应用…',
-    applying: '应用中…',
+    applying: '正在应用…',
     saving: '正在保存…',
     apply: '应用',
+    appliedSuccess: '应用成功',
+    savedSuccess: '保存成功',
     ok: '确定',
     browse: '浏览...',
     reloadFile: '重新加载文件',
@@ -372,7 +430,6 @@ const I18N = {
     imageLoadFailed: '[图片加载失败]',
     dropFileHere: '拖放文件到此处打开',
     allFiles: '所有文件',
-    confirmResetSettings: '确认恢复默认设置？',
     tablistLabel: '标签页',
     closeAria: '关闭',
     heading1: '# 标题 1',
@@ -451,6 +508,7 @@ const I18N = {
     sortBy: '排序',
     sortByName: '名称',
     sortByTime: '修改时间',
+    fileSort: '排序方式',
     sortAsc: '升序',
     sortDesc: '降序',
     folderOpened: '已打开文件夹: {path}',
@@ -626,21 +684,23 @@ const I18N = {
     closeActionMinimize: 'Minimize to tray',
     followSystem: 'Follow System',
     resetDefault: 'Reset Default',
-    done: 'Done',
     confirm: 'Confirm',
+    confirmMessage: 'Are you sure you want to continue?',
     themeSwitched: 'Switched to {theme} theme',
     basic: 'Basic',
-    fontScheme: 'Font Scheme',
-    fontSchemeSystemSans: 'Minimalist',
-    fontSchemeClassicSerif: 'Print Style',
     customFonts: 'Custom Fonts',
+    systemFonts: 'System Fonts',
     addFont: 'Add Font',
     editorFont: 'Editor Font',
     previewFont: 'Preview Font',
-    followScheme: 'Follow Scheme',
+    codeFont: 'Code Block Font',
+    defaultFont: 'Default',
     fontPreview: 'Font Preview',
     deleteFont: 'Delete',
     noCustomFont: 'No custom font added yet',
+    systemFontsLoadFailed: 'Failed to load system fonts',
+    systemFontsRetry: 'Retry',
+    noMatchingFonts: 'No matching fonts',
     importingFonts: 'Importing fonts ({n}/{total})…',
     confirmDeleteFont: 'Are you sure you want to delete the font "{name}"? This cannot be undone.',
     importSuccess: 'Successfully imported {n} font(s)',
@@ -749,11 +809,11 @@ const I18N = {
     depHtml2canvas: 'Screenshot export',
     depTauri: 'Desktop application framework',
     spaces: 'spaces',
-    settingsReset: 'Settings reset to defaults',
-    settingsApplying: 'Applying…',
     applying: 'Applying…',
     saving: 'Saving…',
     apply: 'Apply',
+    appliedSuccess: 'Applied',
+    savedSuccess: 'Saved',
     ok: 'OK',
     browse: 'Browse...',
     reloadFile: 'Reload File',
@@ -794,7 +854,6 @@ const I18N = {
     imageLoadFailed: '[Image failed to load]',
     dropFileHere: 'Drop file here to open',
     allFiles: 'All Files',
-    confirmResetSettings: 'Restore default settings?',
     tablistLabel: 'Tabs',
     closeAria: 'Close',
     heading1: '# Heading 1',
@@ -873,6 +932,7 @@ const I18N = {
     sortBy: 'Sort',
     sortByName: 'Name',
     sortByTime: 'Modified',
+    fileSort: 'Sort by',
     sortAsc: 'Ascending',
     sortDesc: 'Descending',
     folderOpened: 'Opened folder: {path}',
@@ -993,7 +1053,6 @@ class MarkdownEditor {
     this.initImagePaste();
     this.initTabScroll();
     this.loadTheme();
-    this.applyFontScheme();
     this.updatePreview();
     this.applyViewMode();
     this.updateMaximizeIcon();
@@ -1175,7 +1234,6 @@ class MarkdownEditor {
     setRowLabel('set-language', t('language'));
     setRowLabel('set-theme-mode', t('themeMode'));
     setRowLabel('set-color-scheme', t('colorScheme'));
-    setRowLabel('set-font-scheme', t('fontScheme'));
     setSectionTitle('set-font-size', t('editor'));
     setRowLabel('set-font-size', t('fontSize'));
     setRowLabel('set-tab-size', t('tabSize'));
@@ -1199,7 +1257,7 @@ class MarkdownEditor {
     setSectionTitle('btn-add-font', t('customFonts'));
     setRowLabel('set-editor-font', t('editorFont'));
     setRowLabel('set-preview-font', t('previewFont'));
-    setRowLabel('font-preview-sample', t('fontPreview'));
+    setRowLabel('set-code-font', t('codeFont'));
     const softBreaksHint = document.querySelector('#setting-soft-breaks-hint .hint-text');
     if (softBreaksHint) softBreaksHint.textContent = t('softBreaksHint');
     const tabSizeHint = document.querySelector('#setting-tab-size-hint .hint-text');
@@ -1216,27 +1274,28 @@ class MarkdownEditor {
     const assetPathHint = document.querySelector('#setting-image-asset-path-hint-text');
     if (assetPathHint) assetPathHint.innerHTML = t('imageAssetPathRelativeHint');
     document.getElementById('settings-reset').textContent = t('resetDefault');
-    document.getElementById('settings-cancel-btn').textContent = t('cancel');
-    document.getElementById('settings-apply-btn').textContent = t('apply');
-    document.getElementById('settings-save-btn').textContent = t('save');
+    // 语言/界面文本刷新时跳过处于 loading 态的按钮：否则 applyPendingSettings 内部的
+    // applyLanguage() 会在保存/应用进行中把按钮文案重置回「保存/应用」，让 spinner +
+    // 「保存中…」只显示不到一帧（本地同步落盘极快），视觉上等于没有 loading。
+    const applyBtn = document.getElementById('settings-apply-btn');
+    if (applyBtn && !applyBtn.classList.contains('is-loading')) applyBtn.textContent = t('apply');
+    const saveBtn = document.getElementById('settings-save-btn');
+    if (saveBtn && !saveBtn.classList.contains('is-loading')) saveBtn.textContent = t('save');
     document.getElementById('settings-close-x').setAttribute('aria-label', t('cancel'));
     document.getElementById('confirm-dialog-confirm').textContent = t('confirm');
     document.getElementById('confirm-dialog-cancel').textContent = t('cancel');
-    // Update color scheme options text
-    const csSelect = document.getElementById('set-color-scheme');
-    if (csSelect) {
-      csSelect.options[0].text = t('schemeDefault');
-      csSelect.options[1].text = t('schemeSunset');
-      csSelect.options[2].text = t('schemeForest');
-      csSelect.options[3].text = t('schemeNord');
-      csSelect.options[4].text = t('schemeDusk');
+    // 配色方案自绘下拉：随语言刷新选项文案（optionsProvider 依赖注入 t）
+    if (this._selects && this._selects.colorScheme) this._selects.colorScheme.applyI18n(t);
+    // 三个字体 FontPicker 的 i18n（占位符/默认项/无匹配文案）；须 bind(this) 否则 t 的 this 指向 FontPicker
+    for (const k of ['editor', 'preview', 'code']) {
+      const p = this._fontPickers && this._fontPickers[k];
+      if (p) p.applyI18n(this.t.bind(this));
     }
-    // Update font scheme options text
-    const fsSelect = document.getElementById('set-font-scheme');
-    if (fsSelect) {
-      fsSelect.options[0].text = t('fontSchemeSystemSans');
-      fsSelect.options[1].text = t('fontSchemeClassicSerif');
-    }
+    // 语言切换后刷新系统字体显示名（中文 UI 显示「微软雅黑」，英文 UI 显示 Microsoft YaHei）
+    this.refreshFontSelectors();
+    // 系统字体加载失败重试按钮文案
+    const retryBtn = document.getElementById('btn-retry-system-fonts');
+    if (retryBtn) retryBtn.textContent = t('systemFontsRetry');
     // Refresh shortcut scheme dropdown text
     const schemeLabel = document.getElementById('shortcuts-scheme-label');
     if (schemeLabel) schemeLabel.textContent = t('shortcutScheme');
@@ -1268,13 +1327,7 @@ class MarkdownEditor {
     setTitle('fmt-collapse', t('collapseExpandToolbar'));
     setTitle('outline-close', t('close'));
     setTitle('folder-close', t('closeFolder'));
-    // 文件目录排序控件文案
-    const sortKey = document.getElementById('folder-sort-key');
-    if (sortKey) {
-      sortKey.title = t('sortBy');
-      if (sortKey.options[0]) sortKey.options[0].text = t('sortByName');
-      if (sortKey.options[1]) sortKey.options[1].text = t('sortByTime');
-    }
+    // 文件目录排序下拉文案随语言刷新由 _folderSortSelect.applyI18n 统一处理（见下方 SETTINGS DROPDOWN OPTIONS）
     this.updateFolderSortOrderButton();
     this.updateFolderMenuLabel();
     setTitle('large-file-banner-close', t('closeNotice'));
@@ -1306,8 +1359,7 @@ class MarkdownEditor {
     // Insert-image dialog
     setText('insert-image-title', t('insertImage'));
     setText('insert-image-source-label', t('imageSource'));
-    setText('insert-image-source-local', t('imageSourceLocal'));
-    setText('insert-image-source-web', t('imageSourceWeb'));
+    if (this._imageSourceSelect) this._imageSourceSelect.applyI18n(t);
     setText('insert-image-file-label', t('file'));
     setText('insert-image-browse', t('browse'));
     setText('insert-image-url-label', t('imageUrlLabel'));
@@ -1413,12 +1465,14 @@ class MarkdownEditor {
 
     // Confirm dialog title & message
     setText('confirm-dialog-title', t('confirm'));
-    setText('confirm-dialog-message', t('confirmResetSettings'));
+    setText('confirm-dialog-message', t('confirmMessage'));
 
     // Shortcuts dialog
     setText('shortcuts-title', t('shortcuts'));
     document.getElementById('shortcuts-reset').textContent = t('resetDefault');
-    document.getElementById('shortcuts-save-btn').textContent = t('done');
+    // 快捷键框「保存」按钮文案：与设置框「保存」一致；loading 中跳过（保 spinner）
+    const scSaveBtn = document.getElementById('shortcuts-save-btn');
+    if (scSaveBtn && !scSaveBtn.classList.contains('is-loading')) scSaveBtn.textContent = t('save');
 
     // Loading overlay
     setText('loading-text', t('loading'));
@@ -1557,44 +1611,19 @@ class MarkdownEditor {
     });
 
     // ====== SETTINGS DROPDOWN OPTIONS ======
-    // Theme mode
-    const themeSel = document.getElementById('set-theme-mode');
-    if (themeSel) {
-      themeSel.options[0].text = t('themeLight');
-      themeSel.options[1].text = t('themeDark');
-      themeSel.options[2].text = t('followSystem');
-    }
-    // Default view
-    const viewSel = document.getElementById('set-default-view');
-    if (viewSel) {
-      viewSel.options[0].text = t('preview');
-      viewSel.options[1].text = t('edit');
-    }
-    // Tab size
-    const tabSizeSel = document.getElementById('set-tab-size');
-    if (tabSizeSel) {
-      tabSizeSel.options[0].text = '2 ' + t('spaces');
-      tabSizeSel.options[1].text = '4 ' + t('spaces');
-      tabSizeSel.options[2].text = '8 ' + t('spaces');
-    }
-    // Max width (unlimited)
-    const maxWSel = document.getElementById('set-max-width');
-    if (maxWSel && maxWSel.options.length > 0) {
-      maxWSel.options[0].text = t('unlimited');
-    }
-    // Close action
-    const closeSel = document.getElementById('set-close-action');
-    if (closeSel) {
-      closeSel.options[0].text = t('closeActionAsk');
-      closeSel.options[1].text = t('closeActionQuit');
-      closeSel.options[2].text = t('closeActionMinimize');
-    }
-    // Language selector
-    const langSel = document.getElementById('set-language');
-    if (langSel) {
-      langSel.options[0].text = t('langZh');
-      langSel.options[1].text = t('langEn');
-    }
+    // 自绘下拉：随语言刷新选项文案（替代原生 select，展开面板可主题化 + 完整 ARIA）
+    if (this._selects && this._selects.themeMode) this._selects.themeMode.applyI18n(t);
+    if (this._selects && this._selects.colorScheme) this._selects.colorScheme.applyI18n(t);
+    if (this._selects && this._selects.language) this._selects.language.applyI18n(t);
+    if (this._selects && this._selects.tabSize) this._selects.tabSize.applyI18n(t);
+    if (this._selects && this._selects.lineHeight) this._selects.lineHeight.applyI18n(t);
+    if (this._selects && this._selects.maxWidth) this._selects.maxWidth.applyI18n(t);
+    if (this._selects && this._selects.defaultView) this._selects.defaultView.applyI18n(t);
+    if (this._selects && this._selects.closeAction) this._selects.closeAction.applyI18n(t);
+    // 快捷键/插入图片/文件夹排序下拉（各自独立实例）随语言刷新
+    if (this._schemeSelect) this._schemeSelect.applyI18n(t);
+    if (this._imageSourceSelect) this._imageSourceSelect.applyI18n(t);
+    if (this._folderSortSelect) this._folderSortSelect.applyI18n(t);
     // 自定义字体区（空状态 + 编辑/预览字体下拉的「跟随方案」）随语言刷新
     this.renderCustomFontSettings();
   }
@@ -1610,7 +1639,6 @@ class MarkdownEditor {
       maxWidth: 0,
       themeMode: 'light',
       colorScheme: 'default',
-      fontScheme: 'system-sans',
       defaultView: 'preview',
       scrollSync: true,
       language: 'zh',
@@ -1633,6 +1661,7 @@ class MarkdownEditor {
       fileSortOrder: 'asc',
       // 预览区分屏宽度（合并自 PR #36）：拖拽 resizer 后持久化，下次启动按此还原。
       previewPaneWidth: 360,
+      codeFont: '', // 预览代码块（行内代码 + 围栏代码块）字体，存自定义字体 id，空=跟随等宽默认
     };
   }
 
@@ -1640,17 +1669,8 @@ class MarkdownEditor {
     const defaults = this.defaultSettings();
     try {
       const saved = this._validConfigObject(JSON.parse(localStorage.getItem('tizumark-settings')));
-      // 向后兼容：旧版本没有 fontScheme 时，从配色方案推断
-      if (saved && saved.fontScheme === undefined) {
-        const colorSchemeFontMap = {
-          default: 'system-sans',
-          forest: 'system-sans',
-          nord: 'system-sans',
-          dusk: 'system-sans',
-          sunset: 'system-sans',
-        };
-        saved.fontScheme = colorSchemeFontMap[saved.colorScheme] || 'system-sans';
-      }
+      // 注：旧版本 localStorage 若残留 fontScheme 字段，defaults 已无此键，
+      // 下方类型校验会把残留字段重置为 undefined 并在落盘时自动剔除（自愈）。
       // 类型校验：丢弃与默认值类型不符的字段，避免字符串/布尔错位污染 UI 与回写
       const merged = { ...defaults, ...saved };
       for (const k of Object.keys(merged)) {
@@ -1711,60 +1731,61 @@ class MarkdownEditor {
     const s = this.settings;
     document.getElementById('set-font-size').value = s.fontSize;
     document.getElementById('font-size-label').textContent = s.fontSize + 'px';
-    document.getElementById('set-tab-size').value = s.tabSize;
+    if (this._selects && this._selects.tabSize) this._selects.tabSize.setValue(String(s.tabSize), true);
     document.getElementById('set-line-wrap').checked = s.lineWrap;
     document.getElementById('set-line-numbers').checked = s.lineNumbers;
     document.getElementById('set-preview-font-size').value = s.previewFontSize;
     document.getElementById('preview-font-size-label').textContent = s.previewFontSize + 'px';
-    document.getElementById('set-line-height').value = s.lineHeight;
-    document.getElementById('set-max-width').value = s.maxWidth;
-    document.getElementById('set-theme-mode').value = s.themeMode;
-    document.getElementById('set-color-scheme').value = s.colorScheme || 'default';
-    document.getElementById('set-font-scheme').value = s.fontScheme || 'system-sans';
-    document.getElementById('set-default-view').value = s.defaultView;
+    if (this._selects && this._selects.lineHeight) this._selects.lineHeight.setValue(String(s.lineHeight), true);
+    if (this._selects && this._selects.maxWidth) this._selects.maxWidth.setValue(String(s.maxWidth), true);
+    if (this._selects && this._selects.themeMode) this._selects.themeMode.setValue(s.themeMode, true);
+    if (this._selects && this._selects.colorScheme) this._selects.colorScheme.setValue(s.colorScheme || 'default', true);
+    // 三个字体 FontPicker 值同步（silent，不触发 onChange 递归）
+    for (const k of ['editor', 'preview', 'code']) {
+      const p = this._fontPickers && this._fontPickers[k];
+      if (p) p.setValue(s[k + 'Font'] || '', true);
+    }
+    if (this._selects && this._selects.defaultView) this._selects.defaultView.setValue(s.defaultView || 'preview', true);
     document.getElementById('set-scroll-sync').checked = s.scrollSync;
     document.getElementById('set-code-line-numbers').checked = s.codeLineNumbers;
     document.getElementById('set-code-wrap').checked = s.codeWrap;
     document.getElementById('set-code-scroll').checked = s.codeScroll;
-    document.getElementById('set-language').value = s.language || 'zh';
+    if (this._selects && this._selects.language) this._selects.language.setValue(s.language || 'zh', true);
     const modeRadio = document.querySelector(`#settings-image-store-mode input[value="${s.imageInsertMode || 'assets'}"]`);
     if (modeRadio) modeRadio.checked = true;
     document.getElementById('set-soft-breaks').checked = s.softBreaks !== false;
     document.getElementById('set-show-tray-icon').checked = s.showTrayIcon !== false;
-    document.getElementById('set-close-action').value = s.closeAction || 'ask';
+    if (this._selects && this._selects.closeAction) this._selects.closeAction.setValue(s.closeAction || 'ask', true);
     document.getElementById('settings-image-asset-path').value = s.imageAssetPath || 'assets';
     const pathModeRadio = document.querySelector(`#settings-image-asset-path-mode input[value="${s.imageAssetPathMode || 'relative'}"]`);
     if (pathModeRadio) pathModeRadio.checked = true;
   }
 
-  // 设置重渲染的 loading toast（引用计数）：主题/配色/字体/代码块选项变更会触发全量重渲染
-  // （mermaid 图表多时较慢），期间在页面顶部 toast 位置显示持续提示，计数归零才移除。
-  // msgKey 可选：应用时「正在应用设置…」/ 保存时「保存中…」（与按钮 loading 文案对应）。
-  _beginSettingsBusy(msgKey = 'settingsApplying') {
-    this._settingsBusyCount = (this._settingsBusyCount || 0) + 1;
-    if (this._settingsBusyCount !== 1) return;
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    if (this._settingsBusyToast && this._settingsBusyToast.isConnected) return;
-    const el = document.createElement('div');
-    el.className = 'toast settings-loading-toast';
-    const spinner = document.createElement('span');
-    spinner.className = 'settings-loading-toast-spinner';
-    const body = document.createElement('div');
-    body.className = 'toast-body';
-    body.textContent = this.t(msgKey);
-    el.appendChild(spinner);
-    el.appendChild(body);
-    container.appendChild(el);
-    this._settingsBusyToast = el;
+  // 最小可见时长：设置保存/应用是本地即时操作（同步落盘），loading 往往一闪而过，
+  // 用户几乎看不到 spinner。这里保证 loading 至少展示 ms 毫秒，提供明确的点击反馈。
+  // 用 setTimeout 实现（与操作 Promise 以 Promise.all 取较长者），事件循环并行、不累加时长。
+  _minDelay(ms) {
+    return new Promise((res) => {
+      if (typeof setTimeout === 'function') setTimeout(res, ms);
+      else res();
+    });
   }
 
-  _endSettingsBusy() {
-    this._settingsBusyCount = Math.max(0, (this._settingsBusyCount || 0) - 1);
-    if (this._settingsBusyCount === 0 && this._settingsBusyToast && this._settingsBusyToast.isConnected) {
-      this._settingsBusyToast.remove();
-      this._settingsBusyToast = null;
-    }
+  // 确保浏览器先完成一次 paint，再执行后续重活。
+  // 关键：设置 spinner 的 innerHTML 后若「紧接 await 一个内部含同步重渲染的 async 函数」，
+  // 该同步重活会作为微任务在 paint 之前执行，把首帧 paint 推迟到重活之后，导致 loading
+  // 只闪一帧（用户看不到）。rAF 回调后接 setTimeout(0)（宏任务，保证在 paint 之后）是
+  // 最稳的「等一帧 paint」写法：第一帧 paint 出 spinner，第二帧才开始重活（卡顿时可见）。
+  _ensurePainted() {
+    return new Promise((res) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => setTimeout(res, 0));
+      } else {
+        // jsdom 等没有 requestAnimationFrame 的环境：直接等约一帧（16ms）再继续，
+        // 保证 resolve 不依赖浏览器 paint 调度，避免 handler 永远挂起。
+        setTimeout(res, 16);
+      }
+    });
   }
 
   async initSettings() {
@@ -1772,13 +1793,18 @@ class MarkdownEditor {
     document.getElementById('settings-close-x').addEventListener('click', () => this.hideSettings(true));
     const applyBtn = document.getElementById('settings-apply-btn');
     applyBtn.addEventListener('click', async () => {
-      // 点「应用」= 生效 + 落盘，面板保持打开：按钮进入 loading 态（让一帧确保可见）
+      // 点「应用」= 生效 + 落盘，面板保持打开：按钮进入 loading 态（文字「正在应用」+ spinner）
+      // 顶部不再显示 loading toast，loading 结束后才弹「应用成功」成功提示。
       applyBtn.classList.add('is-loading');
       applyBtn.disabled = true;
       applyBtn.innerHTML = '<span class="btn-spinner"></span>' + this.t('applying');
-      await new Promise(r => requestAnimationFrame(r));
+      await this._ensurePainted(); // 让 spinner 先绘制一帧，避免被同步重活推后导致看不到
       try {
-        await this.applyPendingSettings('settingsApplying');
+        await Promise.all([
+          this.applyPendingSettings(),
+          this._minDelay(300), // 保证 loading 至少可见 300ms，避免一闪而过
+        ]);
+        this.showToast(this.t('appliedSuccess'), 'success'); // 应用完成后弹成功提示
       } finally {
         applyBtn.disabled = false;
         applyBtn.classList.remove('is-loading');
@@ -1787,13 +1813,18 @@ class MarkdownEditor {
     });
     const saveBtn = document.getElementById('settings-save-btn');
     saveBtn.addEventListener('click', async () => {
-      // 点「保存」= 应用 + 落盘 + 关闭：按钮进入 loading 态（让一帧确保可见）
+      // 点「保存」= 应用 + 落盘 + 关闭：按钮进入 loading 态（文字「正在保存」+ spinner）
+      // 顶部不再显示 loading toast，loading 结束后才弹「保存成功」成功提示。
       saveBtn.classList.add('is-loading');
       saveBtn.disabled = true;
       saveBtn.innerHTML = '<span class="btn-spinner"></span>' + this.t('saving');
-      await new Promise(r => requestAnimationFrame(r));
+      await this._ensurePainted(); // 让 spinner 先绘制一帧，避免被同步重活推后导致看不到
       try {
-        await this.applyPendingSettings('saving');
+        await Promise.all([
+          this.applyPendingSettings(),
+          this._minDelay(300), // 保证 loading 至少可见 300ms，避免一闪而过
+        ]);
+        this.showToast(this.t('savedSuccess'), 'success'); // 保存完成后弹成功提示
         this.hideSettings(false);
       } finally {
         saveBtn.disabled = false;
@@ -1801,8 +1832,8 @@ class MarkdownEditor {
         saveBtn.textContent = this.t('save');
       }
     });
-    document.getElementById('settings-cancel-btn').addEventListener('click', () => this.hideSettings(true));
-    // 注：不支持点击遮罩层关闭设置框，只能点「取消」或「×」关闭
+    // 注：设置框不支持点击遮罩层关闭，也去掉了「取消」按钮；只能通过「×」放弃改动关闭，
+    // 或点「应用」/「保存」生效。× 与旧的「取消」行为一致（按打开时快照回滚）。
     document.getElementById('settings-reset').addEventListener('click', () => this.resetSettings());
 
     this.syncSettingsControls();
@@ -1813,9 +1844,6 @@ class MarkdownEditor {
     });
     document.getElementById('set-font-size').addEventListener('change', (e) => {
       this.settings.fontSize = Number(e.target.value);
-    });
-    document.getElementById('set-tab-size').addEventListener('change', (e) => {
-      this.settings.tabSize = Number(e.target.value);
     });
     document.getElementById('set-line-wrap').addEventListener('change', (e) => {
       this.settings.lineWrap = e.target.checked;
@@ -1829,24 +1857,6 @@ class MarkdownEditor {
     document.getElementById('set-preview-font-size').addEventListener('change', (e) => {
       this.settings.previewFontSize = Number(e.target.value);
     });
-    document.getElementById('set-line-height').addEventListener('change', (e) => {
-      this.settings.lineHeight = Number(e.target.value);
-    });
-    document.getElementById('set-max-width').addEventListener('change', (e) => {
-      this.settings.maxWidth = Number(e.target.value);
-    });
-    document.getElementById('set-theme-mode').addEventListener('change', (e) => {
-      this.settings.themeMode = e.target.value;
-    });
-    document.getElementById('set-color-scheme').addEventListener('change', (e) => {
-      this.settings.colorScheme = e.target.value;
-    });
-    document.getElementById('set-font-scheme').addEventListener('change', (e) => {
-      this.settings.fontScheme = e.target.value;
-    });
-    document.getElementById('set-default-view').addEventListener('change', (e) => {
-      this.settings.defaultView = e.target.value;
-    });
     document.getElementById('set-scroll-sync').addEventListener('change', (e) => {
       this.settings.scrollSync = e.target.checked;
     });
@@ -1856,9 +1866,6 @@ class MarkdownEditor {
     document.getElementById('set-show-tray-icon').addEventListener('change', (e) => {
       this.settings.showTrayIcon = e.target.checked;
     });
-    document.getElementById('set-close-action').addEventListener('change', (e) => {
-      this.settings.closeAction = e.target.value;
-    });
     document.getElementById('set-code-line-numbers').addEventListener('change', (e) => {
       this.settings.codeLineNumbers = e.target.checked;
     });
@@ -1867,9 +1874,6 @@ class MarkdownEditor {
     });
     document.getElementById('set-code-scroll').addEventListener('change', (e) => {
       this.settings.codeScroll = e.target.checked;
-    });
-    document.getElementById('set-language').addEventListener('change', (e) => {
-      this.settings.language = e.target.value;
     });
     document.querySelectorAll('#settings-image-store-mode input[name="settings-image-store"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
@@ -1891,20 +1895,142 @@ class MarkdownEditor {
     });
     this.updateImageAssetPathHint();
 
-    // ====== 自定义字体 ======
+    // ====== 字体选择（系统字体全量 + 自定义字体，可搜索 FontPicker） ======
     const addFontBtn = document.getElementById('btn-add-font');
     if (addFontBtn) addFontBtn.addEventListener('click', () => this.addFontFiles());
-    const edFont = document.getElementById('set-editor-font');
-    if (edFont) edFont.addEventListener('change', (e) => {
-      this.settings.editorFont = e.target.value;
-      this.refreshFontSelectors();
-    });
-    const pvFont = document.getElementById('set-preview-font');
-    if (pvFont) pvFont.addEventListener('change', (e) => {
-      this.settings.previewFont = e.target.value;
-      this.refreshFontSelectors();
-    });
+    // 三个字体选择器：editor / preview / code 共用同一组件与选项
+    this._fontPickers = {};
+    for (const k of ['editor', 'preview', 'code']) {
+      const root = document.getElementById('set-' + k + '-font');
+      if (!root) continue;
+      this._fontPickers[k] = new FontPicker(root, {
+        value: this.settings[k + 'Font'] || '',
+        placeholder: this.t('defaultFont'),
+        t: this.t.bind(this),
+        onChange: (v) => {
+          this.settings[k + 'Font'] = v;
+          this.refreshFontSelectors();
+        },
+      });
+    }
+    // 通用自绘下拉：主题模式 + 配色方案（替代原生 select，展开面板可主题化 + 完整 ARIA）
+    this._selects = {};
+    const themeHost = document.getElementById('set-theme-mode');
+    if (themeHost) {
+      this._selects.themeMode = new Select(themeHost, {
+        value: this.settings.themeMode,
+        t: this.t.bind(this),
+        ariaLabelKey: 'themeMode',
+        optionsProvider: (t) => ([
+          { value: 'light', label: t('themeLight') },
+          { value: 'dark', label: t('themeDark') },
+          { value: 'system', label: t('followSystem') },
+        ]),
+        onChange: (v) => { this.settings.themeMode = v; },
+      });
+    }
+    const colorHost = document.getElementById('set-color-scheme');
+    if (colorHost) {
+      this._selects.colorScheme = new Select(colorHost, {
+        value: this.settings.colorScheme || 'default',
+        t: this.t.bind(this),
+        ariaLabelKey: 'colorScheme',
+        optionsProvider: (t) => ([
+          { value: 'default', label: t('schemeDefault') },
+          { value: 'sunset', label: t('schemeSunset') },
+          { value: 'forest', label: t('schemeForest') },
+          { value: 'nord', label: t('schemeNord') },
+          { value: 'dusk', label: t('schemeDusk') },
+        ]),
+        onChange: (v) => { this.settings.colorScheme = v; },
+      });
+    }
+    // 通用自绘下拉：语言 / Tab 宽度 / 行高 / 最大宽度 / 默认视图 / 关闭行为
+    // （替代原生 select，展开面板可主题化 + 完整 ARIA；与原生 select 行为一致：仅写内存，
+    //  真正生效/落盘由「应用/保存」决定）
+    const langHost = document.getElementById('set-language');
+    if (langHost) {
+      this._selects.language = new Select(langHost, {
+        value: this.settings.language || 'zh',
+        t: this.t.bind(this),
+        ariaLabelKey: 'language',
+        optionsProvider: (t) => ([
+          { value: 'zh', label: t('langZh') },
+          { value: 'en', label: t('langEn') },
+        ]),
+        onChange: (v) => { this.settings.language = v; },
+      });
+    }
+    const tabHost = document.getElementById('set-tab-size');
+    if (tabHost) {
+      this._selects.tabSize = new Select(tabHost, {
+        value: String(this.settings.tabSize),
+        t: this.t.bind(this),
+        ariaLabelKey: 'tabSize',
+        optionsProvider: (t) => ([
+          { value: '2', label: '2 ' + t('spaces') },
+          { value: '4', label: '4 ' + t('spaces') },
+          { value: '8', label: '8 ' + t('spaces') },
+        ]),
+        onChange: (v) => { this.settings.tabSize = Number(v); },
+      });
+    }
+    const lhHost = document.getElementById('set-line-height');
+    if (lhHost) {
+      this._selects.lineHeight = new Select(lhHost, {
+        value: String(this.settings.lineHeight),
+        t: this.t.bind(this),
+        ariaLabelKey: 'lineHeight',
+        optionsProvider: (t) => (['1.4', '1.6', '1.7', '1.8', '2.0'].map((v) => ({ value: v, label: v }))),
+        onChange: (v) => { this.settings.lineHeight = Number(v); },
+      });
+    }
+    const mwHost = document.getElementById('set-max-width');
+    if (mwHost) {
+      this._selects.maxWidth = new Select(mwHost, {
+        value: String(this.settings.maxWidth),
+        t: this.t.bind(this),
+        ariaLabelKey: 'maxWidth',
+        optionsProvider: (t) => ([
+          { value: '0', label: t('unlimited') },
+          { value: '800', label: '800px' },
+          { value: '1000', label: '1000px' },
+          { value: '1200', label: '1200px' },
+        ]),
+        onChange: (v) => { this.settings.maxWidth = Number(v); },
+      });
+    }
+    const dvHost = document.getElementById('set-default-view');
+    if (dvHost) {
+      this._selects.defaultView = new Select(dvHost, {
+        value: this.settings.defaultView || 'preview',
+        t: this.t.bind(this),
+        ariaLabelKey: 'defaultView',
+        optionsProvider: (t) => ([
+          { value: 'preview', label: t('preview') },
+          { value: 'edit', label: t('edit') },
+        ]),
+        onChange: (v) => { this.settings.defaultView = v; },
+      });
+    }
+    const caHost = document.getElementById('set-close-action');
+    if (caHost) {
+      this._selects.closeAction = new Select(caHost, {
+        value: this.settings.closeAction || 'ask',
+        t: this.t.bind(this),
+        ariaLabelKey: 'closeAction',
+        optionsProvider: (t) => ([
+          { value: 'ask', label: t('closeActionAsk') },
+          { value: 'quit', label: t('closeActionQuit') },
+          { value: 'minimize', label: t('closeActionMinimize') },
+        ]),
+        onChange: (v) => { this.settings.closeAction = v; },
+      });
+    }
+    const retryBtn = document.getElementById('btn-retry-system-fonts');
+    if (retryBtn) retryBtn.addEventListener('click', () => this.loadSystemFonts(true));
 
+    await this.loadSystemFonts();
     await this.registerCustomFonts();
     this.renderCustomFontSettings();
 
@@ -2348,14 +2474,6 @@ class MarkdownEditor {
     return String(text).replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
   }
 
-  applyFontScheme() {
-    document.documentElement.setAttribute('data-font-scheme', this.settings.fontScheme || 'system-sans');
-    // 更新 mermaid 字体
-    if (typeof mermaid !== 'undefined') {
-      this.rerenderMermaid();
-    }
-  }
-
   // 同步托盘显隐状态到 Rust 后端
   async applyWindowBehavior() {
     const showTray = this.settings.showTrayIcon !== false;
@@ -2390,7 +2508,6 @@ class MarkdownEditor {
     this.preview.classList.toggle('code-no-scroll', s.codeScroll === false);
     if (this._hljsCache) this._hljsCache.clear();
     await this.applyThemeMode();
-    this.applyFontScheme();
     this.applyCustomFonts();
   }
 
@@ -2511,12 +2628,42 @@ class MarkdownEditor {
     style.textContent = css;
   }
 
+  // 加载系统字体列表：Rust 命令 list_system_fonts 精确枚举（fontdb）。
+  // 结果缓存 this._systemFonts；失败 → 空列表 + toast + 显示重试按钮，
+  // 绝不伪造降级名单（保证「用户选到的字体是真实已安装的」）。
+  async loadSystemFonts(force = false) {
+    if (!force && Array.isArray(this._systemFonts)) return this._systemFonts;
+    const retryBtn = document.getElementById('btn-retry-system-fonts');
+    try {
+      const list = await TauriApi.listSystemFonts();
+      this._systemFonts = Array.isArray(list) ? list.slice() : [];
+      this._systemFontsError = '';
+    } catch (err) {
+      this._systemFonts = [];
+      this._systemFontsError = String(err && err.message ? err.message : err);
+      this.showToast(this.t('systemFontsLoadFailed'), 'danger');
+    }
+    if (retryBtn) retryBtn.classList.toggle('hidden', !this._systemFontsError);
+    this.refreshFontSelectors();
+    return this._systemFonts;
+  }
+
+  // 字体值 → CSS font-family 片段：空→''；命中自定义字体 id→tizumark-custom-{id}；
+  // 否则视为系统字体族名→加引号（兼容含空格的族名如 "Microsoft YaHei"）
+  _fontFamilyFor(id) {
+    if (!id) return '';
+    const isCustom = (this.settings.customFonts || []).some(f => f.id === id);
+    return isCustom ? `'tizumark-custom-${id}'` : `"${id}"`;
+  }
+
   applyCustomFonts() {
-    const fam = (id) => id ? `'tizumark-custom-${id}'` : '';
-    const ef = fam(this.settings.editorFont);
+    const ef = this._fontFamilyFor(this.settings.editorFont);
     this.cm.getWrapperElement().style.fontFamily = ef;
-    const pf = fam(this.settings.previewFont);
+    const pf = this._fontFamilyFor(this.settings.previewFont);
     this.preview.style.fontFamily = pf;
+    // 预览代码块字体（行内代码 + 围栏代码块）注入到专用 CSS 变量；空则回退等宽默认
+    const cf = this._fontFamilyFor(this.settings.codeFont);
+    this.preview.style.setProperty('--font-code-preview', cf || 'var(--font-mono)');
   }
 
   async removeCustomFont(id) {
@@ -2529,6 +2676,7 @@ class MarkdownEditor {
         this.settings.customFonts = (this.settings.customFonts || []).filter(f => f.id !== id);
         if (this.settings.editorFont === id) this.settings.editorFont = '';
         if (this.settings.previewFont === id) this.settings.previewFont = '';
+        if (this.settings.codeFont === id) this.settings.codeFont = '';
         // 应用式：删除在面板内即时生效，落盘随「应用/保存」
         await this.registerCustomFonts();
         this.applyCustomFonts();
@@ -2569,28 +2717,78 @@ class MarkdownEditor {
   }
 
   refreshFontSelectors() {
-    ['editor', 'preview'].forEach(k => {
-      const sel = document.getElementById('set-' + k + '-font');
-      if (!sel) return;
-      const cur = this.settings[k + 'Font'] || '';
-      sel.innerHTML = '';
-      const opt0 = document.createElement('option');
-      opt0.value = '';
-      opt0.textContent = this.t('followScheme');
-      sel.appendChild(opt0);
-      (this.settings.customFonts || []).forEach(f => {
-        const o = document.createElement('option');
-        o.value = f.id;
-        o.textContent = f.name;
-        sel.appendChild(o);
-      });
-      sel.value = cur;
-    });
-    const sample = document.getElementById('font-preview-sample');
-    if (sample) {
-      const pf = this.settings.previewFont;
-      sample.style.fontFamily = pf ? `'tizumark-custom-${pf}'` : '';
+    // 选项分组：系统字体（值=英文族名原文，仅白名单内且本机已装，中英文名归一去重）
+    //           + 自定义字体（值=自定义 id）
+    const groups = [];
+    const allSys = Array.isArray(this._systemFonts) ? this._systemFonts : [];
+    const custom = this.settings.customFonts || [];
+    const customIds = new Set(custom.map(f => f.id));
+    const isZh = this.settings.language !== 'en';
+    // 已选中的系统字体（可能不在白名单内，但应保留显示）
+    const selectedSys = new Set(['editor', 'preview', 'code'].map(k => this.settings[k + 'Font'] || '').filter(Boolean));
+    // 归一：中文名/变体名条目 → 主族英文 value（FONT_LOCALE_REV）；未映射字体保持原名
+    const norm = (n) => FONT_LOCALE_REV.get(n.toLowerCase()) || n;
+    // 显示名：中文 UI 显示中文名（有映射时），英文 UI 显示英文原名
+    const disp = (en) => (isZh && FONT_NAME_LOCALE[en]) ? FONT_NAME_LOCALE[en] : en;
+    const seen = new Set();
+    const sysItems = [];
+    for (const n of allSys) {
+      const en = norm(n);
+      if (!SYSTEM_FONT_WHITELIST_SET.has(en.toLowerCase()) && !selectedSys.has(en)) continue;
+      const key = en.toLowerCase();
+      if (seen.has(key)) continue; // 中英两条同族只保留一条
+      seen.add(key);
+      sysItems.push({ value: en, label: disp(en), fontFamily: `"${en}"` });
     }
+    // 防御：选中了白名单外、且未在枚举列表中的字体，也补一项避免「字体消失」
+    ['editor', 'preview', 'code'].forEach(k => {
+      const v = this.settings[k + 'Font'] || '';
+      if (v && !customIds.has(v) && !seen.has(v.toLowerCase())) {
+        seen.add(v.toLowerCase());
+        sysItems.push({ value: v, label: disp(v), fontFamily: `"${v}"` });
+      }
+    });
+    if (sysItems.length) {
+      groups.push({ label: this.t('systemFonts'), items: sysItems });
+    }
+    if (custom.length) {
+      groups.push({
+        label: this.t('customFonts'),
+        items: custom.map(f => ({ value: f.id, label: f.name, fontFamily: `'tizumark-custom-${f.id}'` })),
+      });
+    }
+    for (const k of ['editor', 'preview', 'code']) {
+      const p = this._fontPickers && this._fontPickers[k];
+      if (!p) continue;
+      p.setGroups(groups);
+      p.setValue(this.settings[k + 'Font'] || '', true);
+      this.updateFontPreview(k);
+    }
+  }
+
+  // 每个字体选择器下方有独立预览：以所选字体渲染样例文本，并显示当前字体名
+  updateFontPreview(k) {
+    const wrap = document.getElementById('font-preview-' + k);
+    if (!wrap) return;
+    const val = this.settings[k + 'Font'] || '';
+    const text = wrap.querySelector('.font-preview-text');
+    const cap = document.getElementById('font-name-' + k);
+    if (text) {
+      const fam = this._fontFamilyFor(val);
+      text.style.fontFamily = fam || (k === 'code' ? 'var(--font-mono)' : '');
+    }
+    if (cap) {
+      cap.textContent = val ? this._fontDisplayName(val) : (this.t('defaultFont') || '');
+    }
+  }
+
+  _fontDisplayName(val) {
+    if (!val) return '';
+    const f = (this.settings.customFonts || []).find(x => x.id === val);
+    if (f) return f.name;
+    // 系统字体：中文 UI 显示中文族名（如有映射），英文 UI 显示英文原名
+    const isZh = this.settings.language !== 'en';
+    return (isZh && FONT_NAME_LOCALE[val]) ? FONT_NAME_LOCALE[val] : val;
   }
 
   async applyThemeMode() {
@@ -2715,16 +2913,10 @@ class MarkdownEditor {
   }
 
   // 「应用」：把面板内改动生效（applySettings）并落盘，面板保持打开（可连续调整）；
-  // 「保存」= applyPendingSettings + 关闭面板。重渲染期间显示 loading toast。
-  // 「应用」/「保存」统一入口：生效 + 落盘 + 快照推进。msgKey 控制顶部 loading toast 文案
-  // （'settingsApplying' = 正在应用… / 'saving' = 正在保存…），与按钮 loading 文案对应。
-  async applyPendingSettings(msgKey = 'settingsApplying') {
-    this._beginSettingsBusy(msgKey);
-    try {
-      await this.applySettings();
-    } finally {
-      this._endSettingsBusy();
-    }
+  // 「保存」= applyPendingSettings + 关闭面板。
+  // 「应用」/「保存」统一入口：生效 + 落盘 + 快照推进。
+  async applyPendingSettings() {
+    await this.applySettings();
     this.applyLanguage();       // 语言/界面文本生效
     this.applyWindowBehavior(); // 托盘显隐生效
     this.saveSettings();        // 应用 = 落盘
@@ -2732,22 +2924,16 @@ class MarkdownEditor {
     this._settingsSnapshot = JSON.parse(JSON.stringify(this.settings));
   }
 
-  async resetSettings() {
-    const confirmed = await this.showConfirmDialog(
-      this.t('settings'),
-      this.t('confirmResetSettings')
-    );
-    if (!confirmed) return;
-
+  // 「恢复默认」：仅把面板内设置项值重置为默认值（保留已导入的自定义字体），
+  // 不立即生效、不落盘。改动写进 this.settings（面板当前态），由「应用 / 保存」统一生效落盘；
+  // 直接点「取消 / ×」则按 _settingsSnapshot 回滚，恢复默认也变成可撤销的未生效改动。
+  resetSettings() {
     const defaults = this.defaultSettings();
-    // 恢复默认：保留已导入的自定义字体，仅把编辑器/预览字体选择重置为「跟随方案」
     const savedCustomFonts = this.settings.customFonts || [];
     this.settings = { ...defaults, customFonts: savedCustomFonts };
     this.syncSettingsControls();
     this.renderCustomFontSettings();
     this.updateImageAssetPathHint();
-    // 恢复默认立即生效并落盘（等同自动执行一次「应用」），面板保持打开可继续调整
-    await this.applyPendingSettings();
   }
 
   updateImageAssetPathHint() {
@@ -3121,8 +3307,7 @@ class MarkdownEditor {
         </div>`;
     }).join('');
 
-    const schemeSel = document.getElementById('shortcuts-scheme');
-    if (schemeSel) schemeSel.value = this.shortcutScheme || 'default';
+    if (this._schemeSelect) this._schemeSelect.setValue(this.shortcutScheme || 'default', true);
 
     container.querySelectorAll('.shortcut-record-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -3198,36 +3383,57 @@ class MarkdownEditor {
       this.showShortcutsDialog();
     });
     document.getElementById('shortcuts-close').addEventListener('click', () => this.hideShortcutsDialog());
-    document.getElementById('shortcuts-dialog').addEventListener('click', (e) => {
-      if (e.target.id === 'shortcuts-dialog') this.hideShortcutsDialog();
-    });
+    // 注：快捷键框不支持点击遮罩层关闭，只能通过「×」关闭（放弃改动），与设置框一致。
     document.getElementById('shortcuts-reset').addEventListener('click', () => this.resetShortcuts());
-    document.getElementById('shortcuts-save-btn').addEventListener('click', () => {
-      // 「确认」按钮：方案切换与按键编辑在此正式生效（切换下拉只预览不生效）
-      const sel = document.getElementById('shortcuts-scheme');
-      const name = sel ? sel.value : this.shortcutScheme;
-      if (name === 'custom') {
-        // 自定义：以当前编辑后的键位为准，持久化并应用到 CM
-        this.shortcutScheme = 'custom';
-        this.saveShortcuts();
-        this.saveShortcutScheme('custom');
-        this.applyShortcuts();
-      } else {
-        // 预置方案：加载键位 + 持久化 + 应用到 CM
-        this.applyShortcutScheme(name);
+    document.getElementById('shortcuts-save-btn').addEventListener('click', async () => {
+      // 与设置框「保存」行为一致：按钮进入 loading 态（文字「正在保存」+ spinner），
+      // 完成后弹「保存成功」成功提示并关闭；顶部不再显示 loading toast。
+      const saveBtn = document.getElementById('shortcuts-save-btn');
+      saveBtn.classList.add('is-loading');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="btn-spinner"></span>' + this.t('saving');
+      await this._ensurePainted(); // 让 spinner 先绘制一帧，避免被同步重活推后导致看不到
+      try {
+        // 「确认」按钮：方案切换与按键编辑在此正式生效（切换下拉只预览不生效）
+        const name = this._schemeSelect ? this._schemeSelect.getValue() : this.shortcutScheme;
+        if (name === 'custom') {
+          // 自定义：以当前编辑后的键位为准，持久化并应用到 CM
+          this.shortcutScheme = 'custom';
+          this.saveShortcuts();
+          this.saveShortcutScheme('custom');
+          this.applyShortcuts();
+        } else {
+          // 预置方案：加载键位 + 持久化 + 应用到 CM
+          this.applyShortcutScheme(name);
+        }
+        await this._minDelay(300); // 保证 loading 至少可见 300ms，避免一闪而过
+        this.showToast(this.t('savedSuccess'), 'success'); // 保存完成后弹成功提示
+        this.hideShortcutsDialog();
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('is-loading');
+        saveBtn.textContent = this.t('save');
       }
-      this.hideShortcutsDialog();
     });
 
-    // 快捷键方案下拉
-    const schemeSel = document.getElementById('shortcuts-scheme');
-    if (schemeSel) {
-      schemeSel.addEventListener('change', (e) => {
-        const name = e.target.value;
-        // 随意切换：仅把键位加载到列表预览（不应用 CM、不持久化），点「确认」按钮才正式生效。
+    // 快捷键方案下拉：自绘 Select 组件（替代原生 select，展开面板可主题化 + 完整 ARIA）
+    const schemeHost = document.getElementById('shortcuts-scheme');
+    if (schemeHost) {
+      this._schemeSelect = new Select(schemeHost, {
+        value: this.shortcutScheme || 'default',
+        t: this.t.bind(this),
+        ariaLabelKey: 'shortcutScheme',
+        optionsProvider: (t) => ([
+          { value: 'default', label: t('schemeDefault') },
+          { value: 'vscode', label: t('schemeVSCode') },
+          { value: 'typora', label: t('schemeTypora') },
+          { value: 'sublime', label: t('schemeSublime') },
+          { value: 'custom', label: t('schemeCustom') },
+        ]),
+        // 随意切换：仅把键位加载到列表预览（不应用 CM、不持久化），点「保存」按钮才正式生效。
         // 历史实现：change 即弹 window.confirm 并立即生效，Tauri 下 confirm 依赖
         // dialog:allow-confirm 权限（缺失报 "dialog.confirm not allowed"），且交互不符直觉。
-        this.previewShortcutScheme(name);
+        onChange: (name) => { this.previewShortcutScheme(name); },
       });
     }
     this.populateSchemeSelect();
@@ -3245,17 +3451,16 @@ class MarkdownEditor {
   }
 
   populateSchemeSelect() {
-    const sel = document.getElementById('shortcuts-scheme');
-    if (!sel) return;
+    if (!this._schemeSelect) return;
     const opts = [
-      ['default', this.t('schemeDefault')],
-      ['vscode', this.t('schemeVSCode')],
-      ['typora', this.t('schemeTypora')],
-      ['sublime', this.t('schemeSublime')],
-      ['custom', this.t('schemeCustom')],
+      { value: 'default', label: this.t('schemeDefault') },
+      { value: 'vscode', label: this.t('schemeVSCode') },
+      { value: 'typora', label: this.t('schemeTypora') },
+      { value: 'sublime', label: this.t('schemeSublime') },
+      { value: 'custom', label: this.t('schemeCustom') },
     ];
-    sel.innerHTML = opts.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
-    sel.value = this.shortcutScheme || 'default';
+    this._schemeSelect.setOptions(opts);
+    this._schemeSelect.setValue(this.shortcutScheme || 'default', true);
   }
 
   hideShortcutsDialog() {
@@ -4220,14 +4425,22 @@ class MarkdownEditor {
     document.getElementById('folder-close').addEventListener('click', () => {
       this.closeFolder();
     });
-    // 文件目录排序控件
-    const sortKeyEl = document.getElementById('folder-sort-key');
-    if (sortKeyEl) {
-      sortKeyEl.value = this.settings.fileSortKey || 'name';
-      sortKeyEl.addEventListener('change', () => {
-        this.settings.fileSortKey = sortKeyEl.value;
-        this.saveSettings();
-        this.renderFolderTree();
+    // 文件目录排序控件：自绘 Select 组件（替代原生 select，展开面板可主题化 + 完整 ARIA）
+    const sortKeyHost = document.getElementById('folder-sort-key');
+    if (sortKeyHost) {
+      this._folderSortSelect = new Select(sortKeyHost, {
+        value: this.settings.fileSortKey || 'name',
+        t: this.t.bind(this),
+        ariaLabelKey: 'fileSort',
+        optionsProvider: (t) => ([
+          { value: 'name', label: t('sortByName') },
+          { value: 'time', label: t('sortByTime') },
+        ]),
+        onChange: (v) => {
+          this.settings.fileSortKey = v;
+          this.saveSettings();
+          this.renderFolderTree();
+        },
       });
     }
     const sortOrderEl = document.getElementById('folder-sort-order');
@@ -5853,13 +6066,24 @@ class MarkdownEditor {
     });
 
     // Insert Image dialog
-    const sourceSelect = document.getElementById('insert-image-source');
-    sourceSelect.addEventListener('change', () => {
-      const isLocal = sourceSelect.value === 'local';
-      document.getElementById('insert-image-local-field').classList.toggle('hidden', !isLocal);
-      document.getElementById('insert-image-alt-field').classList.toggle('hidden', !isLocal);
-      document.getElementById('insert-image-web-field').classList.toggle('hidden', isLocal);
-    });
+    const sourceHost = document.getElementById('insert-image-source');
+    if (sourceHost) {
+      this._imageSourceSelect = new Select(sourceHost, {
+        value: 'local',
+        t: this.t.bind(this),
+        ariaLabelKey: 'imageSource',
+        optionsProvider: (t) => ([
+          { value: 'local', label: t('imageSourceLocal') },
+          { value: 'web', label: t('imageSourceWeb') },
+        ]),
+        onChange: (v) => {
+          const isLocal = v === 'local';
+          document.getElementById('insert-image-local-field').classList.toggle('hidden', !isLocal);
+          document.getElementById('insert-image-alt-field').classList.toggle('hidden', !isLocal);
+          document.getElementById('insert-image-web-field').classList.toggle('hidden', isLocal);
+        },
+      });
+    }
     document.getElementById('insert-image-browse').addEventListener('click', async () => {
       try {
         const selected = await dialogOpen({
@@ -5928,7 +6152,7 @@ class MarkdownEditor {
   }
 
   showInsertImageDialog() {
-    document.getElementById('insert-image-source').value = 'local';
+    if (this._imageSourceSelect) this._imageSourceSelect.setValue('local', true);
     document.getElementById('insert-image-local-field').classList.remove('hidden');
     document.getElementById('insert-image-alt-field').classList.remove('hidden');
     document.getElementById('insert-image-web-field').classList.add('hidden');
@@ -8407,11 +8631,11 @@ input[type="checkbox"]:checked::after { display: none !important; }
     try {
       if (this.settings.themeMode !== 'light' && this.settings.themeMode !== 'dark') {
         this.settings.themeMode = this.isDark ? 'light' : 'dark';
-        document.getElementById('set-theme-mode').value = this.settings.themeMode;
+        if (this._selects && this._selects.themeMode) this._selects.themeMode.setValue(this.settings.themeMode, true);
       }
       this.isDark = !this.isDark;
       this.settings.themeMode = this.isDark ? 'dark' : 'light';
-      document.getElementById('set-theme-mode').value = this.settings.themeMode;
+      if (this._selects && this._selects.themeMode) this._selects.themeMode.setValue(this.settings.themeMode, true);
       this.saveSettings();
       document.documentElement.setAttribute('data-theme', this.isDark ? 'dark' : 'light');
       document.documentElement.setAttribute('data-color-scheme', this.settings.colorScheme || 'default');

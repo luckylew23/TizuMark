@@ -175,18 +175,19 @@ test('folder-sort: applyLanguage 刷新排序控件文案（中/英）', async (
     const sortKey = w.document.getElementById('folder-sort-key');
     const orderBtn = w.document.getElementById('folder-sort-order');
     assert.ok(sortKey && orderBtn, '排序控件应存在于 DOM');
+    assert.ok(ed._folderSortSelect, '排序下拉应已自绘为 Select 组件');
 
     ed.settings.language = 'en';
     ed.applyLanguage();
-    assert.strictEqual(sortKey.options[0].text, 'Name');
-    assert.strictEqual(sortKey.options[1].text, 'Modified');
+    assert.strictEqual(ed._folderSortSelect._options[0].label, 'Name');
+    assert.strictEqual(ed._folderSortSelect._options[1].label, 'Modified');
     assert.strictEqual(orderBtn.title, 'Ascending');
     assert.ok(orderBtn.querySelector('svg'), '排序按钮应渲染 SVG 图标');
 
     ed.settings.language = 'zh';
     ed.applyLanguage();
-    assert.strictEqual(sortKey.options[0].text, '名称');
-    assert.strictEqual(sortKey.options[1].text, '修改时间');
+    assert.strictEqual(ed._folderSortSelect._options[0].label, '名称');
+    assert.strictEqual(ed._folderSortSelect._options[1].label, '修改时间');
     assert.strictEqual(orderBtn.title, '升序');
   } finally { cleanup(w); }
 });

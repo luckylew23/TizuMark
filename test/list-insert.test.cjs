@@ -216,10 +216,10 @@ test('D4 编辑器初始化时 indentUnit 取自 settings.tabSize', async () => 
 });
 
 test('D5 设置变更 handler 读取 Tab 宽度，applySettings 统一同步 indentUnit', async () => {
-  // 新架构：change handler 只把 select 值写入 settings.tabSize，
+  // 新架构：自绘 Select 组件的 onChange 只把组件值写入 settings.tabSize，
   // 真正的 indentUnit 同步在 applySettings（this.cm.setOption('indentUnit', s.tabSize)）统一应用。
-  assert.ok(APP.includes('this.settings.tabSize = Number(e.target.value)'),
-    'handler 应读取 select 值写入 settings.tabSize');
+  assert.ok(APP.includes('this.settings.tabSize = Number(v)'),
+    'handler(onChange) 应读取组件值写入 settings.tabSize');
   assert.ok(APP.includes("this.cm.setOption('indentUnit', s.tabSize)"),
     'applySettings 应将 indentUnit 设为 settings.tabSize');
 });
@@ -256,17 +256,13 @@ test('E2 存在 Tab 宽度说明框（id="setting-tab-size-hint"）', async () =
   assert.ok(HTML.includes('id="setting-tab-size-hint"'));
 });
 
-test('E3 #set-tab-size 下拉框有 3 个选项（2/4/8 空格）', async () => {
-  const hdom = new JSDOM('<!DOCTYPE html><body>' + HTML + '</body>');
-  const sel = hdom.window.document.querySelector('#set-tab-size');
-  assert.ok(sel, '应能找到 #set-tab-size');
-  assert.strictEqual(sel.options.length, 3, '应有 3 个选项，实际 ' + sel.options.length);
+test('E3 #set-tab-size 改为自绘 Select 组件（不再原生 select，宿主元素存在）', async () => {
+  assert.ok(/id="set-tab-size"/.test(HTML), '应能找到 #set-tab-size 宿主元素');
+  assert.ok(!/<select[^>]*id="set-tab-size"/.test(HTML), '不应再是原生 <select>（已统一为自绘组件）');
 });
 
-test('E4 Tab 宽度默认选中值为 "4"', async () => {
-  const hdom = new JSDOM('<!DOCTYPE html><body>' + HTML + '</body>');
-  const sel = hdom.window.document.querySelector('#set-tab-size');
-  assert.strictEqual(sel.value, '4', '默认应选中 4 空格');
+test('E4 Tab 宽度默认值仍为 "4"（配置在 app.js defaultSettings）', async () => {
+  assert.ok(/tabSize:\s*4/.test(APP), 'defaultSettings 中 tabSize 默认仍为 4 空格');
 });
 
 test('E5 说明框含 hint-icon 与 hint-text 节点（供翻译写入）', async () => {

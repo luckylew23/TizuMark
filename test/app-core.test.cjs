@@ -70,7 +70,6 @@ test('settings: applySettings 把 tabSize 驱动到 CM tabSize/indentUnit', asyn
   const ed = w.editor;
   // 隔离主题/字体副作用（避免 mermaid 重渲染、字体注册等）
   ed.applyThemeMode = async () => {};
-  ed.applyFontScheme = () => {};
   ed.applyCustomFonts = () => {};
 
   ed.settings.tabSize = 2;

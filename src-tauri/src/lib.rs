@@ -756,6 +756,94 @@ fn app_data_dir(app: tauri::AppHandle) -> Result<String, String> {
         .map(|p| p.to_string_lossy().to_string())
 }
 
+// ====== 系统字体枚举 ======
+// 用 fontdb 精确枚举系统全部已安装字体族名（跨平台），去重排序后返回。
+// 首次调用需解析全部字体文件头部（数百 ms），故放 spawn_blocking 避免卡 UI。
+#[tauri::command]
+async fn list_system_fonts() -> Result<Vec<String>, String> {
+    let result = tauri::async_runtime::spawn_blocking(|| {
+        let mut db = fontdb::Database::new();
+        db.load_system_fonts();
+        // Windows 补充：注册表可能指向任意绝对路径的字体文件（企业部署场景），
+        // fontdb 的目录扫描覆盖不到；尽力而为，失败仅跳过。
+        #[cfg(target_os = "windows")]
+        load_windows_registry_fonts(&mut db);
+        let mut names: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for face in db.faces() {
+            for (family, _lang) in &face.families {
+                let name = family.trim();
+                if !name.is_empty() {
+                    names.insert(name.to_string());
+                }
+            }
+        }
+        let mut list: Vec<String> = names.into_iter().collect();
+        list.sort();
+        Ok(list)
+    })
+    .await;
+    match result {
+        Ok(Ok(list)) => Ok(list),
+        Ok(Err(e)) => Err(e),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+// Windows：枚举 HKLM/HKCU 注册表 Fonts 键，把每个值（字体文件名或绝对路径）加载进 fontdb。
+#[cfg(target_os = "windows")]
+fn load_windows_registry_fonts(db: &mut fontdb::Database) {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
+    use winreg::RegKey;
+    const SUBKEY: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts";
+    let system_root = std::env::var("SYSTEMROOT").unwrap_or_else(|_| "C:\\Windows".to_string());
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    for hive in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
+        if let Ok(key) = RegKey::predef(hive).open_subkey(SUBKEY) {
+            for (_, value) in key.enum_values().flatten() {
+                let Some(data) = reg_value_string(&value) else { continue };
+                let data = data.trim();
+                if data.is_empty() {
+                    continue;
+                }
+                let p = if std::path::Path::new(data).is_absolute() {
+                    std::path::PathBuf::from(data)
+                } else {
+                    std::path::Path::new(&system_root).join("Fonts").join(data)
+                };
+                paths.push(p);
+            }
+        }
+    }
+    for p in paths {
+        if p.is_file() {
+            let _ = db.load_font_file(&p);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn reg_value_string(v: &winreg::RegValue) -> Option<String> {
+    use winreg::enums::{REG_EXPAND_SZ, REG_SZ};
+    if v.vtype != REG_SZ && v.vtype != REG_EXPAND_SZ {
+        return None;
+    }
+    let bytes = &v.bytes;
+    if bytes.len() % 2 != 0 {
+        return None;
+    }
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect();
+    let s = String::from_utf16_lossy(&units);
+    let s = s.trim_end_matches('\0').to_string();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
 // 递归遍历目录，收集指定扩展名的文件清单，供前端 Ctrl+P 快速打开。
 // 不跳过任何子目录（含 node_modules/.git/dist/src-tauri 等），保证"文件多也能搜"；
 // 仅按扩展名过滤（默认 .md/.markdown/.txt）并按 max_results 截断，避免病态目录树失控。
@@ -992,6 +1080,7 @@ pub fn run() {
             watch_folder,
             stop_watch,
             app_data_dir,
+            list_system_fonts,
             save_image_to_assets,
             fetch_image_as_base64,
             generate_toc,

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <title>TizuMark</title>
+  <link rel="icon" type="image/png" href="app-icon.png">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="lib/codemirror/codemirror.css">
   <link rel="stylesheet" href="lib/codemirror/theme/material-darker.css">
@@ -393,10 +394,7 @@
             <div class="folder-header" id="folder-header">
               <span class="folder-path" id="folder-path"></span>
               <div class="folder-sort" id="folder-sort">
-                <select id="folder-sort-key" class="folder-sort-key" title="">
-                  <option value="name">名称</option>
-                  <option value="time">修改时间</option>
-                </select>
+                <div id="folder-sort-key" class="folder-sort-key" title=""></div>
                 <button id="folder-sort-order" class="folder-sort-order" type="button" title="升序" aria-label="切换排序方向"></button>
               </div>
               <button id="folder-close" class="folder-close-btn" title="关闭文件夹">&times;</button>
@@ -794,10 +792,7 @@
         </p>
         <div class="form-field">
           <label id="insert-image-source-label">图片来源</label>
-          <select id="insert-image-source">
-            <option value="local" id="insert-image-source-local">本地图片</option>
-            <option value="web" id="insert-image-source-web">网络图片</option>
-          </select>
+          <div id="insert-image-source"></div>
         </div>
         <div class="form-field" id="insert-image-local-field">
           <label id="insert-image-file-label" class="required">文件</label>
@@ -836,7 +831,7 @@
         <div class="settings-group">
           <div class="settings-group-title" id="shortcuts-scheme-label">快捷键方案</div>
           <div class="settings-row scheme-row">
-            <select id="shortcuts-scheme"></select>
+            <div id="shortcuts-scheme"></div>
           </div>
         </div>
         <div class="settings-group">
@@ -907,35 +902,15 @@
           <h3>基本</h3>
           <div class="settings-row">
             <label>界面语言</label>
-            <select id="set-language">
-              <option value="zh" selected>中文</option>
-              <option value="en">English</option>
-            </select>
+            <div id="set-language"></div>
           </div>
           <div class="settings-row">
             <label>主题模式</label>
-            <select id="set-theme-mode">
-              <option value="light" selected>明亮</option>
-              <option value="dark">暗黑</option>
-              <option value="system">跟随系统</option>
-            </select>
+            <div id="set-theme-mode"></div>
           </div>
           <div class="settings-row">
             <label>配色方案</label>
-            <select id="set-color-scheme">
-              <option value="default">基准</option>
-              <option value="sunset">暖橙风</option>
-              <option value="forest">翠林风</option>
-              <option value="nord">极夜风</option>
-              <option value="dusk">暮紫风</option>
-            </select>
-          </div>
-          <div class="settings-row">
-            <label>字体方案</label>
-            <select id="set-font-scheme">
-              <option value="system-sans">简约风格</option>
-              <option value="classic-serif">印刷风格</option>
-            </select>
+            <div id="set-color-scheme"></div>
           </div>
         </div>
         <div class="settings-section">
@@ -949,11 +924,7 @@
           </div>
           <div class="settings-row">
             <label>Tab 宽度</label>
-            <select id="set-tab-size">
-              <option value="2">2 空格</option>
-              <option value="4" selected>4 空格</option>
-              <option value="8">8 空格</option>
-            </select>
+            <div id="set-tab-size"></div>
             <p class="form-hint" id="setting-tab-size-hint">
               <svg class="hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               <span class="hint-text"></span>
@@ -979,22 +950,11 @@
           </div>
           <div class="settings-row">
             <label>行高</label>
-            <select id="set-line-height">
-              <option value="1.4">1.4</option>
-              <option value="1.6">1.6</option>
-              <option value="1.7" selected>1.7</option>
-              <option value="1.8">1.8</option>
-              <option value="2.0">2.0</option>
-            </select>
+            <div id="set-line-height"></div>
           </div>
           <div class="settings-row">
             <label>最大宽度</label>
-            <select id="set-max-width">
-              <option value="0" selected>无限制</option>
-              <option value="800">800px</option>
-              <option value="1000">1000px</option>
-              <option value="1200">1200px</option>
-            </select>
+            <div id="set-max-width"></div>
           </div>
           <div class="settings-row">
             <label>代码块行号</label>
@@ -1017,10 +977,7 @@
           <h3>行为</h3>
           <div class="settings-row">
             <label>默认视图</label>
-            <select id="set-default-view">
-              <option value="preview" selected>预览</option>
-              <option value="edit">编辑</option>
-            </select>
+            <div id="set-default-view"></div>
           </div>
           <div class="settings-row">
             <label>滚动同步</label>
@@ -1036,11 +993,7 @@
           </div>
           <div class="settings-row">
             <label>关闭窗口时</label>
-            <select id="set-close-action">
-              <option value="ask">每次询问</option>
-              <option value="quit">退出应用</option>
-              <option value="minimize">最小化到托盘</option>
-            </select>
+            <div id="set-close-action"></div>
           </div>
           <div class="settings-row">
             <label>显示托盘图标</label>
@@ -1080,23 +1033,37 @@
             <button type="button" id="btn-add-font" class="dialog-btn dialog-btn-primary">添加字体…</button>
           </div>
           <div id="custom-font-list" class="custom-font-list"></div>
-          <div class="settings-row">
-            <label>编辑器字体</label>
-            <select id="set-editor-font"></select>
-          </div>
-          <div class="settings-row">
-            <label>预览字体</label>
-            <select id="set-preview-font"></select>
-          </div>
           <div class="settings-row settings-row-stacked">
-            <label>字体预览</label>
-            <div id="font-preview-sample" class="font-preview-sample">永和九年岁在癸丑 暮春之初 ABC abc 123</div>
+            <button type="button" id="btn-retry-system-fonts" class="dialog-btn hidden"></button>
+          </div>
+          <div class="settings-row settings-row-stacked font-field">
+            <label>编辑器字体</label>
+            <div id="set-editor-font" class="font-picker-root"></div>
+            <div class="font-preview" id="font-preview-editor">
+              <span class="font-preview-caption" id="font-name-editor"></span>
+              <span class="font-preview-text">永和九年岁在癸丑 暮春之初 The quick brown fox 0123</span>
+            </div>
+          </div>
+          <div class="settings-row settings-row-stacked font-field">
+            <label>预览字体</label>
+            <div id="set-preview-font" class="font-picker-root"></div>
+            <div class="font-preview" id="font-preview-preview">
+              <span class="font-preview-caption" id="font-name-preview"></span>
+              <span class="font-preview-text">永和九年岁在癸丑 暮春之初 ABC abc 123</span>
+            </div>
+          </div>
+          <div class="settings-row settings-row-stacked font-field">
+            <label>代码块字体</label>
+            <div id="set-code-font" class="font-picker-root"></div>
+            <div class="font-preview font-preview-code" id="font-preview-code">
+              <span class="font-preview-caption" id="font-name-code"></span>
+              <span class="font-preview-text">const answer = 42; function greet() { return '你好'; }</span>
+            </div>
           </div>
         </div>
       </div>
       <div class="dialog-footer">
         <button id="settings-reset" class="dialog-btn">恢复默认</button>
-        <button id="settings-cancel-btn" class="dialog-btn">取消</button>
         <button id="settings-apply-btn" class="dialog-btn dialog-btn-primary">应用</button>
         <button id="settings-save-btn" class="dialog-btn dialog-btn-primary">保存</button>
       </div>
@@ -1249,6 +1216,8 @@
 <script src="modules/tauri-api.js"></script>
 <script src="modules/file-search.js"></script>
 <script src="modules/image-processor.js"></script>
+<script src="modules/font-picker.js"></script>
+<script src="modules/select.js"></script>
 <script src="controllers/preview-controller.js"></script>
 <script src="app.js"></script>
 </body>
