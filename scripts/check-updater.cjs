@@ -321,6 +321,16 @@ function main(argv) {
   }
 
   // 8. 签名环境变量门禁（防：漏设密码 → 未签名包流出 → 用户更新失败）
+  // 本项目签名是独立手动步骤（tauri signer sign），release.js 只负责上传、不会自动
+  // export 密码 env。故若 process.env 未设置，尝试从标准位置 ~/.tauri/tizu-updater.password
+  // 读取注入，避免误阻断发布。真正的"漏签名"由第 9 项（.sig 存在 + keyId 一致）兜底。
+  if (!process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
+    const pwFile = path.join(DOT_TAURI, 'tizu-updater.password');
+    if (fileExists(pwFile)) {
+      const pw = fs.readFileSync(pwFile, 'utf8').trim();
+      if (pw) process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD = pw;
+    }
+  }
   const hasPwEnv = !!process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
   let envReady = hasPwEnv;
   if (!envReady) {
