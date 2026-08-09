@@ -30,6 +30,8 @@ const KNOWN_GLOBALS = new Set([
   'PreviewWindow',
   'TauriApi',
   'ImageProcessor', // P1-1 新增：processImages 抽离为纯模块
+  'Select', // 统一自绘下拉框组件（2026-08 引入）
+  'FontPicker', // 字体选择器组件（2026-08 引入）
 ]);
 
 // 不锚行首：\bwindow\.[A-Z][A-Za-z]*\s*=
