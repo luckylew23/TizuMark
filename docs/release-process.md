@@ -37,6 +37,14 @@
 | Windows SDK（signtool.exe） | Authenticode 签名 |
 | Tauri CLI（通过 npm） | `npm run build` 包含 |
 
+> **自动更新自检（重要，仅限「打包发布」流程）**：发布脚本（`scripts/release.js`、`scripts/github-release.js`）在**发布前**会自动执行 `node scripts/check-updater.cjs --release`，逐项核验自动更新端到端可用的前置条件——pubkey 与私钥 keyId 一致、`.sig` 由对应私钥签名（keyId 一致）、update JSON 的 version/signature/url 正确、更新端点可达、签名密码已就绪等，专为防范两类历史故障：**老版本升不上来**（用错密钥 / `.sig` 损坏 / update JSON 的 signature 不一致 / 端点 404）与**本版本升不到后续**（endpoints 指错或不可达）。
+>
+> **严重度（发布模式全部致命）**：任一检查项不通过都会立即中断发布，避免产出「装了却无法更新」的包；此外要求 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 已设置（环境变量或项目根 `.env`），否则产物未签名，用户更新必失败。若流程被中断，请按脚本输出逐项修复后再继续。最终密码学校验由 Tauri 运行时完成，自检脚本只守「配置与一致性」层。
+>
+> **`npm run build` 零前置阻拦**：日常构建命令现为 `npm run build:renderer && tauri build`，不在其中插入任何自检或生成步骤，构建直接进行。如需在构建前手动预检，可单独运行 `node scripts/check-updater.cjs`（默认模式，一致性类问题仅警告、不阻断）。
+
+> **发布说明自动生成（重要，仅限「打包发布」流程）**：`release.js` / `github-release.js` 在发布前会自动执行 `node scripts/release-notes.js`（落盘 `release/RELEASE_NOTES_v{version}.md`）——它检查 `git` 中「自上次发布标签（`git describe --tags --abbrev=0`）至今」的**所有提交**，把每条改动/需求归纳成一句话，并作为两者的**唯一 Release Note 来源**（保证 Gitee 与 GitHub 两端一致）。发布前请人工复核该文件，按需增删分类。
+
 ### 1.2 凭据
 
 - **Gitee Token（`GITEE_TOKEN`）**：用于通过 API 创建 Release 和上传附件
@@ -55,7 +63,7 @@
 ```
 ① 更新版本号（10 处同步修改）
        ↓
-② npm run build（构建三种安装包）
+② npm run build（纯构建，无前置阻拦）
        ↓
 ③ 复制到 release/ 目录
        ↓
@@ -104,7 +112,9 @@ npm run build
 
 该命令等同于：
 1. `node scripts/build-renderer.mjs` — 从 `src/unified-renderer.js` 打包 `src/lib/unified-bundle.js`
-2. `tauri build` — Tauri 构建，自动触发 `postbuild` 脚本生成绿色版
+2. `node scripts/check-updater.cjs` — 自动更新功能自检（见 1.1 分级严重度；打包模式下仅源码/配置类问题会中断）
+3. `node scripts/release-notes.js` — 自动生成 `release/RELEASE_NOTES_v{version}.md`（自上次发布标签至今的全部提交归纳）
+4. `tauri build` — Tauri 构建，自动触发 `postbuild` 脚本生成绿色版
 
 **构建产物（三种安装包）：**
 

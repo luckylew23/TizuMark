@@ -1,7 +1,13 @@
+// 发布前先自检自动更新功能（致命问题中断发布）
+const { run: runUpdaterCheck } = require('./check-updater.cjs');
+if (!runUpdaterCheck(['--release'])) process.exit(1);
+
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { VERSION, notesLines } = require('./release-notes');
+const { VERSION, notesLines, writeNotes } = require('./release-notes');
+// 打包发布流程：生成（落盘）发布说明，作为本次 Release 的内容来源
+writeNotes();
 
 const TOKEN = process.env.GITEE_TOKEN;
 if (!TOKEN) {

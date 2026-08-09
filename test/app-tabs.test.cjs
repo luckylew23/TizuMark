@@ -81,3 +81,106 @@ test('tab: reorderTab 调整顺序并跟踪 activeTab', async () => {
   }
   cleanup(w);
 });
+
+// 鼠标悬停显示完整路径（含文件名）：带 filePath 的标签 title 应为完整路径，
+// 未保存（filePath=null）标签回退为文件名。
+test('tab: 带路径标签 hover title 显示完整路径', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  await delay(300);
+  const ed = w.editor;
+  // 隔离与断言无关的副作用，但保留 updateTabBar 真实执行（验证 title 设置）
+  ed.saveSession = () => {};
+  ed.updatePreview = async () => {};
+  ed.addRecentFile = () => {};
+  ed.ensureTabLoaded = async () => {};
+  ed.updateTabDisplay = () => {};
+  ed.updateWordCount = () => {};
+  ed.updateOutline = () => {};
+  ed.updateExternalChangeBanner = () => {};
+  ed.highlightTreeActiveFile = () => {};
+  ed._beginPaneLoad = () => {};
+  ed._endPaneLoad = () => {};
+  ed.refreshFileMeta = () => {};
+  const fp = 'C:/Users/admin/docs/demo.md';
+  await ed.addTab('demo.md', '# hello', fp);
+  const idx = ed.tabs.length - 1;
+  const tabEl = w.document.querySelector(`.tab[data-index="${idx}"]`);
+  assert.ok(tabEl, '应渲染出标签元素');
+  assert.strictEqual(tabEl.getAttribute('title'), fp, 'hover title 应为完整路径');
+  cleanup(w);
+});
+
+test('tab: 未保存标签 hover title 回退为文件名', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  await delay(300);
+  const ed = w.editor;
+  ed.saveSession = () => {};
+  ed.updatePreview = async () => {};
+  ed.addRecentFile = () => {};
+  ed.ensureTabLoaded = async () => {};
+  ed.updateTabDisplay = () => {};
+  ed.updateWordCount = () => {};
+  ed.updateOutline = () => {};
+  ed.updateExternalChangeBanner = () => {};
+  ed.highlightTreeActiveFile = () => {};
+  ed._beginPaneLoad = () => {};
+  ed._endPaneLoad = () => {};
+  ed.refreshFileMeta = () => {};
+  await ed.addTab('未命名', '', null);
+  const idx = ed.tabs.length - 1;
+  const tabEl = w.document.querySelector(`.tab[data-index="${idx}"]`);
+  assert.ok(tabEl, '应渲染出标签元素');
+  assert.strictEqual(tabEl.getAttribute('title'), '未命名', '未保存标签 title 应回退为文件名');
+  cleanup(w);
+});
+
+// 标签页右键「打开所在目录」：tab 均为文件（markdown），应以 isDir=false 调用
+// 通用 openContainingFolder（打开父目录并选中该文件）。
+test('tab: openTabContainingFolder 以文件身份调用 openContainingFolder', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  await delay(300);
+  const ed = w.editor;
+  stubTabSideEffects(ed);
+  let opened = null;
+  ed.openContainingFolder = async (p, d) => { opened = { p, d }; };
+  await ed.addTab('demo.md', '# hello', 'C:/Users/admin/docs/demo.md');
+  ed._contextTabIndex = ed.tabs.length - 1;
+  await ed.openTabContainingFolder(ed._contextTabIndex);
+  assert.ok(opened, '应调用 openContainingFolder');
+  assert.strictEqual(opened.p, 'C:/Users/admin/docs/demo.md');
+  assert.strictEqual(opened.d, false, 'tab 是文件，isDir 应为 false');
+  cleanup(w);
+});
+
+test('tab: 未保存标签「打开所在目录」提示未保存且不调用', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  await delay(300);
+  const ed = w.editor;
+  stubTabSideEffects(ed);
+  let opened = false;
+  ed.openContainingFolder = async () => { opened = true; };
+  let status = null;
+  ed.setStatus = (s) => { status = s; };
+  await ed.addTab('未命名', '', null);
+  ed._contextTabIndex = ed.tabs.length - 1;
+  await ed.openTabContainingFolder(ed._contextTabIndex);
+  assert.strictEqual(opened, false, '未保存标签不应调用 openContainingFolder');
+  assert.strictEqual(status, ed.t('notSaved'), '应提示未保存');
+  cleanup(w);
+});
+
+// 右键菜单动作分发已注册 tab-open-containing（防止 case 遗漏导致点击无反应）。
+test('tab: executeMenuAction 分发 tab-open-containing 到 openTabContainingFolder', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  await delay(300);
+  const ed = w.editor;
+  stubTabSideEffects(ed);
+  let called = false;
+  ed.openTabContainingFolder = async () => { called = true; };
+  await ed.addTab('demo.md', '# hello', 'C:/x/demo.md');
+  ed._contextTabIndex = ed.tabs.length - 1;
+  ed.executeMenuAction('tab-open-containing');
+  await delay(10); // 等待 async 分支落地
+  assert.strictEqual(called, true, 'executeMenuAction 应分发到 openTabContainingFolder');
+  cleanup(w);
+});

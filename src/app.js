@@ -1613,6 +1613,7 @@ class MarkdownEditor {
       'tab-close-others': 'closeOther',
       'tab-close-all': 'closeAll',
       'tab-copy-path': 'copyFilePath',
+      'tab-open-containing': 'openContainingFolder',
       // 注意：'folder-open-containing' 文案由 updateFolderMenuLabel() 按 _folderCtxIsDir 动态切换
       // （文件夹→openFolder / 文件→openContainingFolder），不走这里的静态映射。
       'folder-copy-path': 'copyFilePath',
@@ -4288,6 +4289,8 @@ class MarkdownEditor {
           this._dragState = { from: i, startX: e.clientX, startY: e.clientY, active: false };
         }
       });
+      // 鼠标悬停显示完整路径（含文件名）；未保存标签无 filePath 时回退文件名
+      tabEl.title = tab.filePath || tab.name;
       fragment.appendChild(tabEl);
     });
 
@@ -10388,6 +10391,7 @@ input[type="checkbox"]:checked::after { display: none !important; }
       case 'tab-close-others': this.closeOtherTabs(this._contextTabIndex); break;
       case 'tab-close-all': this.closeAllTabs(); break;
       case 'tab-copy-path': this.copyTabPath(this._contextTabIndex); break;
+      case 'tab-open-containing': this.openTabContainingFolder(this._contextTabIndex); break;
 
       case 'folder-open-containing': this.openContainingFolder(this._folderCtxPath, this._folderCtxIsDir); break;
       case 'folder-copy-path': this.copyPath(this._folderCtxPath); break;
@@ -10480,6 +10484,15 @@ input[type="checkbox"]:checked::after { display: none !important; }
       return;
     }
     await this.copyPath(tab.filePath);
+  }
+
+  // 标签页右键「打开所在目录」：tab 均为文件（markdown），isDir=false，
+  // 调用通用 openContainingFolder 打开父目录并选中该文件。
+  async openTabContainingFolder(index) {
+    if (index < 0 || index >= this.tabs.length) return;
+    const tab = this.tabs[index];
+    if (!tab.filePath) { this.setStatus(this.t('notSaved')); return; }
+    await this.openContainingFolder(tab.filePath, false);
   }
 
   // 在系统文件管理器中「打开所在目录」：文件→打开父目录并选中文件，目录→打开并选中自身。

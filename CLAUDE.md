@@ -138,6 +138,10 @@ release body 用以下格式，不得更改：
 npm run build
 ```
 
+> **构建命令零前置阻拦**：`npm run build` 现为 `npm run build:renderer && tauri build`，不做任何自动更新自检或发布说明生成，日常构建直接进行。
+
+> **自动更新自检 + 发布说明 = 仅限「打包发布」流程**：`scripts/release.js` / `scripts/github-release.js` 在发布前会自动先跑 `node scripts/check-updater.cjs --release`（全部致命，含要求 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 已设置），并自动执行 `node scripts/release-notes.js` 生成 `release/RELEASE_NOTES_v{version}.md` 作为两端 Release Note 唯一来源。最终密码学校验由 Tauri 运行时完成；自检只守「配置与一致性」层。如需构建前手动预检，可单独运行 `node scripts/check-updater.cjs`（默认模式，一致性问题仅警告不阻断）。
+
 构建产物（三种安装包）：
 
 - `src-tauri/target/release/bundle/nsis/TizuMark_{version}_x64-setup.exe`

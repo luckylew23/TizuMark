@@ -1,9 +1,15 @@
+// 发布前先自检自动更新功能（致命问题中断发布）
+const { run: runUpdaterCheck } = require('./check-updater.cjs');
+if (!runUpdaterCheck(['--release'])) process.exit(1);
+
 // 创建 GitHub Release（tizuio/TizuMark）并上传安装包附件。
 // 复用 scripts/release-notes.js 作为唯一 Release Note 来源，仅把下载链接改写为 GitHub。
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const { VERSION, notesLines } = require('./release-notes.js');
+const { VERSION, notesLines, writeNotes } = require('./release-notes.js');
+// 打包发布流程：生成（落盘）发布说明，作为本次 Release 的内容来源
+writeNotes();
 
 const TOKEN = process.env.GITHUB_TOKEN;
 const OWNER = 'tizuio';
