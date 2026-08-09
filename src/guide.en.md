@@ -318,6 +318,16 @@ Update dialog:
 - In the print dialog you can choose "Save as PDF" and adjust page orientation/margins
 - Math formulas and Mermaid charts are re-rendered for crisp output
 
+### Export DOCX
+
+`File → Export DOCX` generates a standard `.docx` document (native Word 2007+ format, opens and edits directly in Word/WPS):
+
+- Converted from the preview and **styled with the same typography as the preview** (heading hierarchy & rules, body line-height, lists, table borders, blockquotes, gray code-block background, alert colors, bold/italic, links, images) to closely match the on-screen preview
+- Images are inlined as embedded resources (no separate folder needed) and auto-scaled to fit the page width, so they are never clipped or cut off
+- Mermaid diagrams are first rendered to PNG and then embedded, auto-scaled to the page width, so Word does not need to parse SVG and wide diagrams are never cut off
+- KaTeX formulas are first rendered to PNG and then embedded, so Word does not need to parse MathML; code blocks drop syntax-highlight spans for Word compatibility and keep a gray background with monospace font
+- Known limitations: alert border-radius/shadows and task-list checkboxes (CSS not supported by Word) are simplified; very long code lines may extend past the page boundary
+
 ---
 
 ## Personalization

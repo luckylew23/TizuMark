@@ -60,6 +60,8 @@ const MANIFEST = [
   ['html2canvas/dist/html2canvas.min.js', 'html2canvas.min.js'],
   // markdown-it（单文件）
   ['markdown-it/dist/markdown-it.min.js', 'markdown-it.min.js'],
+  // html-docx-js（单文件 UMD，自带 jszip；导出 Word .docx 用，挂 window.htmlDocx）
+  ['html-docx-js/dist/html-docx.js', 'html-docx.min.js'],
   // highlight.js：highlight.min.js 用 esbuild 打包（见 buildHighlightMin），
   // 其余伴随文件从 node_modules 精确复制（styles/languages/common/core）
   ['highlight.js/styles/github.min.css', 'highlight.js/github.min.css'],

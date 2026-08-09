@@ -90,11 +90,22 @@ function scheduleReload(extra) {
     broadcastReload();
   }, 60);
 }
+// 只监听真正参与页面渲染的源文件类型，避免日志/临时/二进制文件被 fs.watch 误判触发刷新。
+// 之前偶发自动刷新，多半是外部进程（杀软扫描、编辑器后台写）碰了一下 src/ 下的非源码文件。
+const WATCH_EXT = new Set(['.html', '.js', '.mjs', '.css', '.json', '.md']);
+function shouldWatch(filename) {
+  if (!filename) return false;
+  if (/(^|[\\/])\.|~$/.test(filename)) return false; // 跳过隐藏/临时文件
+  if (isBundle(filename)) return false; // 忽略我们自己产出的 bundle
+  if (isRendererSource(filename)) return true; // 渲染器源码单独处理
+  const ext = path.extname(filename).toLowerCase();
+  return WATCH_EXT.has(ext); // 仅白名单扩展名才触发刷新
+}
 try {
   fs.watch(ROOT, { recursive: true }, (event, filename) => {
-    if (!filename) return;
-    if (/(^|[\\/])\.|~$/.test(filename)) return; // 跳过临时文件
-    if (isBundle(filename)) return; // 忽略我们自己产出的 bundle，避免重复刷新
+    if (!shouldWatch(filename)) return;
+    // 诊断日志：偶发刷新时可在终端直接看到「是哪个文件触发的」，便于定位误触发来源
+    console.log(`[dev-server] 文件变化触发刷新: ${event} ${filename}`);
     if (isRendererSource(filename)) {
       // 渲染器源码改动：先重新打包 bundle，再热加载 webview
       scheduleReload(() => rebuildRendererBundle(filename));

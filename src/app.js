@@ -128,6 +128,7 @@ const I18N = {
     exportHTML: '导出 HTML',
     exportImg: '导出长图',
     exportPDF: '导出 PDF',
+    exportWord: '导出DOCX',
     shortcuts: '快捷键设置',
     settings: '设置',
     insert: '插入',
@@ -342,10 +343,16 @@ const I18N = {
     exportedImg: '已导出长图',
     exportedHTML: '已导出 HTML',
     exportedPDF: '已导出 PDF',
+    exportedWord: '已导出DOCX',
+    exportSuccess: '导出成功',
     exportError: '导出失败',
     printTip1: '可在「更多设置」中「取消勾选"页眉和页脚"」，去除 PDF 顶部的日期、标题等多余信息。',
     printTip2: '如果代码高亮或背景色显示异常，请在「更多设置」中「勾选"背景图形"」。',
     pdfBigFileWarn: '⚠ 文件较大时生成 PDF 耗时较长，请耐心等待；如果未生成完就打开 PDF，会提示文件损坏',
+    wordTip1: 'DOCX 由 HTML 导入生成，复杂排版可能与预览略有差异。',
+    wordTip2: '公式、Mermaid 图表会被转为图片；代码块保留灰底但不含语法高亮色。',
+    wordBigFileWarn: '⚠ 文件较大时生成 DOCX 耗时较长，请耐心等待。',
+    preparingWordExport: '正在导出 DOCX...',
     backendDown: '⚠ 开发环境：后端已断开，文件功能不可用。请重启 npm run dev。',
     folderWatchErrorTitle: '文件夹监听异常',
     folderWatchErrorMessage: '目录树可能不会自动刷新。点击「确认」重新监听，或点击「取消」继续使用。',
@@ -554,6 +561,7 @@ const I18N = {
     exportHTML: 'Export HTML',
     exportImg: 'Export Image',
     exportPDF: 'Export PDF',
+    exportWord: 'Export DOCX',
     shortcuts: 'Shortcuts',
     settings: 'Settings',
     insert: 'Insert',
@@ -765,10 +773,16 @@ const I18N = {
     exportedImg: 'Exported image',
     exportedHTML: 'Exported HTML',
     exportedPDF: 'PDF exported',
+    exportedWord: 'DOCX exported',
+    exportSuccess: 'Export successful',
     exportError: 'Export failed',
     printTip1: 'Go to "More settings" and uncheck "Headers and footers" to remove date, title and other extra info from the PDF.',
     printTip2: 'If code highlighting or background colors look wrong, go to "More settings" and check "Background graphics".',
     pdfBigFileWarn: '⚠ Generating a large PDF takes time — please be patient. Opening the PDF before it finishes will report file corruption.',
+    wordTip1: 'DOCX is generated via HTML import; complex layouts may differ slightly from the preview.',
+    wordTip2: 'Formulas and Mermaid diagrams will be converted to images; code blocks keep a gray background but no syntax highlighting colors.',
+    wordBigFileWarn: '⚠ Generating a large DOCX takes time — please be patient.',
+    preparingWordExport: 'Exporting DOCX...',
     backendDown: '⚠ Dev backend disconnected — file features unavailable. Restart with npm run dev.',
     folderWatchErrorTitle: 'Folder watcher error',
     folderWatchErrorMessage: 'The folder tree may not auto-refresh. Click "OK" to re-watch the folder, or "Cancel" to keep using.',
@@ -1179,6 +1193,7 @@ class MarkdownEditor {
     updateMenuText('btn-export-html', t('exportHTML'));
     updateMenuText('btn-export-img', t('exportImg'));
     updateMenuText('btn-export-pdf', t('exportPDF'));
+    updateMenuText('btn-export-word', t('exportWord'));
     updateMenuText('btn-shortcuts', t('shortcuts'));
     updateMenuText('btn-settings', t('settings'));
     updateMenuText('btn-user-guide', t('userGuide'));
@@ -4484,6 +4499,10 @@ class MarkdownEditor {
       document.getElementById('file-menu').classList.add('hidden');
       this.exportPDF();
     });
+    document.getElementById('btn-export-word').addEventListener('click', () => {
+      document.getElementById('file-menu').classList.add('hidden');
+      this.exportWord();
+    });
     document.getElementById('btn-settings').addEventListener('click', () => {
       document.getElementById('file-menu').classList.add('hidden');
       this.showSettings();
@@ -7255,54 +7274,12 @@ class MarkdownEditor {
     return '';
   }
 
-  async exportHTML() {
-    try {
-      const path = await dialogSave({
-        defaultPath: this.activeTab.filePath
-          ? this.activeTab.filePath.replace(/\.md$/, '.html')
-          : 'export.html',
-        filters: [{ name: 'HTML', extensions: ['html'] }]
-      });
-      if (!path) return;
-
-      const clone = this.preview.cloneNode(true);
-      clone.style.position = '';
-      clone.style.left = '';
-      clone.style.top = '';
-      clone.style.width = '';
-      clone.style.padding = '';
-      clone.style.overflow = '';
-      clone.style.height = '';
-
-      clone.querySelectorAll('.copy-btn').forEach(el => el.remove());
-      const abbrData = clone.querySelector('#abbr-data');
-      if (abbrData) abbrData.remove();
-
-      await this._inlineImagesForExport(clone, this.activeTab.filePath);
-
-      let katexCSS = '';
-      try {
-        const resp = await fetch('lib/katex/katex.min.css');
-        if (resp.ok) katexCSS = await resp.text();
-      } catch (e) { /* skip */ }
-
-      let hljsCSS = '';
-      try {
-        const themeLink = document.getElementById('highlight-theme');
-        if (themeLink) {
-          const resp = await fetch(themeLink.getAttribute('href'));
-          if (resp.ok) hljsCSS = await resp.text();
-        }
-      } catch (e) { /* skip */ }
-
-      const escapedTitle = this.activeTab.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      const fullHTML = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <title>${escapedTitle}</title>
-  <style>
-    body { max-width: 860px; margin: 0 auto; padding: 40px 20px; line-height: 1.8; color: #2a2a2e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  // 文档导出（HTML / Word）共用的基础样式表。
+  // 使用标签级选择器（h1/pre/...）而非 .preview-content 后代选择器，
+  // 因为导出时 this.preview 的外层容器被丢弃，仅其 children 进入 <body>。
+  // 该 CSS 同时被 Word 的 altChunk 导入器识别（html-docx-js 把整段 HTML 原样嵌入 MHT）。
+  _documentExportCSS() {
+    return `body { max-width: 860px; margin: 0 auto; padding: 40px 20px; line-height: 1.8; color: #2a2a2e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     h1, h2, h3, h4, h5, h6 { margin-top: 24px; margin-bottom: 12px; font-weight: 600; line-height: 1.3; }
     h1 { font-size: 2em; border-bottom: 2px solid #d4d4d8; padding-bottom: 10px; }
     h2 { font-size: 1.5em; border-bottom: 1px solid #d4d4d8; padding-bottom: 8px; }
@@ -7362,7 +7339,592 @@ input[type="checkbox"]:checked { background: #16a34a url("data:image/svg+xml;bas
     input[type="checkbox"]:checked { background: #16a34a; border-color: #16a34a; }
     input[type="checkbox"]:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
     details { margin-bottom: 14px; padding: 8px 12px; background: #f6f5f4; border-radius: 6px; border: 1px solid #d4d4d8; }
-    summary { font-weight: 600; cursor: pointer; }
+    summary { font-weight: 600; cursor: pointer; }`;
+  }
+
+  // 纯函数：计算 canvas/imageData 的裁剪边界（去除四周空白/透明/背景色）。
+  // 返回 { x, y, w, h }；若全空返回 null。
+  static _computeTrimBounds(data, width, height, { backgroundColor = null, padding = 4, tolerance = 15 } = {}) {
+    if (!data || width <= 0 || height <= 0) return null;
+    const isEmpty = (idx) => {
+      if (data[idx + 3] < 10) return true;
+      if (!backgroundColor) return false;
+      const dr = data[idx] - backgroundColor.r;
+      const dg = data[idx + 1] - backgroundColor.g;
+      const db = data[idx + 2] - backgroundColor.b;
+      return Math.sqrt(dr * dr + dg * dg + db * db) <= tolerance;
+    };
+    let minX = width, minY = height, maxX = -1, maxY = -1;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        if (!isEmpty(idx)) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0 || maxY < 0) return null;
+    const x = Math.max(0, minX - padding);
+    const y = Math.max(0, minY - padding);
+    const w = Math.min(width - x, maxX - minX + 1 + padding * 2);
+    const h = Math.min(height - y, maxY - minY + 1 + padding * 2);
+    if (w <= 0 || h <= 0) return null;
+    return { x, y, w, h };
+  }
+
+  // 裁剪 canvas 四周空白/透明/背景色边距，仅保留有内容的区域。
+  // backgroundColor 为 null 时只裁剪完全透明像素；传入 {r,g,b} 时按颜色裁剪（容差 15）。
+  _trimCanvas(canvas, { backgroundColor = null, padding = 4, tolerance = 15 } = {}) {
+    try {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return canvas;
+      const { width, height } = canvas;
+      if (width <= 0 || height <= 0) return canvas;
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const bounds = MarkdownEditor._computeTrimBounds(imageData.data, width, height, { backgroundColor, padding, tolerance });
+      if (!bounds) return canvas;
+      const { x, y, w, h } = bounds;
+      const out = document.createElement('canvas');
+      out.width = w;
+      out.height = h;
+      const outCtx = out.getContext('2d');
+      if (!outCtx) return canvas;
+      outCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+      return out;
+    } catch (e) {
+      return canvas;
+    }
+  }
+
+  // 把 SVG 元素转成 PNG data URL（用于 Mermaid 图表落入 Word）。
+  // 失败时返回空字符串，调用方应保留原 SVG 作为降级。
+  async _svgToPngDataUrl(svg) {
+    try {
+      if (typeof XMLSerializer === 'undefined' || typeof Blob === 'undefined' || typeof Image === 'undefined') return '';
+      const serializer = new XMLSerializer();
+      let svgStr = serializer.serializeToString(svg);
+      if (!svgStr) return '';
+      // 解析尺寸：优先 viewBox，其次 width/height 属性
+      let width = 0, height = 0;
+      const vb = svg.getAttribute('viewBox');
+      if (vb) {
+        const parts = vb.trim().split(/\s+/).map(Number);
+        if (parts.length >= 4 && Number.isFinite(parts[2]) && Number.isFinite(parts[3])) {
+          width = parts[2];
+          height = parts[3];
+        }
+      }
+      if (!width || !height) {
+        const w = parseFloat(svg.getAttribute('width'));
+        const h = parseFloat(svg.getAttribute('height'));
+        if (w && h) { width = w; height = h; }
+      }
+      if (!width || !height) {
+        const rect = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+        if (rect && rect.width > 0 && rect.height > 0) {
+          width = rect.width;
+          height = rect.height;
+        }
+      }
+      if (!width || !height) { width = 600; height = 400; }
+      // 声明命名空间，避免 canvas 绘制空白
+      if (!/xmlns="http:\/\/www\.w3\.org\/2000\/svg"/.test(svgStr)) {
+        svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(blob) : '';
+      if (!url) return '';
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { URL.revokeObjectURL(url); return ''; }
+      canvas.width = Math.max(1, Math.floor(width));
+      canvas.height = Math.max(1, Math.floor(height));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // 在 Web Worker 里运行 html-docx-js 的 asBlob，避免其同步 zip 操作阻塞主线程。
+  // Worker 接收 HTML 字符串，返回 docx 文件的 ArrayBuffer。
+  _runWordExportWorker(html) {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker('lib/word-export.worker.js');
+      let settled = false;
+      const id = `${Date.now()}-${Math.random()}`;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        worker.terminate();
+        reject(new Error('word export worker timeout'));
+      }, 120000);
+      worker.onmessage = (e) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        worker.terminate();
+        if (e.data && e.data.success) {
+          resolve(e.data.arrayBuffer);
+        } else {
+          reject(new Error((e.data && e.data.error) || 'word export worker failed'));
+        }
+      };
+      worker.onerror = (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        worker.terminate();
+        reject(err);
+      };
+      worker.postMessage({ id, html });
+    });
+  }
+
+  // 把 Word HTML 转成 docx 的 ArrayBuffer；优先走 Worker，失败或 Worker 不可用时回退主线程。
+  async _convertHtmlToDocxBuffer(html) {
+    if (typeof Worker !== 'undefined') {
+      try {
+        return await this._runWordExportWorker(html);
+      } catch (e) {
+        console.warn('Word export worker failed, falling back to main thread:', e);
+      }
+    }
+    if (typeof htmlDocx !== 'undefined') {
+      const blob = htmlDocx.asBlob(html);
+      return await blob.arrayBuffer();
+    }
+    throw new Error('导出组件未加载（html-docx 未加载）');
+  }
+
+  // 给导出到 Word 的 <img> 同时设置 HTML width/height 属性 + CSS 尺寸。
+  // Word 的 HTML 导入器对 CSS width 支持不可靠（会按图片原始像素渲染导致超宽被裁），
+  // 但对 HTML width/height 属性支持稳定，因此以属性为主、CSS 为辅双保险。
+  //   natW/natH : 图像真实像素尺寸（用于算宽高比）
+  //   maxW      : 宽度上限（CSS px），默认 500；原显示宽度 < maxW 的小图保持原尺寸不放大
+  //   cssW      : 原始「显示宽度」（CSS px）；未传时以 natW 当作显示宽（普通图片路径）
+  _applyWordImgSize(img, natW, natH, maxW, cssW) {
+    // 单图高度上限（CSS px）：A4 默认页边距下内容区约 930px，取 850 留出容器/上下文余量，避免高图跨页被截断。
+    const WORD_PAGE_MAX_CSS_HEIGHT = 850;
+    const wMax = Math.max(1, Math.round(maxW || 500));
+    // 显示参考宽度：优先用 cssW（原始显示宽），否则退化为 natW（普通图片的 naturalWidth）
+    const refW = (cssW && cssW > 0) ? cssW : (natW > 0 ? natW : wMax);
+    // 小图（显示宽 < 上限）保持原显示尺寸，不放大；大图限制到上限宽度
+    let targetW = refW < wMax ? Math.max(1, Math.round(refW)) : wMax;
+    let targetH = null;
+    if (natW > 0 && natH > 0) {
+      const ratio = natH / natW;
+      targetH = Math.round(targetW * ratio);
+      // 高度限制：等比缩放后高度超过一页可用高度，则按高度反推宽度，强制等比例缩小
+      if (targetH > WORD_PAGE_MAX_CSS_HEIGHT) {
+        targetH = WORD_PAGE_MAX_CSS_HEIGHT;
+        targetW = Math.max(1, Math.round(targetH / ratio));
+      }
+    }
+    img.setAttribute('width', targetW);
+    img.style.width = targetW + 'px';
+    if (targetH != null) {
+      img.setAttribute('height', targetH);
+      img.style.height = targetH + 'px';
+    } else {
+      img.style.height = 'auto';
+    }
+  }
+
+  // 把 canvas 像素宽度限制在 maxPxW 以内（等比缩小），返回新 canvas；无需缩放时原样返回。
+  // 用于避免 html2canvas 2× 截图后像素过大导致 docx 膨胀、且 Word 按原始大像素渲染溢出页面。
+  _scaleCanvasDown(canvas, maxPxW) {
+    try {
+      if (!canvas || canvas.width <= 0 || canvas.width <= maxPxW) return canvas;
+      const scale = maxPxW / canvas.width;
+      const newW = Math.max(1, Math.round(maxPxW));
+      const newH = Math.max(1, Math.round(canvas.height * scale));
+      const out = document.createElement('canvas');
+      out.width = newW;
+      out.height = newH;
+      const ctx = out.getContext('2d');
+      if (!ctx) return canvas;
+      ctx.drawImage(canvas, 0, 0, newW, newH);
+      return out;
+    } catch (e) {
+      return canvas;
+    }
+  }
+
+  // Word 导出前的 DOM 预处理：把 Web 预览中 Word HTML 导入器会曲解的结构，
+  // 转成 Word 能稳定渲染的等价形式，并内联关键样式。
+  async _prepareWordDOM(clone) {
+    // 把 clone 临时挂到离屏 DOM，确保 html2canvas 能拿到真实布局与样式。
+    const holder = document.createElement('div');
+    holder.style.position = 'fixed';
+    holder.style.left = '-9999px';
+    holder.style.top = '0';
+    holder.style.zIndex = '-1';
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+
+    try {
+    // 1. 删除线 / 插入线：Word 会把 <del>/<ins> 当成修订追踪，换成等效 <span>
+    clone.querySelectorAll('del').forEach((el) => {
+      const span = document.createElement('span');
+      span.style.textDecoration = 'line-through';
+      span.style.color = '#5e5e62';
+      span.innerHTML = el.innerHTML;
+      el.replaceWith(span);
+    });
+    clone.querySelectorAll('ins').forEach((el) => {
+      const span = document.createElement('span');
+      span.style.textDecoration = 'underline';
+      span.innerHTML = el.innerHTML;
+      el.replaceWith(span);
+    });
+
+    // 2. 任务列表：Word 不会渲染 <input type="checkbox">，换成 Unicode 字符
+    clone.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      const span = document.createElement('span');
+      span.textContent = cb.checked ? '☑ ' : '☐ ';
+      const li = cb.closest ? cb.closest('li') : null;
+      if (li) {
+        const ul = li.parentElement;
+        if (ul && ul.tagName === 'UL') {
+          ul.style.listStyleType = 'none';
+          ul.style.paddingLeft = '0';
+        }
+      }
+      cb.replaceWith(span);
+    });
+
+    // 3. 列表项包裹的 <p> 会导致 Word 把 bullet 与文字分两段；含嵌套列表时也要 unwrap。
+    //    循环处理直到没有 <li> 直接子 <p> 为止。
+    let pInLi;
+    while ((pInLi = clone.querySelector('li > p'))) {
+      const li = pInLi.parentElement;
+      // 把 <p> 的内容移到 <p> 之前，保留后续兄弟（如嵌套 <ul>/<ol>）
+      while (pInLi.firstChild) li.insertBefore(pInLi.firstChild, pInLi);
+      pInLi.remove();
+    }
+    // 清除列表项里的空文本节点，避免 Word 把它们渲染成空 bullet
+    clone.querySelectorAll('li').forEach((li) => {
+      for (let i = li.childNodes.length - 1; i >= 0; i--) {
+        const node = li.childNodes[i];
+        if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) {
+          node.remove();
+        }
+      }
+    });
+
+    // 4. 代码块：.code-line flex 结构 + 语法高亮 span 在 Word 里常变成带框小格。
+    //     Word 对 <pre> 预格式化识别最好；内部用 <br> 强制换行，white-space:pre 禁止自动硬折行。
+    const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    clone.querySelectorAll('pre').forEach((pre) => {
+      const code = pre.querySelector('code');
+      let plain = '';
+      if (code) {
+        const scroll = code.querySelector('.code-scroll');
+        if (scroll) {
+          const lines = [];
+          scroll.querySelectorAll('.code-line').forEach((line) => {
+            const text = line.querySelector('.code-line-text');
+            lines.push(text ? text.textContent : line.textContent);
+          });
+          plain = lines.join('\n');
+        } else {
+          plain = code.textContent;
+        }
+      } else {
+        plain = pre.textContent;
+      }
+      plain = plain.replace(/\n+\s*$/, '');
+      if (!plain) plain = '';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'tizu-code-block';
+      wrapper.style.background = '#f6f5f4';
+      wrapper.style.border = '1px solid #d4d4d8';
+      wrapper.style.borderRadius = '6px';
+      wrapper.style.padding = '16px';
+      wrapper.style.margin = '16px 0';
+      wrapper.style.maxWidth = '100%';
+      wrapper.style.overflowX = 'auto';
+      wrapper.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+      const newPre = document.createElement('pre');
+      newPre.style.cssText = 'margin:0;padding:0;background:transparent;border:none;font-family:"SF Mono","Fira Code",monospace;font-size:0.9em;line-height:1.5;white-space:pre;word-wrap:normal;word-break:keep-all;';
+      newPre.innerHTML = plain.split('\n').map((line) => escapeHtml(line || ' ')).join('<br>');
+
+      wrapper.appendChild(newPre);
+      pre.replaceWith(wrapper);
+    });
+
+    // 5. 引用块：内联样式 + 段落内换行换成 <br>
+    clone.querySelectorAll('blockquote').forEach((bq) => {
+      bq.style.background = '#f6f5f4';
+      bq.style.borderLeft = '4px solid #2563eb';
+      bq.style.padding = '12px 20px';
+      bq.style.margin = '0 0 16px 0';
+      bq.style.borderRadius = '0 6px 6px 0';
+      bq.style.color = '#5e5e62';
+      bq.querySelectorAll('p').forEach((p) => {
+        p.style.marginBottom = '0';
+        if (p.innerHTML.includes('\n')) p.innerHTML = p.innerHTML.replace(/\n/g, '<br>');
+      });
+    });
+
+    // 6. 提示框（Alerts）：Word 对 <style> 里的 rgba/类选择器支持不稳定，内联实色
+    const alertMap = {
+      'alert-note': { bg: '#eef4ff', border: '#3884ff' },
+      'alert-tip': { bg: '#e9f9f1', border: '#10b981' },
+      'alert-important': { bg: '#f3edfd', border: '#8b5cf6' },
+      'alert-warning': { bg: '#fef6e7', border: '#f59e0b' },
+      'alert-caution': { bg: '#fdecec', border: '#ef4444' }
+    };
+    clone.querySelectorAll('.alert').forEach((alert) => {
+      let style = alertMap['alert-note'];
+      for (const cls of alert.classList) {
+        if (alertMap[cls]) { style = alertMap[cls]; break; }
+      }
+      alert.style.borderRadius = '10px';
+      alert.style.padding = '14px 18px';
+      alert.style.margin = '16px 0';
+      alert.style.maxWidth = '100%';
+      alert.style.borderLeft = `4px solid ${style.border}`;
+      alert.style.background = style.bg;
+      alert.style.overflowWrap = 'break-word';
+      const title = alert.querySelector('.alert-title');
+      if (title) {
+        title.style.fontWeight = '700';
+        title.style.marginBottom = '6px';
+        title.style.fontSize = '0.95em';
+        title.style.display = 'block';
+      }
+      alert.querySelectorAll('p').forEach((p) => { p.style.marginBottom = '0'; });
+    });
+
+    // 7. 高亮：内联背景色
+    clone.querySelectorAll('mark').forEach((m) => {
+      m.style.display = 'inline-block';
+      m.style.background = '#fbbf24';
+      m.style.color = '#1a1a1a';
+      m.style.padding = '1px 4px';
+      m.style.borderRadius = '3px';
+    });
+
+    // 8. 数学公式：KaTeX HTML/MathML 在 Word HTML 导入里基本都失败，
+    //     用 html2canvas 把 .katex 渲染成 PNG 内联图最稳；失败再保留 MathML。
+    const katexEls = Array.from(clone.querySelectorAll('.katex'));
+    for (const katex of katexEls) {
+      let dataUrl = '';
+      let natW = 0, natH = 0;
+      try {
+        if (typeof html2canvas !== 'undefined') {
+          const canvas = await html2canvas(katex, {
+            scale: 2,
+            backgroundColor: null,
+            useCORS: true
+          });
+          const trimmed = this._trimCanvas(canvas, { backgroundColor: null, padding: 2 });
+          // 限制像素宽度，避免 docx 膨胀 + Word 按原始大像素渲染溢出页面。
+          const scaled = this._scaleCanvasDown(trimmed, 1000);
+          dataUrl = scaled.toDataURL('image/png');
+          natW = scaled.width;
+          natH = scaled.height;
+        }
+      } catch (e) { dataUrl = ''; }
+      if (!dataUrl) {
+        const mathml = katex.querySelector('.katex-mathml');
+        if (mathml) {
+          const math = mathml.querySelector('math');
+          if (math) {
+            const newMath = math.cloneNode(true);
+            if (!newMath.getAttribute('xmlns')) {
+              newMath.setAttribute('xmlns', 'http://www.w3.org/1998/Math/MathML');
+            }
+            katex.replaceWith(newMath);
+            continue;
+          }
+        }
+      }
+      if (!dataUrl) continue;
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.className = 'tizu-math-img';
+      // 截图是 2× 像素，显示参考宽度应取一半（预览看到的 CSS 宽），否则小公式会被当作 2× 大图放大到 500；
+      // 小于 500 的小公式保持原显示尺寸，大公式限制到 500，过高再按高度等比缩小。
+      this._applyWordImgSize(img, natW, natH, 500, natW > 0 ? natW / 2 : 0);
+      img.style.verticalAlign = 'middle';
+      katex.replaceWith(img);
+      // 让出主线程，使 loading spinner 与鼠标事件有机会处理。
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    // 9. Mermaid 图表：SVG 在 Word HTML 导入里常丢失，转成 PNG 内联图。
+    //    截图前临时去掉容器 padding/border/background，让容器紧包 SVG；
+    //    截图后裁剪透明边，并以实际内容尺寸显示（不超宽时不满页拉伸）。
+    const mermaidContainers = Array.from(clone.querySelectorAll('.mermaid-container'));
+    for (const container of mermaidContainers) {
+      let dataUrl = '';
+      let natW = 0, natH = 0, cssW = 0;
+      // 备份原样式，截图后恢复（最终 Word HTML 里仍保留灰底框装饰）。
+      const savedStyle = {
+        padding: container.style.padding,
+        border: container.style.border,
+        background: container.style.background,
+        backgroundColor: container.style.backgroundColor,
+        borderRadius: container.style.borderRadius,
+        margin: container.style.margin,
+        overflow: container.style.overflow,
+        textAlign: container.style.textAlign,
+      };
+      try {
+        container.style.padding = '0';
+        container.style.border = 'none';
+        container.style.background = 'transparent';
+        container.style.backgroundColor = 'transparent';
+        container.style.borderRadius = '0';
+        container.style.margin = '0';
+        container.style.overflow = 'visible';
+        container.style.textAlign = 'left';
+        if (typeof html2canvas !== 'undefined') {
+          const canvas = await html2canvas(container, {
+            scale: 2,
+            backgroundColor: null,
+            useCORS: true
+          });
+          const trimmed = this._trimCanvas(canvas, { backgroundColor: null, padding: 4 });
+          // 把图片像素本身限制在 1000px 宽以内（2× 显示宽度），避免 docx 膨胀且 Word 按原始大像素渲染时溢出页面。
+          const scaled = this._scaleCanvasDown(trimmed, 1000);
+          dataUrl = scaled.toDataURL('image/png');
+          natW = scaled.width;
+          natH = scaled.height;
+          cssW = scaled.width / 2; // 2× 截图，显示参考宽度取一半
+        }
+      } catch (e) { dataUrl = ''; }
+      // 恢复容器装饰样式
+      Object.assign(container.style, savedStyle);
+      if (!dataUrl) {
+        const svg = container.querySelector('svg');
+        if (svg) {
+          try {
+            dataUrl = await this._svgToPngDataUrl(svg);
+            // 从 svg 取自然尺寸用于等比高度
+            let sw = 0, sh = 0;
+            const vb = svg.getAttribute('viewBox');
+            if (vb) { const p = vb.trim().split(/\s+/).map(Number); if (p.length >= 4) { sw = p[2]; sh = p[3]; } }
+            if (!sw || !sh) { sw = parseFloat(svg.getAttribute('width')) || 0; sh = parseFloat(svg.getAttribute('height')) || 0; }
+            if (!sw || !sh) { const r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null; if (r) { sw = r.width; sh = r.height; } }
+            natW = sw; natH = sh; cssW = sw; // sw 已是 CSS 显示宽
+          } catch (e) { dataUrl = ''; }
+        }
+      }
+      if (!dataUrl) continue;
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.className = 'tizu-mermaid-img';
+      // 同时设置 HTML width/height 属性：小于 500 的小图保持原显示尺寸，大图限制 500，
+      // 过高则按页面高度上限等比缩小，确保 Word 中完整显示、不跨页裁切。
+      this._applyWordImgSize(img, natW, natH, 500, cssW);
+      img.style.display = 'inline-block';
+      container.innerHTML = '';
+      container.style.textAlign = 'center';
+      container.style.padding = '16px';
+      container.style.background = '#f0efee';
+      container.style.border = '1px solid #d4d4d8';
+      container.style.borderRadius = '8px';
+      container.style.maxWidth = '100%';
+      container.style.boxSizing = 'border-box';
+      container.appendChild(img);
+      // 让出主线程，使 loading spinner 与鼠标事件有机会处理。
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    // 10. 普通图片：读取自然尺寸，按宽高比等比缩放到 500px，并设置 HTML width/height 属性，
+    //     确保 Word 按此尺寸完整显示、不裁切（CSS width 在 Word 导入器里不可靠）。
+    //     公式（.tizu-math-img）与 Mermaid（.tizu-mermaid-img）已单独处理为 500px，这里跳过以免被覆盖。
+    const plainImages = Array.from(clone.querySelectorAll('img')).filter((img) => {
+      return !img.classList.contains('tizu-math-img') && !img.classList.contains('tizu-mermaid-img');
+    });
+    await Promise.all(plainImages.map(async (img) => {
+      // 优先用导出前从真实预览采集的渲染尺寸（dataset），不再依赖 new Image() 异步重加载——
+      // 该方式在 SVG（naturalWidth 为 0）、图片未成功内联、或加载超时时会读取失败，
+      // 导致 natW=0、所有图片退化为 width=500（小图被放大、超高图高度上限失效）。
+      let natW = parseInt(img.dataset.natW || '0', 10) || 0;
+      let natH = parseInt(img.dataset.natH || '0', 10) || 0;
+      const dispW = parseInt(img.dataset.dispW || '0', 10) || 0;
+      const dispH = parseInt(img.dataset.dispH || '0', 10) || 0;
+      // naturalWidth/naturalHeight 不可靠（如 SVG）时，用显示尺寸兜底，保证宽高比与高度上限可用。
+      if (natW <= 0 && dispW > 0) natW = dispW;
+      if (natH <= 0 && dispH > 0) natH = dispH;
+      // 先清除原始 width/height 属性（如 width="1200"），再由 _applyWordImgSize 写入正确的等比尺寸。
+      img.removeAttribute('width');
+      img.removeAttribute('height');
+      this._applyWordImgSize(img, natW, natH, 500, dispW > 0 ? dispW : natW);
+      img.style.display = 'inline-block';
+      img.style.maxWidth = '100%';
+    }));
+
+    } finally {
+      holder.remove();
+    }
+  }
+
+  async exportHTML() {
+    try {
+      const path = await dialogSave({
+        defaultPath: this.activeTab.filePath
+          ? this.activeTab.filePath.replace(/\.md$/, '.html')
+          : 'export.html',
+        filters: [{ name: 'HTML', extensions: ['html'] }]
+      });
+      if (!path) return;
+
+      const clone = this.preview.cloneNode(true);
+      clone.style.position = '';
+      clone.style.left = '';
+      clone.style.top = '';
+      clone.style.width = '';
+      clone.style.padding = '';
+      clone.style.overflow = '';
+      clone.style.height = '';
+
+      clone.querySelectorAll('.copy-btn').forEach(el => el.remove());
+      const abbrData = clone.querySelector('#abbr-data');
+      if (abbrData) abbrData.remove();
+
+      await this._inlineImagesForExport(clone, this.activeTab.filePath);
+
+      let katexCSS = '';
+      try {
+        const resp = await fetch('lib/katex/katex.min.css');
+        if (resp.ok) katexCSS = await resp.text();
+      } catch (e) { /* skip */ }
+
+      let hljsCSS = '';
+      try {
+        const themeLink = document.getElementById('highlight-theme');
+        if (themeLink) {
+          const resp = await fetch(themeLink.getAttribute('href'));
+          if (resp.ok) hljsCSS = await resp.text();
+        }
+      } catch (e) { /* skip */ }
+
+      const escapedTitle = this.activeTab.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const fullHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>${escapedTitle}</title>
+  <style>
+    ${this._documentExportCSS()}
 ${katexCSS ? katexCSS + '\n' : ''}${hljsCSS ? hljsCSS : ''}
   </style>
 </head>
@@ -7375,6 +7937,170 @@ ${clone.innerHTML}
       this.setStatus(`${this.t('exportedHTML')}: ${path}`);
     } catch (error) {
       this.setStatus(`${this.t('exportFailed')}: ${error}`);
+    }
+  }
+
+  async exportWord() {
+    if (typeof htmlDocx === 'undefined') {
+      this.reportError('E_RENDER', { detail: '导出组件未加载（html-docx 未加载）' });
+      return;
+    }
+
+    // 与导出 PDF 一致的确认框：提示 Word 导出特性与耗时风险，用户确认后再继续。
+    const proceed = await this.showConfirmDialog(
+      this.t('exportWord'),
+      this.t('wordTip1') + '\n\n' + this.t('wordTip2'),
+      null,
+      this.t('wordBigFileWarn'),
+    );
+    if (!proceed) return;
+
+    // Loading overlay：导出过程（尤其是 html2canvas 渲染公式/图表）可能阻塞主线程，
+    // 给用户一个明确的等待反馈；60s watchdog 兜底防止 overlay 永远不消失。
+    const overlay = document.createElement('div');
+    overlay.innerHTML = `<div class="pdf-loading-spinner"></div><div class="pdf-loading-text">${this.t('preparingWordExport')}</div>`;
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);font-family:-apple-system,sans-serif;';
+    if (!document.getElementById('pdf-loading-style')) {
+      const s = document.createElement('style');
+      s.id = 'pdf-loading-style';
+      s.textContent = '.pdf-loading-spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,0.25);border-top-color:#fff;border-radius:50%;animation:pdf-spin .7s linear infinite;margin-bottom:14px;}@keyframes pdf-spin{to{transform:rotate(360deg)}}.pdf-loading-text{color:#fff;font-size:15px;letter-spacing:.5px;}';
+      document.head.appendChild(s);
+    }
+    document.body.appendChild(overlay);
+
+    let overlayDone = false;
+    let exported = false;
+    const hideOverlay = () => {
+      if (overlayDone) return;
+      overlayDone = true;
+      if (overlay.parentNode) overlay.remove();
+    };
+
+    let watchdog = null;
+    try {
+      // 先让 overlay 渲染出来，再执行可能较重的同步/阻塞操作。
+      await new Promise(r => requestAnimationFrame(r));
+
+      const path = await dialogSave({
+        defaultPath: this.activeTab.filePath
+          ? this.activeTab.filePath.replace(/\.md$/, '.docx')
+          : 'export.docx',
+        filters: [{ name: 'Word 文档', extensions: ['docx'] }]
+      });
+      if (!path) {
+        hideOverlay();
+        return;
+      }
+
+      // watchdog 只在「真正开始导出处理」之后才计时，不把用户选文件的时间算进去；
+      // 超时放宽到 120s，避免公式/图表多、文档大时导出仍在进行却被误判卡死提前撤掉遮罩。
+      watchdog = setTimeout(() => {
+        this.setStatus(this.t('exportError'));
+        hideOverlay();
+      }, 120000);
+
+      const clone = this.preview.cloneNode(true);
+      clone.style.position = '';
+      clone.style.left = '';
+      clone.style.top = '';
+      clone.style.width = '';
+      clone.style.padding = '';
+      clone.style.overflow = '';
+      clone.style.height = '';
+
+      clone.querySelectorAll('.copy-btn').forEach(el => el.remove());
+      const abbrData = clone.querySelector('#abbr-data');
+      if (abbrData) abbrData.remove();
+
+      // 从真实预览元素采集每张图片的渲染尺寸（仍在文档流中，getBoundingClientRect / naturalWidth 可靠），
+      // 写入 clone 的同源 <img>，供 _prepareWordDOM 设置导出尺寸。
+      // 不再依赖 _prepareWordDOM 内 new Image() 异步重加载：该方式在 SVG（naturalWidth 为 0）、
+      // 图片未成功内联、或加载超时时会读取失败 → natW=0 → 所有图片退化为 width=500
+      // （小图被放大、超高图因不设 height 而跨页被裁）。
+      {
+        const srcImgs = Array.from(this.preview.querySelectorAll('img'));
+        const dstImgs = Array.from(clone.querySelectorAll('img'));
+        dstImgs.forEach((dimg, i) => {
+          const simg = srcImgs[i];
+          if (!simg) return;
+          // 若预览元素已带 dataset（测试模拟已渲染），优先使用；否则取真实布局尺寸。
+          const dw = simg.dataset.dispW ? parseInt(simg.dataset.dispW, 10)
+            : (Math.round(simg.getBoundingClientRect().width) || 0);
+          const dh = simg.dataset.dispH ? parseInt(simg.dataset.dispH, 10)
+            : (Math.round(simg.getBoundingClientRect().height) || 0);
+          dimg.dataset.natW = String(simg.naturalWidth || 0);
+          dimg.dataset.natH = String(simg.naturalHeight || 0);
+          dimg.dataset.dispW = String(dw || (simg.naturalWidth || 0));
+          dimg.dataset.dispH = String(dh || (simg.naturalHeight || 0));
+        });
+      }
+
+      await this._inlineImagesForExport(clone, this.activeTab.filePath);
+
+      // 把 Web 预览 DOM 转换成 Word HTML 导入器能稳定渲染的结构。
+      await this._prepareWordDOM(clone);
+
+      const escapedTitle = this.activeTab.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      // KaTeX / highlight.js 主题：与 HTML 导出一致，让公式与代码配色贴近预览。
+      // 深色调下 hljs 主题背景为深色，会与浅色文档冲突，故深色模式跳过（代码块仍保留浅灰底）。
+      let katexCSS = '';
+      try {
+        const resp = await fetch('lib/katex/katex.min.css');
+        if (resp.ok) katexCSS = await resp.text();
+      } catch (e) { /* skip */ }
+
+      let hljsCSS = '';
+      if (!this.isDark) {
+        try {
+          const themeLink = document.getElementById('highlight-theme');
+          if (themeLink) {
+            const resp = await fetch(themeLink.getAttribute('href'));
+            if (resp.ok) hljsCSS = await resp.text();
+          }
+        } catch (e) { /* skip */ }
+      }
+
+      // html-docx-js 把整段 HTML 作为 altChunk 嵌入 .docx，由 Word 自身的 HTML 导入器渲染，
+      // 因此 <head> 里的 <style> 会被应用——套用与 HTML 导出相同的基础样式表即可贴近预览。
+      // Word 导入器不支持 rgba()，这里把提示框底色换成近似实色；其余圆角/阴影等属性被忽略无副作用。
+      const wordOverride = `
+    .alert { background: #f6f5f4; border-left-color: #d4d4d8; }
+    .alert-note { background: #eef4ff; border-left-color: #3884ff; }
+    .alert-tip { background: #e9f9f1; border-left-color: #10b981; }
+    .alert-important { background: #f3edfd; border-left-color: #8b5cf6; }
+    .alert-warning { background: #fef6e7; border-left-color: #f59e0b; }
+    .alert-caution { background: #fdecec; border-left-color: #ef4444; }
+    .mermaid-container { width: 100%; max-width: 100%; box-sizing: border-box; }`;
+      const wordStyle = `${this._documentExportCSS()}\n${wordOverride}\n${katexCSS ? katexCSS + '\n' : ''}${hljsCSS ? hljsCSS : ''}`;
+
+      const wordHTML = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><title>${escapedTitle}</title>
+<style>
+${wordStyle}
+</style></head>
+<body>
+${clone.innerHTML}
+</body>
+</html>`;
+
+      const arrayBuffer = await this._convertHtmlToDocxBuffer(wordHTML);
+      const buf = new Uint8Array(arrayBuffer);
+      await TauriApi.writeBinaryFile({ path, contents: buf });
+      clearTimeout(watchdog);
+      this.setStatus(`${this.t('exportedWord')}: ${path}`);
+      exported = true;
+    } catch (error) {
+      clearTimeout(watchdog);
+      console.error('exportWord error:', error);
+      this.setStatus(`${this.t('exportFailed')}: ${error}`);
+    } finally {
+      hideOverlay();
+      // 导出真正完成后（写入文件成功）再弹成功提示；先关遮罩，确保 toast 不被遮住。
+      if (exported) {
+        this.showToast(this.t('exportSuccess'), 'success');
+      }
     }
   }
 
