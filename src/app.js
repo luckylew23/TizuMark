@@ -4598,7 +4598,7 @@ class MarkdownEditor {
       // 文件树右键菜单快捷键（合并自 PR #36）：_fileTreeCtx 存在时，F2/Delete/Ctrl+X/C/V 对其生效。
       // 关键修复：点击文件打开后焦点落在编辑器（.CodeMirror），旧逻辑用「!inEditor」拦截导致
       // Ctrl+C/V 被 CodeMirror 吞掉、文件复制/粘贴「不起作用」。现改为：Ctrl+C/X/V 以文件树操作为先，
-      // 仅当编辑器存在文本选区时才让位给编辑器的文本复制/剪切/粘贴（cm.somethingSelected()）。
+      // 仅当编辑器或预览区存在文本选区时才让位给文本复制/剪切/粘贴。
       // 用户真正点进编辑器编辑时（editorWrapper mousedown）会清掉 _fileTreeCtx，恢复纯文本操作。
       if (this._fileTreeCtx) {
         const inInput = e.target.closest('input, textarea, select');
@@ -4608,17 +4608,21 @@ class MarkdownEditor {
           if (e.key === 'Delete') { e.preventDefault(); this.fileTreeDelete(); return; }
           if (ctrl && !e.shiftKey && !e.altKey) {
             const k = e.key.toLowerCase();
-            // 复制 / 剪切：编辑器有文本选区时交给编辑器；否则按文件树复制/剪切
+            // 检查编辑器或预览区是否有文本选区——有选区时交给浏览器原生 copy/cut，
+            // 不走文件树操作。预览区是 HTML 内容，window.getSelection() 检测其选区。
+            const hasTextSelection = (this.cm && this.cm.somethingSelected())
+              || (window.getSelection && window.getSelection().toString().length > 0);
+            // 复制 / 剪切：有文本选区时交给编辑器/浏览器；否则按文件树复制/剪切
             if (k === 'x' || k === 'c') {
-              if (this.cm && this.cm.somethingSelected()) return;
+              if (hasTextSelection) return;
               e.preventDefault();
               if (k === 'c') this.fileTreeCopy(); else this.fileTreeCut();
               return;
             }
-            // 粘贴：文件树选中节点（目录或文件）且编辑器无文本选区时，粘贴文件。
-            // 选中目录→粘贴进该目录；选中文件→粘贴进其所在目录（同级）。编辑器有选区时交给文本粘贴。
+            // 粘贴：文件树选中节点（目录或文件）且无文本选区时，粘贴文件。
+            // 选中目录→粘贴进该目录；选中文件→粘贴进其所在目录（同级）。有文本选区时交给文本粘贴。
             if (k === 'v') {
-              if (!(this.cm && this.cm.somethingSelected())) {
+              if (!hasTextSelection) {
                 e.preventDefault();
                 this.fileTreePaste();
               }
