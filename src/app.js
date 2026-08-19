@@ -2509,6 +2509,7 @@ class MarkdownEditor {
     this.cm.setOption('lineWrapping', s.lineWrap);
     this.cm.setOption('lineNumbers', s.lineNumbers);
     this.preview.style.fontSize = s.previewFontSize + 'px';
+    this.previewZoom = null; // 应用设置时回落到设置字号（与编辑器 tab.fontSize 重置一致）
     this.preview.style.lineHeight = String(s.lineHeight);
     if (s.maxWidth) {
       this.preview.style.maxWidth = s.maxWidth + 'px';
@@ -3789,6 +3790,72 @@ class MarkdownEditor {
       this.cm.refresh();
       this.showZoomHint();
     }, true);  // capture：先于 CM 内部 mousewheel 监听拦截
+
+    // 预览区 Ctrl + 鼠标滚轮缩放字号（全局，不持久化到 settings，与编辑器缩放一致）
+    this.previewZoom = null; // null=未缩放，回落到 settings.previewFontSize
+
+    this.previewZoomHint = document.createElement('div');
+    this.previewZoomHint.className = 'zoom-hint';
+    this.previewZoomHint.innerHTML = '<span class="zoom-hint-text"></span><span class="zoom-hint-reset hidden" role="button" title="Reset preview font size"></span>';
+    this.previewZoomHint.querySelector('.zoom-hint-reset').addEventListener('click', () => this.resetPreviewFontSize());
+    this._previewZoomHintHovering = false;
+    this.previewZoomHint.addEventListener('mouseenter', () => {
+      this._previewZoomHintHovering = true;
+      clearTimeout(this._previewZoomHintTimer);
+    });
+    this.previewZoomHint.addEventListener('mouseleave', () => {
+      this._previewZoomHintHovering = false;
+      this._previewZoomHintTimer = setTimeout(() => this.previewZoomHint.classList.remove('show'), 3000);
+    });
+    document.body.appendChild(this.previewZoomHint);
+
+    this.showPreviewZoomHint = () => {
+      if (!this.previewZoomHint) return;
+      const cur = this.previewZoom ?? this.settings.previewFontSize;
+      const base = this.settings.previewFontSize;
+      const textEl = this.previewZoomHint.querySelector('.zoom-hint-text');
+      const resetEl = this.previewZoomHint.querySelector('.zoom-hint-reset');
+      // 左侧始终显示当前字号
+      textEl.textContent = this.t('fontSizeHint', { size: cur });
+      if (cur !== base) {
+        // 右侧显示「还原 Npx」按钮（与设置字号一致）
+        resetEl.textContent = this.t('fontSizeReset', { base });
+        resetEl.classList.remove('hidden');
+      } else {
+        resetEl.classList.add('hidden');
+      }
+      this.previewZoomHint.classList.add('show');
+      clearTimeout(this._previewZoomHintTimer);
+      // hover 期间保持显示；离开后才按 3 秒倒计时消失
+      if (!this._previewZoomHintHovering) {
+        this._previewZoomHintTimer = setTimeout(() => this.previewZoomHint.classList.remove('show'), 3000);
+      }
+    };
+
+    this.hidePreviewZoomHint = () => {
+      if (!this.previewZoomHint) return;
+      this.previewZoomHint.classList.remove('show');
+      clearTimeout(this._previewZoomHintTimer);
+    };
+
+    this.resetPreviewFontSize = () => {
+      this.previewZoom = null;
+      this.preview.style.fontSize = this.settings.previewFontSize + 'px';
+      this.showPreviewZoomHint();
+    };
+
+    const _previewScroll = document.getElementById('preview-pane');
+    _previewScroll.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey) return;            // 非 Ctrl：放行，预览正常滚动
+      e.preventDefault();               // 阻止预览滚动 + 浏览器整页/页面缩放
+      e.stopPropagation();
+      const cur = this.previewZoom ?? this.settings.previewFontSize;
+      const next = Math.max(8, Math.min(72, cur + (e.deltaY < 0 ? 1 : -1)));
+      if (next === cur) return;
+      this.previewZoom = next;
+      this.preview.style.fontSize = next + 'px';
+      this.showPreviewZoomHint();
+    }, true);  // capture：先于预览内部可能的滚动监听拦截
 
     this.cm.on('change', () => {
       this.activeTab.content = this.cm.getValue();
