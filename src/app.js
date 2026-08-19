@@ -88,7 +88,6 @@ class Tab {
     this.pendingExternalChange = false;
     this._loaded = true;
     this.previewScrollTop = 0;
-    this.fontSize = null; // 每标签独立缩放字号；null=未初始化，切换时按 settings.fontSize 初始化
   }
 
   get isModified() {
@@ -521,7 +520,8 @@ const I18N = {
     folderOpened: '已打开文件夹: {path}',
     extraDirsIgnoredBatch: '已忽略 {n} 个多余目录（每次仅打开一个文件夹）',
     fontSizeChanged: '字号 {size}px',
-    fontSizeHint: '字号 {size}px',
+    fontSizeHint: '编辑器字号 {size}px',
+    previewFontSizeHint: '预览字号 {size}px',
     fontSizeReset: '还原 {base}px',
     switchWorkspaceTitle: '切换工作区',
     switchWorkspaceMsg: '当前已打开工作区，是否切换到 {path}？',
@@ -952,7 +952,8 @@ const I18N = {
     folderOpened: 'Opened folder: {path}',
     extraDirsIgnoredBatch: 'Ignored {n} extra folders (only one folder can be opened at a time)',
     fontSizeChanged: 'Font size {size}px',
-    fontSizeHint: 'Font size {size}px',
+    fontSizeHint: 'Editor font size {size}px',
+    previewFontSizeHint: 'Preview font size {size}px',
     fontSizeReset: 'Reset to {base}px',
     switchWorkspaceTitle: 'Switch Workspace',
     switchWorkspaceMsg: 'A workspace is already open. Switch to {path}?',
@@ -2502,7 +2503,7 @@ class MarkdownEditor {
 
   async applySettings() {
     const s = this.settings;
-    if (this.activeTab) this.activeTab.fontSize = s.fontSize;
+    this.editorZoom = null; // 应用设置时回落到设置字号（编辑器字号全局，非 per-tab）
     this.cm.getWrapperElement().style.fontSize = s.fontSize + 'px';
     this.cm.setOption('tabSize', s.tabSize);
     this.cm.setOption('indentUnit', s.tabSize);
@@ -3719,14 +3720,23 @@ class MarkdownEditor {
       }
     });
 
-    // Ctrl + 鼠标滚轮缩放编辑器字体（仅当前标签，不持久化到 settings）
+    // Ctrl + 鼠标滚轮缩放编辑器字体（全局，不持久化到 settings 面板，hint 消失后写回）
     const _zoomWrapper = this.cm.getWrapperElement();
+    this.editorZoom = null; // null=未缩放，回落到 settings.fontSize
+    // 「还原」按钮的目标字号 = 出厂默认（defaultSettings），而非当前设置值
+    const _defaultSizes = this.defaultSettings();
+    this._defaultEditorFontSize = _defaultSizes.fontSize;
+    this._defaultPreviewFontSize = _defaultSizes.previewFontSize;
 
     // 顶部缩放提示（与 .lightbox-hint 视觉一致）
     this.zoomHint = document.createElement('div');
     this.zoomHint.className = 'zoom-hint';
     this.zoomHint.innerHTML = '<span class="zoom-hint-text"></span><span class="zoom-hint-reset hidden" role="button" title="Reset font size"></span>';
-    this.zoomHint.querySelector('.zoom-hint-reset').addEventListener('click', () => this.resetEditorFontSize());
+    this.zoomHint.querySelector('.zoom-hint-reset').addEventListener('click', () => {
+      // 编辑器/预览共用同一提示条，按当前显示模式分派重置目标
+      if (this._zoomHintMode === 'preview') this.resetPreviewFontSize();
+      else this.resetEditorFontSize();
+    });
     this._zoomHintHovering = false;
     this.zoomHint.addEventListener('mouseenter', () => {
       this._zoomHintHovering = true;
@@ -3734,20 +3744,26 @@ class MarkdownEditor {
     });
     this.zoomHint.addEventListener('mouseleave', () => {
       this._zoomHintHovering = false;
-      this._zoomHintTimer = setTimeout(() => this.zoomHint.classList.remove('show'), 3000);
+      this._zoomHintTimer = setTimeout(() => this._zoomHintTimeout(), 3000);
     });
     document.body.appendChild(this.zoomHint);
 
-    this.showZoomHint = () => {
-      if (!this.activeTab || !this.zoomHint) return;
-      const cur = this.activeTab.fontSize ?? this.settings.fontSize;
-      const base = this.settings.fontSize;
+    this.showZoomHint = (mode = 'editor') => {
+      if (!this.zoomHint) return;
+      if (mode !== 'preview' && !this.activeTab) return;
+      this._zoomHintMode = mode; // 记录当前显示模式，供重置按钮分派
+      const isPreview = mode === 'preview';
+      // 编辑器/预览共用同一提示条（避免两个 fixed 元素叠加遮挡）；内容按模式切换
+      const cur = isPreview
+        ? (this.previewZoom ?? this.settings.previewFontSize)
+        : (this.editorZoom ?? this.settings.fontSize);
+      const base = isPreview ? this._defaultPreviewFontSize : this._defaultEditorFontSize;
       const textEl = this.zoomHint.querySelector('.zoom-hint-text');
       const resetEl = this.zoomHint.querySelector('.zoom-hint-reset');
-      // 左侧始终显示当前字号
-      textEl.textContent = this.t('fontSizeHint', { size: cur });
+      // 左侧始终显示当前字号，并明确是编辑器还是预览
+      textEl.textContent = this.t(isPreview ? 'previewFontSizeHint' : 'fontSizeHint', { size: cur });
       if (cur !== base) {
-        // 右侧显示「还原 Npx」按钮（与设置字号一致）
+        // 右侧显示「还原 Npx」按钮（还原到出厂默认字号）
         resetEl.textContent = this.t('fontSizeReset', { base });
         resetEl.classList.remove('hidden');
       } else {
@@ -3755,9 +3771,9 @@ class MarkdownEditor {
       }
       this.zoomHint.classList.add('show');
       clearTimeout(this._zoomHintTimer);
-      // hover 期间保持显示；离开后才按 3 秒倒计时消失
+      // hover 期间保持显示；离开后才按 3 秒倒计时消失（消失即持久化字号）
       if (!this._zoomHintHovering) {
-        this._zoomHintTimer = setTimeout(() => this.zoomHint.classList.remove('show'), 3000);
+        this._zoomHintTimer = setTimeout(() => this._zoomHintTimeout(), 3000);
       }
     };
 
@@ -3767,12 +3783,36 @@ class MarkdownEditor {
       clearTimeout(this._zoomHintTimer);
     };
 
+    // 字号调整落盘：hint 消失（3 秒无操作）后把运行时字号写回 settings 并持久化，
+    // 保证下次重启保持上次调整的大小。编辑器按缩放源 tab 写回，预览按 previewZoom 写回。
+    this._zoomHintTimeout = () => {
+      this.zoomHint.classList.remove('show');
+      this._persistZoom();
+    };
+
+    this._persistZoom = () => {
+      try {
+        let changed = false;
+        if (this.editorZoom != null) {
+          this.settings.fontSize = this.editorZoom;
+          changed = true;
+        }
+        if (this.previewZoom != null) {
+          this.settings.previewFontSize = this.previewZoom;
+          changed = true;
+        }
+        if (changed) this.saveSettings();
+      } catch {}
+    };
+
     this.resetEditorFontSize = () => {
       const tab = this.activeTab;
       if (!tab) return;
-      tab.fontSize = this.settings.fontSize;
-      this.cm.getWrapperElement().style.fontSize = tab.fontSize + 'px';
+      this.editorZoom = null;
+      this.settings.fontSize = this._defaultEditorFontSize; // 还原到出厂默认字号
+      this.cm.getWrapperElement().style.fontSize = this.settings.fontSize + 'px';
       this.cm.refresh();
+      this.saveSettings(); // 还原即持久化，重启保持默认
       this.showZoomHint();
     };
 
@@ -3780,68 +3820,26 @@ class MarkdownEditor {
       if (!e.ctrlKey) return;            // 非 Ctrl：放行，CM 正常滚动
       e.preventDefault();               // 阻止 CM 滚动 + 浏览器整页/页面缩放
       e.stopPropagation();
-      const tab = this.activeTab;
-      if (!tab) return;
-      const cur = tab.fontSize ?? this.settings.fontSize;
+      if (!this.activeTab) return;
+      const cur = this.editorZoom ?? this.settings.fontSize;
       const next = Math.max(8, Math.min(72, cur + (e.deltaY < 0 ? 1 : -1)));
       if (next === cur) return;
-      tab.fontSize = next;
+      this.editorZoom = next;
       _zoomWrapper.style.fontSize = next + 'px';
       this.cm.refresh();
       this.showZoomHint();
     }, true);  // capture：先于 CM 内部 mousewheel 监听拦截
 
-    // 预览区 Ctrl + 鼠标滚轮缩放字号（全局，不持久化到 settings，与编辑器缩放一致）
+    // 预览区 Ctrl + 鼠标滚轮缩放字号（全局，不持久化到 settings 面板，hint 消失后写回
+    // settings.previewFontSize 并落盘，重启保持）。顶部提示复用编辑器的 zoomHint。
     this.previewZoom = null; // null=未缩放，回落到 settings.previewFontSize
-
-    this.previewZoomHint = document.createElement('div');
-    this.previewZoomHint.className = 'zoom-hint';
-    this.previewZoomHint.innerHTML = '<span class="zoom-hint-text"></span><span class="zoom-hint-reset hidden" role="button" title="Reset preview font size"></span>';
-    this.previewZoomHint.querySelector('.zoom-hint-reset').addEventListener('click', () => this.resetPreviewFontSize());
-    this._previewZoomHintHovering = false;
-    this.previewZoomHint.addEventListener('mouseenter', () => {
-      this._previewZoomHintHovering = true;
-      clearTimeout(this._previewZoomHintTimer);
-    });
-    this.previewZoomHint.addEventListener('mouseleave', () => {
-      this._previewZoomHintHovering = false;
-      this._previewZoomHintTimer = setTimeout(() => this.previewZoomHint.classList.remove('show'), 3000);
-    });
-    document.body.appendChild(this.previewZoomHint);
-
-    this.showPreviewZoomHint = () => {
-      if (!this.previewZoomHint) return;
-      const cur = this.previewZoom ?? this.settings.previewFontSize;
-      const base = this.settings.previewFontSize;
-      const textEl = this.previewZoomHint.querySelector('.zoom-hint-text');
-      const resetEl = this.previewZoomHint.querySelector('.zoom-hint-reset');
-      // 左侧始终显示当前字号
-      textEl.textContent = this.t('fontSizeHint', { size: cur });
-      if (cur !== base) {
-        // 右侧显示「还原 Npx」按钮（与设置字号一致）
-        resetEl.textContent = this.t('fontSizeReset', { base });
-        resetEl.classList.remove('hidden');
-      } else {
-        resetEl.classList.add('hidden');
-      }
-      this.previewZoomHint.classList.add('show');
-      clearTimeout(this._previewZoomHintTimer);
-      // hover 期间保持显示；离开后才按 3 秒倒计时消失
-      if (!this._previewZoomHintHovering) {
-        this._previewZoomHintTimer = setTimeout(() => this.previewZoomHint.classList.remove('show'), 3000);
-      }
-    };
-
-    this.hidePreviewZoomHint = () => {
-      if (!this.previewZoomHint) return;
-      this.previewZoomHint.classList.remove('show');
-      clearTimeout(this._previewZoomHintTimer);
-    };
 
     this.resetPreviewFontSize = () => {
       this.previewZoom = null;
+      this.settings.previewFontSize = this._defaultPreviewFontSize; // 还原到出厂默认字号
       this.preview.style.fontSize = this.settings.previewFontSize + 'px';
-      this.showPreviewZoomHint();
+      this.saveSettings(); // 还原即持久化，重启保持默认
+      this.showZoomHint('preview');
     };
 
     const _previewScroll = document.getElementById('preview-pane');
@@ -3854,7 +3852,7 @@ class MarkdownEditor {
       if (next === cur) return;
       this.previewZoom = next;
       this.preview.style.fontSize = next + 'px';
-      this.showPreviewZoomHint();
+      this.showZoomHint('preview');
     }, true);  // capture：先于预览内部可能的滚动监听拦截
 
     this.cm.on('change', () => {
@@ -4040,13 +4038,10 @@ class MarkdownEditor {
       oldTab.cursorPos = this.cm.getCursor();
       oldTab.scrollPos = { top: this.cm.getScrollInfo().top, left: this.cm.getScrollInfo().left };
       oldTab.previewScrollTop = this.preview.scrollTop;
-      oldTab.fontSize = parseInt(this.cm.getWrapperElement().style.fontSize, 10) || this.settings.fontSize;
 
       this.activeTabIndex = index;
       const newTab = this.activeTab;
-      // 每标签独立字号：未初始化时按设置字号
-      if (newTab.fontSize == null) newTab.fontSize = this.settings.fontSize;
-      this.cm.getWrapperElement().style.fontSize = newTab.fontSize + 'px';
+      // 编辑器字号为全局（editorZoom），切 tab 不改变字号
       this.hideZoomHint();
 
       if (!newTab._loaded && newTab.filePath) {

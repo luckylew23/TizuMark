@@ -1,6 +1,7 @@
 // 预览区 Ctrl + 鼠标滚轮缩放字号测试
-// 覆盖：基础放大/缩小/上下限、顶部提示、重置按钮、3 秒消失、hover。
+// 覆盖：基础放大/缩小/上下限、顶部提示、重置按钮、3 秒消失、hover、与编辑器共用提示条。
 // 与 test/ctrl-wheel-zoom.test.cjs（编辑器缩放）保持同构，差异仅在作用对象为预览。
+// 顶部提示与编辑器共用同一 zoomHint 元素（showZoomHint('preview')），同一时刻只显示一个。
 const test = require('node:test');
 const assert = require('node:assert');
 const { buildEnv, cleanup, waitForEditor } = require('./helpers/app-env.cjs');
@@ -82,10 +83,10 @@ test('ctrl+wheel 缩放后顶部居中显示字号提示（含设置字号与重
   try {
     const base = ed.settings.previewFontSize;
     dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
-    const hint = ed.previewZoomHint;
+    const hint = ed.zoomHint;
     assert.ok(hint.classList.contains('show'), '顶部提示应可见');
     const textEl = hint.querySelector('.zoom-hint-text');
-    assert.strictEqual(textEl.textContent, ed.t('fontSizeHint', { size: base + 1 }), '左侧应显示当前字号');
+    assert.strictEqual(textEl.textContent, ed.t('previewFontSizeHint', { size: base + 1 }), '左侧应显示当前预览字号');
     const resetEl = hint.querySelector('.zoom-hint-reset');
     assert.ok(!resetEl.classList.contains('hidden'), '偏离设置字号时重置按钮应可见');
     assert.strictEqual(resetEl.textContent, ed.t('fontSizeReset', { base }), '右侧按钮应为「还原 Npx」');
@@ -95,29 +96,31 @@ test('ctrl+wheel 缩放后顶部居中显示字号提示（含设置字号与重
 test('命中设置字号时提示仅显示当前字号、重置按钮隐藏', async () => {
   const { w, ed } = await makeEnv();
   try {
-    const textEl = ed.previewZoomHint.querySelector('.zoom-hint-text');
-    const resetEl = ed.previewZoomHint.querySelector('.zoom-hint-reset');
+    const textEl = ed.zoomHint.querySelector('.zoom-hint-text');
+    const resetEl = ed.zoomHint.querySelector('.zoom-hint-reset');
     // 主动调用 resetPreviewFontSize，让预览回到设置字号
     ed.resetPreviewFontSize();
     const base = ed.settings.previewFontSize;
     assert.strictEqual(ed.previewZoom, null, '重置后 previewZoom 应为 null');
-    assert.ok(ed.previewZoomHint.classList.contains('show'));
-    assert.strictEqual(textEl.textContent, ed.t('fontSizeHint', { size: base }));
+    assert.ok(ed.zoomHint.classList.contains('show'));
+    assert.strictEqual(textEl.textContent, ed.t('previewFontSizeHint', { size: base }));
     assert.ok(resetEl.classList.contains('hidden'), '命中设置字号时重置按钮应隐藏');
   } finally { cleanup(w); }
 });
 
-test('点击 ⟲ 重置按钮恢复到设置字号', async () => {
+test('点击 ⟲ 重置按钮恢复到出厂默认字号', async () => {
   const { w, ed } = await makeEnv();
   try {
     const base = ed.settings.previewFontSize;
     dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
-    const resetEl = ed.previewZoomHint.querySelector('.zoom-hint-reset');
+    assert.strictEqual(ed.previewZoom, base + 1, '缩放后 previewZoom 偏离');
+    const resetEl = ed.zoomHint.querySelector('.zoom-hint-reset');
     resetEl.click();
     assert.strictEqual(ed.previewZoom, null, '重置后 previewZoom 应为 null');
-    assert.strictEqual(parseInt(ed.preview.style.fontSize, 10), base, '预览字号应同步回设置字号');
-    const textEl = ed.previewZoomHint.querySelector('.zoom-hint-text');
-    assert.strictEqual(textEl.textContent, ed.t('fontSizeHint', { size: base }));
+    assert.strictEqual(parseInt(ed.preview.style.fontSize, 10), base, '预览字号应同步回默认');
+    assert.strictEqual(ed.settings.previewFontSize, base, '设置应写回默认字号');
+    const textEl = ed.zoomHint.querySelector('.zoom-hint-text');
+    assert.strictEqual(textEl.textContent, ed.t('previewFontSizeHint', { size: base }));
   } finally { cleanup(w); }
 });
 
@@ -134,13 +137,59 @@ test('应用设置后预览运行时缩放回落到设置字号', async () => {
   } finally { cleanup(w); }
 });
 
+test('编辑器与预览共用同一提示条：先后缩放不重叠，内容按模式切换', async () => {
+  const { w, ed } = await makeEnv();
+  try {
+    // 先在编辑器上 Ctrl+滚轮放大
+    const wrapper = ed.cm.getWrapperElement();
+    const evEditor = new w.Event('wheel', { bubbles: true, cancelable: true });
+    Object.defineProperty(evEditor, 'ctrlKey', { value: true, configurable: true });
+    Object.defineProperty(evEditor, 'deltaY', { value: -100, configurable: true });
+    wrapper.dispatchEvent(evEditor);
+    const hint = ed.zoomHint;
+    const editorBase = ed.settings.fontSize;
+    assert.ok(hint.classList.contains('show'), '编辑缩放后提示条应显示');
+    assert.strictEqual(hint.querySelector('.zoom-hint-text').textContent, ed.t('fontSizeHint', { size: editorBase + 1 }), '此时应显示编辑器字号');
+    // 再在预览上 Ctrl+滚轮放大：同一提示条内容切换为预览字号，不产生第二个提示条
+    dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
+    const previewBase = ed.settings.previewFontSize;
+    assert.ok(hint.classList.contains('show'), '预览缩放后提示条仍显示');
+    assert.strictEqual(hint.querySelector('.zoom-hint-text').textContent, ed.t('previewFontSizeHint', { size: previewBase + 1 }), '内容应切换为预览字号');
+    assert.strictEqual(w.document.querySelectorAll('.zoom-hint').length, 1, '应只有一个提示条元素，不会重叠遮挡');
+    // 两侧字号互不影响
+    assert.strictEqual(ed.editorZoom, editorBase + 1, '编辑器字号应保留');
+    assert.strictEqual(ed.previewZoom, previewBase + 1, '预览字号应保留');
+  } finally { cleanup(w); }
+});
+
+test('共用提示条重置按钮按当前模式分派：预览模式点重置恢复预览字号', async () => {
+  const { w, ed } = await makeEnv();
+  try {
+    const editorBase = ed.settings.fontSize;
+    const previewBase = ed.settings.previewFontSize;
+    // 先编辑缩放（提示条为编辑器模式），再预览缩放（切换到预览模式）
+    const wrapper = ed.cm.getWrapperElement();
+    const evEditor = new w.Event('wheel', { bubbles: true, cancelable: true });
+    Object.defineProperty(evEditor, 'ctrlKey', { value: true, configurable: true });
+    Object.defineProperty(evEditor, 'deltaY', { value: -100, configurable: true });
+    wrapper.dispatchEvent(evEditor);
+    dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
+    assert.strictEqual(ed.previewZoom, previewBase + 1, '预览已缩放');
+    // 点重置：应恢复预览字号，而非编辑器字号
+    ed.zoomHint.querySelector('.zoom-hint-reset').click();
+    assert.strictEqual(ed.previewZoom, null, '预览字号应回设置字号');
+    assert.strictEqual(parseInt(ed.preview.style.fontSize, 10), previewBase, '预览字号应同步');
+    assert.strictEqual(ed.editorZoom, editorBase + 1, '编辑器字号应不受影响');
+  } finally { cleanup(w); }
+});
+
 test('停止缩放 3 秒后顶部提示自动消失', async () => {
   const { w, ed } = await makeEnv();
   try {
     dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
-    assert.ok(ed.previewZoomHint.classList.contains('show'), '触发后顶部提示应显示');
+    assert.ok(ed.zoomHint.classList.contains('show'), '触发后顶部提示应显示');
     await new Promise((r) => setTimeout(r, 3100));
-    assert.ok(!ed.previewZoomHint.classList.contains('show'), '3 秒后顶部提示应自动隐藏');
+    assert.ok(!ed.zoomHint.classList.contains('show'), '3 秒后顶部提示应自动隐藏');
   } finally { cleanup(w); }
 });
 
@@ -148,18 +197,31 @@ test('hover 时顶部提示不消失，移出后 3 秒消失', async () => {
   const { w, ed } = await makeEnv();
   try {
     dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
-    assert.ok(ed.previewZoomHint.classList.contains('show'), '触发后顶部提示应显示');
+    assert.ok(ed.zoomHint.classList.contains('show'), '触发后顶部提示应显示');
     // 模拟鼠标移入：标记 hovering 并派发 mouseenter
-    ed._previewZoomHintHovering = true;
-    ed.previewZoomHint.dispatchEvent(new w.Event('mouseenter'));
-    assert.ok(ed._previewZoomHintHovering, 'hovering 标志应为真');
+    ed._zoomHintHovering = true;
+    ed.zoomHint.dispatchEvent(new w.Event('mouseenter'));
+    assert.ok(ed._zoomHintHovering, 'hovering 标志应为真');
     // 即便等过 3 秒也不应消失
     await new Promise((r) => setTimeout(r, 3200));
-    assert.ok(ed.previewZoomHint.classList.contains('show'), 'hover 期间顶部提示应保持显示');
+    assert.ok(ed.zoomHint.classList.contains('show'), 'hover 期间顶部提示应保持显示');
     // 移出：重启 3 秒倒计时
-    ed.previewZoomHint.dispatchEvent(new w.Event('mouseleave'));
-    assert.ok(!ed._previewZoomHintHovering, '移出后 hovering 标志应为假');
+    ed.zoomHint.dispatchEvent(new w.Event('mouseleave'));
+    assert.ok(!ed._zoomHintHovering, '移出后 hovering 标志应为假');
     await new Promise((r) => setTimeout(r, 3100));
-    assert.ok(!ed.previewZoomHint.classList.contains('show'), '移出 3 秒后顶部提示应隐藏');
+    assert.ok(!ed.zoomHint.classList.contains('show'), '移出 3 秒后顶部提示应隐藏');
+  } finally { cleanup(w); }
+});
+
+test('预览字号调整后 3 秒回写设置并落盘，重启保持', async () => {
+  const { w, ed } = await makeEnv();
+  try {
+    const base = ed.settings.previewFontSize;
+    dispatchWheel(w, ed, { ctrlKey: true, deltaY: -100 });
+    assert.strictEqual(ed.settings.previewFontSize, base, '3 秒还原窗口期内不应立即写回设置');
+    await new Promise((r) => setTimeout(r, 3100));
+    assert.strictEqual(ed.settings.previewFontSize, base + 1, 'hint 消失后应写回 settings.previewFontSize');
+    const stored = JSON.parse(w.localStorage.getItem('tizumark-settings'));
+    assert.strictEqual(stored.previewFontSize, base + 1, '应落盘到 localStorage');
   } finally { cleanup(w); }
 });
