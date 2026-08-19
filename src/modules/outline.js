@@ -81,9 +81,11 @@ function renderOutlineHtml(tree, opts) {
       const hasChildren = node.children.length > 0;
       html += '<div class="outline-item-wrapper">';
       html += `<div class="outline-item level-${node.level}" data-id="${node.id}" data-line="${node.line}">`;
-      if (hasChildren) {
-        html += '<span class="outline-toggle">▼</span>';
-      }
+      // 始终输出 toggle 占位：无子节点项加 outline-toggle--hidden（隐藏且不可点击），
+      // 保留与有子节点项一致的宽度，使各级标签起始位置对齐，避免同级标题因
+      // 有无小三角而视觉错位（见 styles.css .outline-toggle--hidden）。
+      const toggleCls = hasChildren ? 'outline-toggle' : 'outline-toggle outline-toggle--hidden';
+      html += `<span class="${toggleCls}">▼</span>`;
       html += `<span class="outline-label">${escapeHtml(node.text)}</span>`;
       html += '</div>';
       if (hasChildren) {

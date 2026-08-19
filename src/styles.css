@@ -2860,6 +2860,14 @@ body.is-resizing .side-btn {
   background-color: var(--bg-hover);
 }
 
+/* 无子节点的占位 toggle：保留与有子节点项一致宽度，使同级标签对齐；
+   隐藏且不可点击，避免误触发折叠（点击穿透到 item/label 触发跳转）。 */
+.outline-toggle--hidden {
+  visibility: hidden;
+  pointer-events: none;
+  cursor: default;
+}
+
 .outline-label {
   flex: 1 1 auto;
   min-width: 0;

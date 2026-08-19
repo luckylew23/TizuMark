@@ -86,6 +86,23 @@ test('renderOutlineHtml 输出层级/锚点/id/data-line 且转义', async () =>
   assert.ok(html.includes('&lt;x&gt;'), '标题文本应被转义: ' + html);
 });
 
+test('renderOutlineHtml: 无子节点项也渲染隐藏占位 toggle 以保证标签对齐', async () => {
+  // # A 有子 ## B；B 为叶子（无子）。
+  const hs = extractHeadings('# A\n## B', opts);
+  const tree = buildOutlineTree(hs);
+  const html = renderOutlineHtml(tree, opts);
+
+  // 有子节点项：可见 toggle（不含 --hidden）
+  assert.ok(html.includes('class="outline-toggle">▼</span>'), 'A 应为可见 toggle');
+  // 无子节点项：占位 toggle（含 --hidden），用于对齐
+  assert.ok(html.includes('outline-toggle--hidden'), 'B（叶子）应渲染隐藏占位 toggle');
+  // 占位 toggle 不应是可见 toggle（类名需区分）
+  const leafToggle = html.match(/<span class="(outline-toggle outline-toggle--hidden)">/);
+  assert.ok(leafToggle, '叶子 toggle 应带 outline-toggle--hidden 类');
+  // 占位 toggle 保留 ▼ 字形，宽度与可见 toggle 完全一致，保证对齐
+  assert.ok(html.includes('class="outline-toggle outline-toggle--hidden">▼</span>'), '占位 toggle 应保留 ▼ 字形');
+});
+
 test('与旧实现逐字符一致（回归）', async () => {
   const samples = [
     '',
