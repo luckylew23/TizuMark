@@ -3598,6 +3598,20 @@ class MarkdownEditor {
       const key = s[action]?.key;
       if (key) extraKeys[toCmKey(key)] = false;
     }
+
+    // 文档首/末导航（与常见编辑器一致：无 Shift=移动光标，带 Shift=从光标处选中）。
+    // 这些键与 a/c/v/x/z/y 同逻辑：在全局捕获 keydown 监听里「放行」（不 preventDefault /
+    // 不 stopPropagation），事件自然到达 CodeMirror，由下方 extraKeys handler 处理；
+    // 这样 CM 的 onKeyDown 不会因 e.defaultPrevented 提前 return，handler 能正常执行。
+    // 用自定义 handler 而非 CM 默认 goDocStart/goDocEnd，因为：CM 默认 Ctrl+End 落末行
+    // 首列（我们要末行末列）；CM 默认 Ctrl+Home 反而「选中」（我们要移动）。
+    // 注意：CM 的 extendSelection(head) 单参数等价 setCursor（移动、collapsed），并不会
+    // 保留原锚点；真正的「从光标选中到目标」需用 setSelection(原光标, 目标)。
+    extraKeys['Ctrl-Home']       = (cm) => cm.setCursor({ line: cm.firstLine(), ch: 0 });
+    extraKeys['Ctrl-End']        = (cm) => cm.setCursor({ line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length });
+    extraKeys['Shift-Ctrl-Home'] = (cm) => { const c = cm.getCursor(); cm.setSelection(c, { line: cm.firstLine(), ch: 0 }); };
+    extraKeys['Shift-Ctrl-End']  = (cm) => { const c = cm.getCursor(); cm.setSelection(c, { line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length }); };
+
     this.cm.setOption('extraKeys', extraKeys);
 
     // Build global shortcut lookup for document-level handling.
@@ -4665,6 +4679,15 @@ class MarkdownEditor {
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl) {
         const key = e.key.toLowerCase();
+
+        // 文档导航键（Home/End）：与 a/c/v/x 同逻辑，放行给 CodeMirror 处理。
+        // 事件自然到达 CM，由 extraKeys 注册的 handler 接管（Ctrl+End 落末行末列、
+        // Ctrl+Home 移动而非选中）；CM 命中后会自行 preventDefault（阻止页面滚动）。
+        // 不放行的话全局捕获监听会 preventDefault，导致 CM 因 defaultPrevented 提前
+        // return、handler 永不执行（见 codemirror.js onKeyDown → signalDOMEvent）。
+        if (key === 'home' || key === 'end') {
+          return;
+        }
 
         // Essential browser editing shortcuts — always let through
         if (['a', 'c', 'v', 'x', 'z', 'y'].includes(key)) {
