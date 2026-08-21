@@ -143,6 +143,17 @@ test('A9 default 方案（合并自 PR #36）：moveLineUp/moveLineDown 默认 A
   assert.strictEqual(d.previewPaneWidth, 360, '预览区宽度默认 360');
 });
 
+test('A11 default 方案与 vscode/typora/sublime 预设：insertLineBelow=Ctrl+Enter、insertLineAbove=Ctrl+Shift+Enter', () => {
+  const def = getDefaultShortcuts();
+  assert.strictEqual(def.insertLineBelow.key, 'Ctrl+Enter', 'insertLineBelow 默认应为 Ctrl+Enter');
+  assert.strictEqual(def.insertLineAbove.key, 'Ctrl+Shift+Enter', 'insertLineAbove 默认应为 Ctrl+Shift+Enter');
+  const presets = getShortcutPresets();
+  for (const name of ['vscode', 'typora', 'sublime']) {
+    assert.strictEqual(presets[name].insertLineBelow, 'Ctrl+Enter', name + ' 预设 insertLineBelow 应为 Ctrl+Enter');
+    assert.strictEqual(presets[name].insertLineAbove, 'Ctrl+Shift+Enter', name + ' 预设 insertLineAbove 应为 Ctrl+Shift+Enter');
+  }
+});
+
 test('A10 预设键位无冲突：vscode fileSearch=Ctrl+P；typora/sublime 显式 fileSearch:"" 避免继承 Ctrl+P 与自身 exportPDF 冲突', () => {
   const presets = getShortcutPresets();
   assert.strictEqual(presets.vscode.fileSearch, 'Ctrl+P', 'vscode 文件搜索=Ctrl+P');

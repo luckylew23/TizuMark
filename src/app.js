@@ -3029,6 +3029,9 @@ class MarkdownEditor {
       fileSearch: { key: 'Ctrl+P', label: '文件搜索' },
       moveLineUp: { key: 'Alt+Up', label: '上移行/选区' },
       moveLineDown: { key: 'Alt+Down', label: '下移行/选区' },
+      // Eclipse/VS Code 风格：在当前行下方/上方插入空行，光标移到新行行首，不截断当前行、不继承缩进
+      insertLineBelow: { key: 'Ctrl+Enter', label: '在下方插入行' },
+      insertLineAbove: { key: 'Ctrl+Shift+Enter', label: '在上方插入行' },
     };
   }
 
@@ -3045,6 +3048,7 @@ class MarkdownEditor {
         // VS Code 特色绑定（合并自 PR #36）：Ctrl+B 切换侧边栏（与 bold 冲突，bold 留空可自定义）；
         // Ctrl+P 为文件搜索（VS Code Quick Open），原「导出 PDF」迁到 Ctrl+Shift+P（见 default 方案）。
         toggleSidebar:'Ctrl+B',
+        insertLineBelow:'Ctrl+Enter', insertLineAbove:'Ctrl+Shift+Enter',
       },
       typora: {
         newFile:'Ctrl+N', openFile:'Ctrl+O', saveFile:'Ctrl+S', closeTab:'Ctrl+W',
@@ -3056,12 +3060,14 @@ class MarkdownEditor {
         insertImage:'Ctrl+Shift+I', insertMathBlock:'Ctrl+Shift+M',
         insertH1:'Ctrl+1', insertH2:'Ctrl+2', insertH3:'Ctrl+3', insertH4:'Ctrl+4',
         insertH5:'Ctrl+5', insertH6:'Ctrl+6',
+        insertLineBelow:'Ctrl+Enter', insertLineAbove:'Ctrl+Shift+Enter',
       },
       sublime: {
         newFile:'Ctrl+N', openFile:'Ctrl+O', saveFile:'Ctrl+S', saveAs:'Ctrl+Shift+S',
         closeTab:'Ctrl+W', find:'Ctrl+F', crossSearch:'Ctrl+H',
         nextTab:'Ctrl+Tab', prevTab:'Ctrl+Shift+Tab',
         exportPDF:'Ctrl+P', toggleTheme:'Ctrl+Shift+T', fileSearch:'',
+        insertLineBelow:'Ctrl+Enter', insertLineAbove:'Ctrl+Shift+Enter',
       },
     };
   }
@@ -3294,7 +3300,7 @@ class MarkdownEditor {
       { key: 'file', ids: ['newFile', 'openFile', 'saveFile', 'saveAs', 'closeTab', 'exportPDF', 'closeToTray'] },
       { key: 'search', ids: ['find', 'crossSearch', 'fileSearch'] },
       { key: 'tabView', ids: ['nextTab', 'prevTab', 'toggleView', 'toggleSidebar', 'toggleTheme'] },
-      { key: 'format', ids: ['bold', 'italic', 'strikethrough', 'inlineCode', 'highlight', 'insertSuperscript', 'insertSubscript', 'moveLineUp', 'moveLineDown'] },
+      { key: 'format', ids: ['bold', 'italic', 'strikethrough', 'inlineCode', 'highlight', 'insertSuperscript', 'insertSubscript', 'moveLineUp', 'moveLineDown', 'insertLineBelow', 'insertLineAbove'] },
       { key: 'insert', ids: ['insertLink', 'insertImage', 'insertTable', 'insertUl', 'insertOl', 'insertTask', 'insertHr', 'codeBlock', 'blockquote', 'insertMathBlock', 'insertMermaid', 'insertToc'] },
       { key: 'heading', ids: ['insertH1', 'insertH2', 'insertH3', 'insertH4', 'insertH5', 'insertH6'] },
       { key: 'callout', ids: ['insertCalloutNote', 'insertCalloutTip', 'insertCalloutWarning', 'insertCalloutCaution', 'insertCalloutImportant'] },
@@ -3555,6 +3561,9 @@ class MarkdownEditor {
       // 行/选区上下移动（合并自 PR #36）：CM5 核心无 moveLineUp/Down 命令，自实现 _moveLine。
       moveLineUp: () => this._moveLine(-1),
       moveLineDown: () => this._moveLine(1),
+      // Eclipse/VS Code 风格：在当前行下方/上方插入空行，光标移到新行行首
+      insertLineBelow: () => this.insertLineBelow(),
+      insertLineAbove: () => this.insertLineAbove(),
     };
 
     // Global actions (work anywhere via document keydown handler)
@@ -10245,6 +10254,32 @@ input[type="checkbox"]:checked::after { display: none !important; }
       this.cm.setCursor({ line: cursor.line + addedLines + lines.length - 1, ch: lines[lines.length - 1].length });
     }
     this.cm.focus();
+  }
+
+  // 在光标所在行下方插入空行（Eclipse/VS Code 语义：不截断当前行，光标移到新行开头）。
+  // 光标在行中任意位置按 Ctrl+Enter 均只在其下方新增一个空行，原行内容保持不动。
+  insertLineBelow() {
+    const cm = this.cm;
+    if (!cm) return;
+    const cur = cm.getCursor();
+    const lineNo = cur.line;
+    const lineLen = cm.getLine(lineNo).length;
+    // 在行尾追加换行 → 当前行光标后文本留在原行，不截断；下方生成一个新的空行。
+    cm.replaceRange('\n', { line: lineNo, ch: lineLen });
+    cm.setCursor({ line: lineNo + 1, ch: 0 });
+    cm.focus();
+  }
+
+  // 在光标所在行上方插入空行（光标移到新行开头）。原行整体下移，上方新增一个空行。
+  insertLineAbove() {
+    const cm = this.cm;
+    if (!cm) return;
+    const cur = cm.getCursor();
+    const lineNo = cur.line;
+    // 在当前行行首插入换行 → 原行整体下移，上方生成一个新的空行。
+    cm.replaceRange('\n', { line: lineNo, ch: 0 });
+    cm.setCursor({ line: lineNo, ch: 0 });
+    cm.focus();
   }
 
   // ========== 右键菜单 ==========
