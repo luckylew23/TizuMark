@@ -10256,30 +10256,33 @@ input[type="checkbox"]:checked::after { display: none !important; }
     this.cm.focus();
   }
 
-  // 在光标所在行下方插入空行（Eclipse/VS Code 语义：不截断当前行，光标移到新行开头）。
-  // 光标在行中任意位置按 Ctrl+Enter 均只在其下方新增一个空行，原行内容保持不动。
+  // 在光标所在行下方插入空行（不截断当前行），光标保持在原来位置（原行、原列），不移动到新行。
   insertLineBelow() {
     const cm = this.cm;
     if (!cm) return;
     const cur = cm.getCursor();
     const lineNo = cur.line;
     const lineLen = cm.getLine(lineNo).length;
-    // 在行尾追加换行 → 当前行光标后文本留在原行，不截断；下方生成一个新的空行。
-    cm.replaceRange('\n', { line: lineNo, ch: lineLen });
-    cm.setCursor({ line: lineNo + 1, ch: 0 });
-    cm.focus();
+    cm.operation(() => {
+      // 在行尾追加换行 → 当前行光标后文本留在原行，不截断；下方生成一个新的空行。
+      cm.replaceRange('\n', { line: lineNo, ch: lineLen });
+      // 光标保持在原行、原列位置（新空行在其下方，原行内容不受影响）。
+      cm.setCursor({ line: lineNo, ch: cur.ch });
+    });
   }
 
-  // 在光标所在行上方插入空行（光标移到新行开头）。原行整体下移，上方新增一个空行。
+  // 在光标所在行上方插入空行：原行整体下移，光标跟随原文本行、保持原列位置（不移动到新行）。
   insertLineAbove() {
     const cm = this.cm;
     if (!cm) return;
     const cur = cm.getCursor();
     const lineNo = cur.line;
-    // 在当前行行首插入换行 → 原行整体下移，上方生成一个新的空行。
-    cm.replaceRange('\n', { line: lineNo, ch: 0 });
-    cm.setCursor({ line: lineNo, ch: 0 });
-    cm.focus();
+    cm.operation(() => {
+      // 在当前行行首插入换行 → 原行整体下移，上方生成一个新的空行。
+      cm.replaceRange('\n', { line: lineNo, ch: 0 });
+      // 原文本整体下移一行，光标跟随到原文本所在的新行（lineNo+1），保持原列位置。
+      cm.setCursor({ line: lineNo + 1, ch: cur.ch });
+    });
   }
 
   // ========== 右键菜单 ==========
