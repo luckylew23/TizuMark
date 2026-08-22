@@ -49,6 +49,10 @@ inst.populateSchemeSelect = () => { inst._populateCount++; };
 inst.setStatus = () => {};
 inst.showToast = () => { inst._toastCount++; };
 inst.t = (k) => k;
+// 录制校验新增「不与内置固定快捷键冲突」分支：此处桩为空，避免影响既有断言
+inst.getBuiltinFixedShortcuts = () => [];
+inst.findBuiltinShortcut = () => null;
+inst._normalizeShortcutKey = (k) => k;
 
 let pass = 0, fail = 0;
 function ok(cond, msg) { if (cond) { pass++; console.log('ok - ' + msg); } else { fail++; console.log('not ok - ' + msg); } }

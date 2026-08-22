@@ -85,3 +85,134 @@ test('迁移：已保存的 previewFind/findReplace 键位被清理，旧 crossS
     cleanup(w);
   }
 });
+
+test('设置布局：内置与可配置两大分类分区渲染（可折叠）', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  try {
+    await waitForEditor(w);
+    const ed = w.editor;
+    ed.renderShortcutsList();
+    const sections = w.document.querySelectorAll('#shortcuts-list .shortcut-section');
+    assert.strictEqual(sections.length, 2, '应有两个折叠分类（内置 / 可配置）');
+    const titles = [...w.document.querySelectorAll('#shortcuts-list .shortcut-section-title .shortcut-section-name')].map(el => el.textContent.trim());
+    assert.ok(titles.includes('内置快捷键'), '应有「内置快捷键」分类');
+    assert.ok(titles.includes('方案与自定义快捷键'), '应有「方案与自定义快捷键」分类');
+    // 可配置区仍包含原有功能分组与全部设置项
+    const renderedIds = new Set([...w.document.querySelectorAll('#shortcuts-list .shortcut-row')].map(el => el.dataset.action));
+    for (const id of Object.keys(ed.getDefaultShortcuts())) {
+      assert.ok(renderedIds.has(id), `设置项 ${id} 应在可配置分类中渲染`);
+    }
+    // 内置区以紧凑两列表格渲染（快捷键 | 名称+说明），含解释文本
+    const builtinTable = w.document.querySelector('#shortcuts-list .shortcut-builtin-table');
+    assert.ok(builtinTable, '内置快捷键应以表格形式渲染');
+    const builtinRows = w.document.querySelectorAll('#shortcuts-list .shortcut-builtin-row');
+    assert.ok(builtinRows.length >= 15, `内置快捷键应逐项展示（含解释），实际 ${builtinRows.length}`);
+    assert.strictEqual(builtinRows[0].tagName.toLowerCase(), 'tr', '内置行应为表格行 tr');
+    assert.ok(builtinRows[0].querySelector('td.shortcut-builtin-key'), '内置行应有快捷键单元格');
+    assert.ok(builtinRows[0].querySelector('td.shortcut-builtin-meta .shortcut-label').textContent.includes('跳到开头'), '内置项应含名称');
+    assert.ok(builtinRows[0].querySelector('.shortcut-builtin-desc').textContent.includes('整篇文档'), '内置项应含解释说明');
+  } finally {
+    cleanup(w);
+  }
+});
+
+test('设置布局：内置分类默认收缩置顶，可折叠/展开，状态保留在折叠属性上', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  try {
+    await waitForEditor(w);
+    const ed = w.editor;
+    const locate = (key) => [...w.document.querySelectorAll('#shortcuts-list .shortcut-section')]
+      .find(s => s.querySelector(`.shortcut-section-title[data-toggle="${key}"]`));
+    ed.renderShortcutsList();
+    // 顺序：内置在前、方案与自定义在后
+    const sections = [...w.document.querySelectorAll('#shortcuts-list .shortcut-section')];
+    assert.strictEqual(sections[0].querySelector('.shortcut-section-title').dataset.toggle, 'builtin', '内置分类应在顶部');
+    assert.strictEqual(sections[1].querySelector('.shortcut-section-title').dataset.toggle, 'config', '方案与自定义应在其后');
+    // 默认：内置收缩、方案与自定义展开
+    const builtinSection = locate('builtin');
+    assert.strictEqual(builtinSection.getAttribute('data-collapsed'), 'true', '内置分类初始应为收缩');
+    const configSection = locate('config');
+    assert.strictEqual(configSection.getAttribute('data-collapsed'), 'false', '方案与自定义初始应为展开');
+    // 收缩时 body 带 data-collapsed 父级，CSS 规则 .shortcut-section[data-collapsed="true"] .shortcut-section-body { display:none } 生效
+    assert.strictEqual(builtinSection.querySelector('.shortcut-section-body').parentElement, builtinSection, '内置 body 应位于内置 section 内');
+    // 点击内置标题展开
+    const title = builtinSection.querySelector('.shortcut-section-title');
+    title.dispatchEvent(new w.Event('click', { bubbles: true }));
+    assert.strictEqual(builtinSection.getAttribute('data-collapsed'), 'false', '点击后应展开');
+    // 展开后重渲染应保持展开状态
+    ed.renderShortcutsList();
+    const reSection = locate('builtin');
+    assert.strictEqual(reSection.getAttribute('data-collapsed'), 'false', '重渲染后应维持展开');
+    // 再点击恢复收缩
+    reSection.querySelector('.shortcut-section-title').dispatchEvent(new w.Event('click', { bubbles: true }));
+    assert.strictEqual(reSection.getAttribute('data-collapsed'), 'true', '再次点击应收缩');
+  } finally {
+    cleanup(w);
+  }
+});
+
+test('布局：快捷键方案下拉归位于「方案与自定义」分类内', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  try {
+    await waitForEditor(w);
+    const ed = w.editor;
+    ed.renderShortcutsList();
+    const configSection = [...w.document.querySelectorAll('#shortcuts-list .shortcut-section')]
+      .find(s => s.querySelector('.shortcut-section-title[data-toggle="config"]'));
+    assert.ok(configSection, '应能定位方案与自定义分类');
+    const host = configSection.querySelector('#shortcuts-scheme-host');
+    assert.ok(host, '配置分类内应包含方案下拉占位容器');
+    // 方案 Select 的宿主节点应被挂接到占位容器内
+    assert.strictEqual(ed._schemeHost && ed._schemeHost.parentElement, host, '方案 Select 宿主应挂入占位容器');
+  } finally {
+    cleanup(w);
+  }
+});
+
+test('校验：录制内置固定快捷键被拒绝（不写入、提示占用）', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  try {
+    await waitForEditor(w);
+    const ed = w.editor;
+    const toasts = [];
+    ed.showToast = (msg) => toasts.push(msg);
+    ed.recordingAction = 'bold';
+    const before = ed.shortcuts.bold.key;
+    // 录制 Ctrl+Home（内置跳到开头）应被拦截
+    const handled = ed.handleShortcutRecording({ key: 'Home', ctrlKey: true, preventDefault() {}, stopPropagation() {} });
+    assert.strictEqual(handled, true, '应吞掉该按键事件');
+    assert.strictEqual(ed.shortcuts.bold.key, before, '内置键不可占用，bold 键位不应被改写');
+    assert.strictEqual(ed.recordingAction, null, '录制应被中止');
+    assert.strictEqual(toasts.length, 1, '应弹出占用提示');
+    assert.match(String(toasts[0]), /内置快捷键/, '提示应说明是内置快捷键');
+  } finally {
+    cleanup(w);
+  }
+});
+
+test('校验：findBuiltinShortcut 规范比对（Ctrl/Control、大小写均命中）', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  try {
+    await waitForEditor(w);
+    const ed = w.editor;
+    assert.ok(ed.getBuiltinFixedShortcuts().length >= 15, '内置快捷键清单应已定义');
+    assert.ok(ed.findBuiltinShortcut('Ctrl+Home'), 'Ctrl+Home 应命中内置');
+    assert.ok(ed.findBuiltinShortcut('Control+ArrowLeft'), 'Control+ArrowLeft 应命中（修饰键别名/大小写归一）');
+    assert.strictEqual(ed.findBuiltinShortcut('Ctrl+G'), null, '普通键不应误判为内置');
+  } finally {
+    cleanup(w);
+  }
+});
+
+test('显示：formatShortcutDisplay 方向键映射为直观符号', async () => {
+  const { w } = await buildEnv({ captureInitErr: true });
+  try {
+    await waitForEditor(w);
+    const ed = w.editor;
+    assert.match(ed.formatShortcutDisplay('Ctrl+ArrowLeft'), /←/, '← 符号');
+    assert.match(ed.formatShortcutDisplay('Ctrl+ArrowRight'), /→/, '→ 符号');
+    assert.match(ed.formatShortcutDisplay('Ctrl+Home'), /Ctrl/, 'Home 保持文本 Ctrl');
+  } finally {
+    cleanup(w);
+  }
+});

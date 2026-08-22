@@ -312,7 +312,16 @@ const I18N = {
     noUnauthorized: '欢迎自由使用、修改和分发，衍生作品须延续 GPL v3 协议。',
     shortcutLabel: { newFile: '新建文件', openFile: '打开文件', saveFile: '保存文件', closeTab: '关闭标签页', find: '查找替换', crossSearch: '跨文件搜索', nextTab: '下一个标签页', prevTab: '上一个标签页', bold: '加粗', italic: '斜体', insertLink: '插入链接', exportPDF: '导出 PDF', inlineCode: '行内代码', strikethrough: '删除线', codeBlock: '代码块', blockquote: '引用块', toggleView: '切换视图', toggleSidebar: '切换侧边栏', toggleTheme: '切换主题', saveAs: '另存为', insertTable: '插入表格', insertImage: '插入图片', insertUl: '无序列表', insertOl: '有序列表', insertTask: '任务列表', insertHr: '水平线', highlight: '高亮标记', insertSuperscript: '上标', insertSubscript: '下标', insertH1: '标题1', insertH2: '标题2', insertH3: '标题3', insertH4: '标题4', insertH5: '标题5', insertH6: '标题6', insertMathBlock: '数学公式', insertMermaid: 'Mermaid 图表', insertToc: '目录', insertCalloutNote: 'Note 提示', insertCalloutTip: 'Tip 建议', insertCalloutWarning: 'Warning 警告', insertCalloutCaution: 'Caution 注意',     insertCalloutImportant: 'Important 重要', moveLineUp: '上移行/选区', moveLineDown: '下移行/选区', fileSearch: '文件搜索', closeToTray: '关闭到托盘' },
     shortcutGroup: { file: '文件', search: '查找与搜索', tabView: '标签页与视图', format: '文本格式', insert: '插入', heading: '标题', callout: '提示块' },
+    // 快捷键设置的两大分类（可折叠）：内核固定不可改 + 方案与自定义可改
+    builtinShortcutsTitle: '内置快捷键',
+    builtinShortcutsHint: '系统固定 · 不可修改',
+    configurableShortcutsTitle: '方案与自定义快捷键',
+    configurableShortcutsHint: '可套用方案或自行设定',
+    builtinNavGroup: '光标与选区',
+    builtinEditGroup: '编辑通用',
+    shortcutBuiltinOccupied: '「{key}」是系统内置快捷键（{name}），不可占用',
     shortcutScheme: '快捷键方案',
+    schemeHint: '切换预设键位方案，或自行修改下方各项',
     shortcutList: '快捷键',
     crossSearch: '跨文件搜索',
     crossSearchTitle: '跨文件搜索',
@@ -743,7 +752,15 @@ const I18N = {
     noUnauthorized: 'Free to use, modify, and distribute. Derivative works must remain under GPL v3.',
     shortcutLabel: { newFile: 'New File', openFile: 'Open File', saveFile: 'Save File', closeTab: 'Close Tab', find: 'Find & Replace', crossSearch: 'Cross-file Search', nextTab: 'Next Tab', prevTab: 'Previous Tab', bold: 'Bold', italic: 'Italic', insertLink: 'Insert Link', exportPDF: 'Export PDF', inlineCode: 'Inline Code', strikethrough: 'Strikethrough', codeBlock: 'Code Block', blockquote: 'Blockquote', toggleView: 'Toggle View', toggleSidebar: 'Toggle Sidebar', toggleTheme: 'Toggle Theme', saveAs: 'Save As', insertTable: 'Insert Table', insertImage: 'Insert Image', insertUl: 'Unordered List', insertOl: 'Ordered List', insertTask: 'Task List', insertHr: 'Horizontal Rule', highlight: 'Highlight', insertSuperscript: 'Superscript', insertSubscript: 'Subscript', insertH1: 'Heading 1', insertH2: 'Heading 2', insertH3: 'Heading 3', insertH4: 'Heading 4', insertH5: 'Heading 5', insertH6: 'Heading 6', insertMathBlock: 'Math Block', insertMermaid: 'Mermaid Diagram', insertToc: 'Table of Contents', insertCalloutNote: 'Callout Note', insertCalloutTip: 'Callout Tip', insertCalloutWarning: 'Callout Warning', insertCalloutCaution: 'Callout Caution',     insertCalloutImportant: 'Callout Important', moveLineUp: 'Move Line/Selection Up', moveLineDown: 'Move Line/Selection Down', fileSearch: 'File Search', closeToTray: 'Hide to tray' },
     shortcutGroup: { file: 'File', search: 'Find & Search', tabView: 'Tabs & View', format: 'Text Format', insert: 'Insert', heading: 'Headings', callout: 'Callouts' },
+    builtinShortcutsTitle: 'Built-in Shortcuts',
+    builtinShortcutsHint: 'Fixed by the app · not editable',
+    configurableShortcutsTitle: 'Scheme & Custom Shortcuts',
+    configurableShortcutsHint: 'Apply a preset or set your own',
+    builtinNavGroup: 'Cursor & Selection',
+    builtinEditGroup: 'Editing',
+    shortcutBuiltinOccupied: '"{key}" is a built-in shortcut ({name}) and cannot be reassigned',
     shortcutScheme: 'Shortcut Scheme',
+    schemeHint: 'Switch a preset scheme, or customize the items below',
     shortcutList: 'Shortcuts',
     crossSearch: 'Cross-file Search',
     crossSearchTitle: 'Cross-file Search',
@@ -3226,8 +3243,87 @@ class MarkdownEditor {
   }
 
   formatShortcutDisplay(key) {
-    if (!key) return this.t('none');
-    return key.split('+').map(k => `<kbd>${k}</kbd>`).join('<span class="key-separator">+</span>');
+    if (!key) return `<span class="shortcut-key shortcut-key-empty">${this.t('none')}</span>`;
+    // 方向键 / 功能键映射为更直观的符号，键位显示更紧凑美观
+    const SYM = {
+      ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+      Home: 'Home', End: 'End', Backspace: '⌫', Delete: '⌦',
+      Enter: '↵', Space: 'Space', Escape: 'Esc', Tab: 'Tab',
+    };
+    const inner = key.split('+').map(k => `<kbd>${SYM[k] || k}</kbd>`).join('<span class="key-separator">+</span>');
+    return `<span class="shortcut-key">${inner}</span>`;
+  }
+
+  // 系统内置、固定不可由用户改写的快捷键（附通俗解释）。
+  // 结构化数据（含 combo/group/name/desc）不便塞进「值为字符串」的 i18n 字典，
+  // 故在此按语言返回，combo 用录制规范格式（与 handleShortcutRecording 产出一致），
+  // 便于冲突校验直接比对；group 用于在内置区内再细分（nav=光标与选区 / edit=编辑通用）。
+  getBuiltinFixedShortcuts() {
+    const ZH = [
+      { combo: 'Ctrl+Home', group: 'nav', name: '跳到开头', desc: '把光标移到整篇文档的最前面' },
+      { combo: 'Ctrl+End', group: 'nav', name: '跳到结尾', desc: '把光标移到整篇文档的最后面' },
+      { combo: 'Shift+Ctrl+Home', group: 'nav', name: '选到开头', desc: '从光标位置一路选中到文档开头' },
+      { combo: 'Shift+Ctrl+End', group: 'nav', name: '选到结尾', desc: '从光标位置一路选中到文档结尾' },
+      { combo: 'Ctrl+ArrowLeft', group: 'nav', name: '按词左移', desc: '光标向左跳过一个完整的词' },
+      { combo: 'Ctrl+ArrowRight', group: 'nav', name: '按词右移', desc: '光标向右跳过一个完整的词' },
+      { combo: 'Shift+Ctrl+ArrowLeft', group: 'nav', name: '向左选词', desc: '按住 Shift，再向左按词选中文本' },
+      { combo: 'Shift+Ctrl+ArrowRight', group: 'nav', name: '向右选词', desc: '按住 Shift，再向右按词选中文本' },
+      { combo: 'Ctrl+Z', group: 'edit', name: '撤销', desc: '撤销上一步操作' },
+      { combo: 'Ctrl+Y', group: 'edit', name: '重做', desc: '恢复刚刚被撤销的操作' },
+      { combo: 'Ctrl+A', group: 'edit', name: '全选', desc: '选中编辑器里的全部内容' },
+      { combo: 'Ctrl+C', group: 'edit', name: '复制', desc: '把选中的文本复制到剪贴板' },
+      { combo: 'Ctrl+X', group: 'edit', name: '剪切', desc: '把选中的文本剪切到剪贴板' },
+      { combo: 'Ctrl+V', group: 'edit', name: '粘贴', desc: '在光标处粘贴剪贴板内容' },
+      { combo: 'Tab', group: 'edit', name: '增加缩进', desc: '为当前行或选中的多行增加一级缩进' },
+      { combo: 'Shift+Tab', group: 'edit', name: '减少缩进', desc: '为当前行或选中的多行减少一级缩进' },
+    ];
+    const EN = [
+      { combo: 'Ctrl+Home', group: 'nav', name: 'Go to start', desc: 'Move the cursor to the very beginning of the document' },
+      { combo: 'Ctrl+End', group: 'nav', name: 'Go to end', desc: 'Move the cursor to the very end of the document' },
+      { combo: 'Shift+Ctrl+Home', group: 'nav', name: 'Select to start', desc: 'Select from the cursor all the way to the document start' },
+      { combo: 'Shift+Ctrl+End', group: 'nav', name: 'Select to end', desc: 'Select from the cursor all the way to the document end' },
+      { combo: 'Ctrl+ArrowLeft', group: 'nav', name: 'Word left', desc: 'Move the cursor left by one whole word' },
+      { combo: 'Ctrl+ArrowRight', group: 'nav', name: 'Word right', desc: 'Move the cursor right by one whole word' },
+      { combo: 'Shift+Ctrl+ArrowLeft', group: 'nav', name: 'Select word left', desc: 'Hold Shift to select words to the left' },
+      { combo: 'Shift+Ctrl+ArrowRight', group: 'nav', name: 'Select word right', desc: 'Hold Shift to select words to the right' },
+      { combo: 'Ctrl+Z', group: 'edit', name: 'Undo', desc: 'Undo the last action' },
+      { combo: 'Ctrl+Y', group: 'edit', name: 'Redo', desc: 'Redo the last undone action' },
+      { combo: 'Ctrl+A', group: 'edit', name: 'Select all', desc: 'Select everything in the editor' },
+      { combo: 'Ctrl+C', group: 'edit', name: 'Copy', desc: 'Copy the selected text to the clipboard' },
+      { combo: 'Ctrl+X', group: 'edit', name: 'Cut', desc: 'Cut the selected text to the clipboard' },
+      { combo: 'Ctrl+V', group: 'edit', name: 'Paste', desc: 'Paste clipboard content at the cursor' },
+      { combo: 'Tab', group: 'edit', name: 'Indent', desc: 'Add one level of indent to the line or selection' },
+      { combo: 'Shift+Tab', group: 'edit', name: 'Outdent', desc: 'Remove one level of indent from the line or selection' },
+    ];
+    const lang = (this.settings && this.settings.language) || 'zh';
+    return lang === 'en' ? EN : ZH;
+  }
+
+  // 把任意来源的键位字符串规范化为「小写修饰键 + 小写主键」的规范串，
+  // 用于冲突比对（不区分 Ctrl/Control、修饰键顺序、字母大小写）。
+  _normalizeShortcutKey(key) {
+    if (!key) return '';
+    const mods = [];
+    let main = '';
+    for (const p of key.split('+')) {
+      const up = p.trim().toLowerCase();
+      if (up === 'ctrl' || up === 'control') mods.push('ctrl');
+      else if (up === 'shift') mods.push('shift');
+      else if (up === 'alt') mods.push('alt');
+      else if (up === 'meta' || up === 'cmd') mods.push('meta');
+      else main = up;
+    }
+    return [...mods.sort(), main].join('+');
+  }
+
+  // 查询某键位是否已被某个「内置固定快捷键」占用，命中返回该条目，否则 null。
+  findBuiltinShortcut(key) {
+    if (!key) return null;
+    const norm = this._normalizeShortcutKey(key);
+    for (const item of this.getBuiltinFixedShortcuts()) {
+      if (this._normalizeShortcutKey(item.combo) === norm) return item;
+    }
+    return null;
   }
 
   updateShortcutHints() {
@@ -3306,7 +3402,12 @@ class MarkdownEditor {
       { key: 'callout', ids: ['insertCalloutNote', 'insertCalloutTip', 'insertCalloutWarning', 'insertCalloutCaution', 'insertCalloutImportant'] },
     ];
 
-    container.innerHTML = groups.map(group => {
+    // 折叠状态在对话框会话内保持（重渲染不丢失用户的展开/收起选择）。
+    // 内置区默认收缩（内容多、且不可改），放在顶部；方案与自定义默认展开。
+    if (!this._sectionCollapsed) this._sectionCollapsed = { builtin: true, config: false };
+
+    // —— 可配置区（方案与自定义）：保留原有按功能分组 + 录制/清除按钮 ——
+    const configGroupsHtml = groups.map(group => {
       const rows = group.ids
         .filter(id => this.shortcuts[id])
         .map(id => {
@@ -3316,11 +3417,11 @@ class MarkdownEditor {
           return `
         <div class="shortcut-row" data-action="${id}">
           <span class="shortcut-label">${label}</span>
-          <div class="shortcut-actions">
-            <div class="shortcut-key">${this.formatShortcutDisplay(shortcut.key)}</div>
-            <button class="shortcut-record-btn${isRecording ? ' recording' : ''}" data-action="${id}">${isRecording ? this.t('pressKeys') : this.t('modify')}</button>
-            <button class="shortcut-clear-btn" data-action="${id}">${this.t('clear')}</button>
-          </div>
+            <div class="shortcut-actions">
+              ${this.formatShortcutDisplay(shortcut.key)}
+              <button class="shortcut-record-btn${isRecording ? ' recording' : ''}" data-action="${id}">${isRecording ? this.t('pressKeys') : this.t('modify')}</button>
+              <button class="shortcut-clear-btn" data-action="${id}">${this.t('clear')}</button>
+            </div>
         </div>`;
         }).join('');
       if (!rows) return '';
@@ -3331,7 +3432,72 @@ class MarkdownEditor {
         </div>`;
     }).join('');
 
+    // —— 内置固定区：不可改，紧凑两列表格（快捷键 | 名称+说明）——
+    const builtin = this.getBuiltinFixedShortcuts();
+    const builtinTable = (grp, title) => {
+      const rows = builtin.filter(b => b.group === grp);
+      if (!rows.length) return '';
+      const body = rows.map(b => `
+          <tr class="shortcut-builtin-row">
+            <td class="shortcut-builtin-key">${this.formatShortcutDisplay(b.combo)}</td>
+            <td class="shortcut-builtin-meta">
+              <span class="shortcut-label">${b.name}</span>
+              <span class="shortcut-builtin-desc">${b.desc}</span>
+            </td>
+          </tr>`).join('');
+      return `
+        <div class="shortcut-group">
+          <div class="shortcut-group-title">${title}</div>
+          <table class="shortcut-builtin-table">
+            <tbody>${body}</tbody>
+          </table>
+        </div>`;
+    };
+
+    const builtinHtml =
+      builtinTable('nav', this.t('builtinNavGroup')) +
+      builtinTable('edit', this.t('builtinEditGroup'));
+
+    const caretHtml = '<svg class="collapse-caret" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const sectionHtml = (key, title, hint, body) => `
+      <div class="shortcut-section" data-collapsed="${this._sectionCollapsed[key] ? 'true' : 'false'}">
+        <div class="shortcut-section-title" data-toggle="${key}">
+          <span class="shortcut-section-name">${title}</span>
+          <span class="shortcut-section-hint">${hint}</span>
+          ${caretHtml}
+        </div>
+        <div class="shortcut-section-body">${body}</div>
+      </div>`;
+
+    // 方案下拉归位到「方案与自定义」分类顶部：方案切换预设键位，下方再列可改项。
+    const schemeBlockHtml = `
+      <div class="scheme-block">
+        <div class="scheme-block-head">
+          <span class="scheme-block-label">${this.t('shortcutScheme')}</span>
+          <span class="scheme-block-hint">${this.t('schemeHint')}</span>
+        </div>
+        <div id="shortcuts-scheme-host" class="scheme-select-host"></div>
+      </div>`;
+
+    container.innerHTML =
+      sectionHtml('builtin', this.t('builtinShortcutsTitle'), this.t('builtinShortcutsHint'), builtinHtml) +
+      sectionHtml('config', this.t('configurableShortcutsTitle'), this.t('configurableShortcutsHint'), schemeBlockHtml + configGroupsHtml);
+
+    // 把方案 Select 的宿主节点移入当前渲染出的占位容器（每次 innerHTML 重建后需重新挂接）。
     if (this._schemeSelect) this._schemeSelect.setValue(this.shortcutScheme || 'default', true);
+    const schemePlaceholder = container.querySelector('#shortcuts-scheme-host');
+    if (schemePlaceholder && this._schemeHost && this._schemeHost.parentElement !== schemePlaceholder) {
+      schemePlaceholder.appendChild(this._schemeHost);
+    }
+
+    // 折叠/展开：点击分类标题切换对应区，保留折叠状态供后续重渲染
+    container.querySelectorAll('.shortcut-section-title').forEach(title => {
+      title.addEventListener('click', () => {
+        const sec = title.dataset.toggle;
+        this._sectionCollapsed[sec] = !this._sectionCollapsed[sec];
+        title.closest('.shortcut-section').setAttribute('data-collapsed', this._sectionCollapsed[sec] ? 'true' : 'false');
+      });
+    });
 
     container.querySelectorAll('.shortcut-record-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -3379,6 +3545,15 @@ class MarkdownEditor {
     const dup = this.findDuplicateShortcut(keyStr, this.recordingAction);
     if (dup) {
       this.showToast(this.t('shortcutOccupied', { key: keyStr, name: this.t('shortcutLabel')[dup] || dup }));
+      this.recordingAction = null;
+      this.renderShortcutsList();
+      return true;
+    }
+    // 不与「内置固定快捷键」冲突：内置键由编辑器内核占用，用户不可改写，
+    // 否则录制成功却不生效，反而造成困惑。冲突即拦截并提示。
+    const builtin = this.findBuiltinShortcut(keyStr);
+    if (builtin) {
+      this.showToast(this.t('shortcutBuiltinOccupied', { key: keyStr, name: builtin.name }));
       this.recordingAction = null;
       this.renderShortcutsList();
       return true;
@@ -3440,26 +3615,29 @@ class MarkdownEditor {
       }
     });
 
-    // 快捷键方案下拉：自绘 Select 组件（替代原生 select，展开面板可主题化 + 完整 ARIA）
-    const schemeHost = document.getElementById('shortcuts-scheme');
-    if (schemeHost) {
-      this._schemeSelect = new Select(schemeHost, {
-        value: this.shortcutScheme || 'default',
-        t: this.t.bind(this),
-        ariaLabelKey: 'shortcutScheme',
-        optionsProvider: (t) => ([
-          { value: 'default', label: t('schemeDefault') },
-          { value: 'vscode', label: t('schemeVSCode') },
-          { value: 'typora', label: t('schemeTypora') },
-          { value: 'sublime', label: t('schemeSublime') },
-          { value: 'custom', label: t('schemeCustom') },
-        ]),
-        // 随意切换：仅把键位加载到列表预览（不应用 CM、不持久化），点「保存」按钮才正式生效。
-        // 历史实现：change 即弹 window.confirm 并立即生效，Tauri 下 confirm 依赖
-        // dialog:allow-confirm 权限（缺失报 "dialog.confirm not allowed"），且交互不符直觉。
-        onChange: (name) => { this.previewShortcutScheme(name); },
-      });
+    // 快捷键方案下拉：自绘 Select 组件（替代原生 select，展开面板可主题化 + 完整 ARIA）。
+    // 宿主用一个持久化的游离 div，渲染时再挂入「方案与自定义」分类内的占位容器，
+    // 避免每次 renderShortcutsList 重写 innerHTML 时把 Select 实例的 DOM 冲掉。
+    if (!this._schemeHost) {
+      this._schemeHost = document.createElement('div');
+      this._schemeHost.className = 'scheme-select-host';
     }
+    this._schemeSelect = new Select(this._schemeHost, {
+      value: this.shortcutScheme || 'default',
+      t: this.t.bind(this),
+      ariaLabelKey: 'shortcutScheme',
+      optionsProvider: (t) => ([
+        { value: 'default', label: t('schemeDefault') },
+        { value: 'vscode', label: t('schemeVSCode') },
+        { value: 'typora', label: t('schemeTypora') },
+        { value: 'sublime', label: t('schemeSublime') },
+        { value: 'custom', label: t('schemeCustom') },
+      ]),
+      // 随意切换：仅把键位加载到列表预览（不应用 CM、不持久化），点「保存」按钮才正式生效。
+      // 历史实现：change 即弹 window.confirm 并立即生效，Tauri 下 confirm 依赖
+      // dialog:allow-confirm 权限（缺失报 "dialog.confirm not allowed"），且交互不符直觉。
+      onChange: (name) => { this.previewShortcutScheme(name); },
+    });
     this.populateSchemeSelect();
   }
 
@@ -3469,6 +3647,8 @@ class MarkdownEditor {
     // 这样「未点确认就关闭面板」留下的内存草稿不会残留，重开仍显示已保存值。
     this.shortcuts = this.loadShortcuts();
     this.shortcutScheme = this.loadShortcutScheme();
+    // 每次打开重置折叠默认：内置固定区收缩、方案与自定义区展开。
+    this._sectionCollapsed = { builtin: true, config: false };
     this.renderShortcutsList();
     this.populateSchemeSelect();
     document.getElementById('shortcuts-dialog').classList.remove('hidden');
@@ -3623,6 +3803,15 @@ class MarkdownEditor {
     extraKeys['Shift-Ctrl-Home'] = (cm) => { const c = cm.getCursor(); cm.setSelection(c, { line: cm.firstLine(), ch: 0 }); };
     extraKeys['Shift-Ctrl-End']  = (cm) => { const c = cm.getCursor(); cm.setSelection(c, { line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length }); };
 
+    // 按「词」移动 / 选择（方案 B：Intl.Segmenter 中文分词）。
+    // 方向键与 Home/End 同逻辑：需在全局捕获 keydown 监听里「放行」（见下方放行名单），
+    // 否则事件被 preventDefault 后 CM 收不到、custom handler 永不执行。
+    // Shift 版本复用同一 handler：extendSelectionsBy 会按 display.shift 自动扩展选区。
+    extraKeys['Ctrl-Left']        = (cm) => this._moveByWord(cm, -1, false);
+    extraKeys['Ctrl-Right']       = (cm) => this._moveByWord(cm, 1, false);
+    extraKeys['Shift-Ctrl-Left']  = (cm) => this._moveByWord(cm, -1, true);
+    extraKeys['Shift-Ctrl-Right'] = (cm) => this._moveByWord(cm, 1, true);
+
     this.cm.setOption('extraKeys', extraKeys);
 
     // Build global shortcut lookup for document-level handling.
@@ -3695,6 +3884,101 @@ class MarkdownEditor {
         );
       }
     });
+  }
+
+  // ---- Ctrl+方向键「按词移动 / 选择」 ----
+  // 词边界分词器：优先用 Intl.Segmenter 做中文分词（地基/承载 等独立成词），
+  // 环境不支持时降级为正则（连续 字母/数字/中文 视为一个词）。懒创建并缓存。
+  _createWordSegmenter() {
+    if (this._wordSegmenterCached) return this._wordSegmenterCached;
+    let info = { type: 'regex' };
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      try {
+        const seg = new Intl.Segmenter('zh', { granularity: 'word' });
+        seg.segment('探测'); // 触发一次，确认可用
+        info = { type: 'segmenter', seg };
+      } catch (e) { /* 降级到 regex */ }
+    }
+    this._wordSegmenterCached = info;
+    return info;
+  }
+
+  // 单行内从 ch 沿 dir 方向计算「词边界」目标（不含跨行）。
+  // 返回 { ch, isEdgeWord }：ch 为目标列；isEdgeWord 表示该边界恰好处在行首/行尾
+  // （词起点在行首 / 词尾在行尾），此时应视为有效停靠点而非继续跨行。
+  // 语义对齐主流编辑器：向右先在词内跳到词尾、再跳下一词尾；向左跳到词头。
+  // 标点 / 空格 / 公式符号等非 word-like 段被跳过，光标落在相邻词的边界。
+  _wordBoundaryInLine(lineText, ch, dir, segInfo) {
+    const words = [];
+    if (segInfo.type === 'segmenter') {
+      for (const s of segInfo.seg.segment(lineText)) {
+        if (s.isWordLike) words.push([s.index, s.index + s.segment.length]);
+      }
+    } else {
+      const re = /[\w一-鿿]+/g;
+      let m;
+      while ((m = re.exec(lineText)) !== null) words.push([m.index, m.index + m[0].length]);
+    }
+    const len = lineText.length;
+    if (dir > 0) {
+      // 向右：词内 → 当前词尾；否则第一个 start>=ch 的词尾
+      for (const [s, e] of words) {
+        if (ch >= s && ch < e) return { ch: e, isEdgeWord: e === len };
+      }
+      for (const [s, e] of words) {
+        if (s >= ch) return { ch: e, isEdgeWord: e === len };
+      }
+      return { ch: len, isEdgeWord: false };
+    }
+    // 向左：词内/词尾 → 词头；否则最后一个 start<ch 的词头
+    for (const [s, e] of words) {
+      if (ch > s && ch <= e) return { ch: s, isEdgeWord: s === 0 };
+    }
+    let target = null;
+    for (const [s] of words) {
+      if (s < ch) target = s; else break;
+    }
+    return { ch: target != null ? target : 0, isEdgeWord: target != null && target === 0 };
+  }
+
+  // Ctrl+←/→ 按词移动；Ctrl+Shift+←/→ 选择词。
+  // extend=true 时临时置 doc.extend，强制 extendSelectionsBy 扩展选区（不依赖
+  // display.shift，确保 Shift 版无论事件路径都能选中）；extend=false 时若有选区则折叠。
+  // 跨行时沿 dir 续算到相邻行的词边界。
+  _moveByWord(cm, dir, extend) {
+    if (!cm) return;
+    const segInfo = this._createWordSegmenter();
+    const doc = cm.doc;
+    const prevExtend = doc.extend;
+    if (extend) doc.extend = true;
+    try {
+      cm.extendSelectionsBy((range) => {
+      let line = range.head.line;
+      let ch = range.head.ch;
+      let guard = 0;
+      const maxLine = cm.lineCount();
+      while (guard++ < maxLine + 2) {
+        const lt = cm.getLine(line);
+        const target = this._wordBoundaryInLine(lt, ch, dir, segInfo);
+        if (dir > 0) {
+          // 命中词尾（非行尾）即停靠；词尾恰在行尾也视为有效停靠；否则跨下一行
+          if (target.ch < lt.length) return { line, ch: target.ch };
+          if (target.isEdgeWord) return { line, ch: lt.length };
+          if (line >= cm.lastLine()) return { line, ch: lt.length };
+          line += 1; ch = 0;
+        } else {
+          // 命中词头（非行首）即停靠；词头恰在行首也视为有效停靠；否则跨上一行
+          if (target.ch > 0) return { line, ch: target.ch };
+          if (target.isEdgeWord) return { line, ch: 0 };
+          if (line <= cm.firstLine()) return { line, ch: 0 };
+          line -= 1; ch = cm.getLine(line).length;
+        }
+      }
+      return { line, ch };
+      });
+    } finally {
+      doc.extend = prevExtend;
+    }
   }
 
   initEditor() {
@@ -4756,7 +5040,10 @@ class MarkdownEditor {
         // Ctrl+Home 移动而非选中）；CM 命中后会自行 preventDefault（阻止页面滚动）。
         // 不放行的话全局捕获监听会 preventDefault，导致 CM 因 defaultPrevented 提前
         // return、handler 永不执行（见 codemirror.js onKeyDown → signalDOMEvent）。
-        if (key === 'home' || key === 'end') {
+        if (key === 'home' || key === 'end' || key === 'arrowleft' || key === 'arrowright') {
+          // 文档导航键 / 方向键：放行给 CodeMirror 处理（Ctrl+←/→ 按词移动、
+          // Ctrl+Shift+←/→ 选词）。若在此 preventDefault，CM 因 defaultPrevented 提前
+          // return，extraKeys 里自定义的 _moveByWord handler 永不执行（同 Home/End 坑）。
           return;
         }
 
