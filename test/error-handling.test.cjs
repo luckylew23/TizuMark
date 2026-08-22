@@ -72,14 +72,27 @@ function harnessFn() {
   clearToast(); ed.showToast({ title: 'T2', detail: 'D2' }, 'info');
   results.push(['info 类型无 code', lines(lastToast()).type === 'info' && !lines(lastToast()).code]);
 
-  // 12. 旧式字符串 toast 向后兼容
+  // 12. 旧式字符串 toast 向后兼容：比较内容区文本（排除右侧「关闭」按钮文字）
   clearToast(); ed.showToast('纯文本成功提示', 'success');
-  results.push(['旧式字符串 toast 兼容', lastToast().textContent === '纯文本成功提示']);
+  const bodyOnly = lastToast().querySelector('.toast-body');
+  results.push(['旧式字符串 toast 兼容', (bodyOnly ? bodyOnly.textContent : lastToast().textContent) === '纯文本成功提示']);
 
   // 13. toast:false 走 setStatus
   let statusText = null; ed.setStatus = (s) => { statusText = s; };
   clearToast(); ed.reportError('E_INIT', { toast: false });
   results.push(['toast:false 走 setStatus', statusText && statusText.includes('编辑器初始化失败') && container.querySelectorAll('.toast').length === 0]);
+
+  // 14-15. toast 关闭按钮存在且点击触发关闭动画
+  clearToast(); ed.showToast('可关闭的提示', 'danger');
+  const closable = lastToast();
+  const closeBtn = closable && closable.querySelector('.toast-close');
+  results.push(['toast 渲染关闭按钮', !!closeBtn && closeBtn.getAttribute('aria-label') === '关闭']);
+  if (closeBtn) {
+    closeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    results.push(['toast 点击关闭按钮触发 dismiss', closable.style.opacity === '0' && closable.style.transform.includes('0.98')]);
+  } else {
+    results.push(['toast 点击关闭按钮触发 dismiss', false]);
+  }
 
   // 把 MarkdownEditor 实例工厂暴露到 window，供文件底部的 C16 异步端到端用例使用
   // （class 不跨脚本作用域共享，只能由脚本内部导出）

@@ -4879,9 +4879,9 @@ select option {
 
 .toast {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 14px 10px 20px;
   border-radius: 6px;
   font-size: 13px;
   line-height: 1.5;
@@ -4935,6 +4935,43 @@ select option {
 .toast-icon svg {
   width: 100%;
   height: 100%;
+}
+
+.toast-close {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: 6px;
+  padding: 1px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .02em;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.toast-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.toast-close:hover {
+  background-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+.toast-close:active {
+  background-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 @keyframes toast-in {

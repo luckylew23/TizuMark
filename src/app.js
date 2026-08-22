@@ -9483,17 +9483,29 @@ input[type="checkbox"]:checked::after { display: none !important; }
       body.textContent = text;
     }
 
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'toast-close';
+    closeBtn.setAttribute('aria-label', this.t('close') || 'Close');
+    closeBtn.textContent = this.t('close') || 'Close';
+
+    let timer = null;
+    const dismiss = () => {
+      if (timer) clearTimeout(timer);
+      if (!el.parentNode) return;
+      el.style.transition = 'opacity 0.25s, transform 0.25s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-12px) scale(0.98)';
+      setTimeout(() => el.remove(), 250);
+    };
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); dismiss(); });
+
     el.appendChild(iconSpan);
     el.appendChild(body);
+    el.appendChild(closeBtn);
     container.appendChild(el);
 
     const duration = opts.duration || (type === 'danger' ? 5000 : type === 'warning' ? 4000 : 3000);
-    setTimeout(() => {
-      el.style.transition = 'opacity 0.3s, transform 0.3s';
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(-20px)';
-      setTimeout(() => el.remove(), 300);
-    }, duration);
+    timer = setTimeout(dismiss, duration);
   }
 
   // 统一错误上报：用户友好提示 + 开发可诊断（错误码 + 上下文写入 console）
