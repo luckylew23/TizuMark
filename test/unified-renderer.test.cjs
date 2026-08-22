@@ -342,3 +342,138 @@ test('跨单元格的孤立 $ 不配对成公式', async () => {
   assert.ok(!html.includes('MATHBLOCK'), '不应生成跨单元格 MATHBLOCK');
 });
 
+// ===== 原始 HTML 表格内联公式不跨标签配对（用户复现）=====
+
+test('原始 HTML table 单元格内 $...$ 不跨 <td></td> 配对', async () => {
+  // 用户复现：<table><tr><td>$ \varphi_k $</td><td>$ M_b $</td>...</table>
+  // guardMathBlocks 曾把 "$</td><td>$" 误判为行内公式，导致整行单元格被合并、
+  // 后续标签被 escape。修复后每个 $...$ 应留在各自 <td> 内，table 结构完整。
+  const md = `<table border=1><tr><td>$ \\varphi_{k} $</td><td>$ M_{b} $</td><td>$ M_{d} $</td><td>$ M_{c} $</td></tr></table>`;
+  const html = renderMarkdown(md, { softBreaks: false });
+  assert.ok(html.includes('<table'), '应保留 <table>');
+  // 4 个数据单元格（无 thead，统一算 td）
+  assert.strictEqual((html.match(/<td/g) || []).length, 4, '应有 4 个 <td>，单元格不错位');
+  assert.ok(html.includes('<td>$ \\varphi_{k} $</td>'), 'φ 公式应留在第一个 td');
+  assert.ok(html.includes('<td>$ M_{b} $</td>'), 'Mb 公式应留在第二个 td');
+  assert.ok(html.includes('<td>$ M_{d} $</td>'), 'Md 公式应留在第三个 td');
+  assert.ok(html.includes('<td>$ M_{c} $</td>'), 'Mc 公式应留在第四个 td');
+  assert.ok(!html.includes('MATHBLOCK'), '不应生成跨标签 MATHBLOCK');
+  assert.ok(!html.includes('&lt;/td&gt;'), '不应出现被 escape 的 </td>');
+});
+
+test('原始 HTML table 表头与数据行均含 $...$ 时结构保持', async () => {
+  const md = `<table><tr><th>$ x $</th><th>$ y $</th></tr><tr><td>$ a $</td><td>$ b $</td></tr></table>`;
+  const html = renderMarkdown(md, { softBreaks: false });
+  assert.strictEqual((html.match(/<th/g) || []).length, 2, '应有 2 个 th');
+  assert.strictEqual((html.match(/<td/g) || []).length, 2, '应有 2 个 td');
+  assert.ok(html.includes('<th>$ x $</th>') && html.includes('<th>$ y $</th>'), '表头公式保留');
+  assert.ok(html.includes('<td>$ a $</td>') && html.includes('<td>$ b $</td>'), '数据行公式保留');
+  assert.ok(!html.includes('MATHBLOCK'), '不应生成 MATHBLOCK');
+});
+
+// ===== 行内 $...$ 前后带空格（用户复现：规范条文公式）=====
+
+test('行内 $...$ 前后带空格且含数学标记时被保护并还原', async () => {
+  // 用户粘贴的规范条文：$ f_{a} $、$ A_{b} $ 等，前后都有空格
+  const md = '式中： $ f_{a} $——由土的抗剪强度指标确定';
+  const html = renderMarkdown(md, { softBreaks: false });
+  assert.ok(html.includes('$ f_{a} $'), '带空格的行内公式文本应完整保留');
+  assert.ok(html.includes('——由土的抗剪强度指标确定'), '公式后中文应保留');
+});
+
+test('原始 HTML table 单元格内 $...$（带空格、含数学标记）仍独立渲染且结构完整', async () => {
+  const md = `<table border=1><tr><td>$ \\varphi_{k}(°) $</td><td>$ M_{b} $</td><td>$ M_{d} $</td><td>$ M_{c} $</td></tr></table>`;
+  const html = renderMarkdown(md, { softBreaks: false });
+  assert.ok(html.includes('<table'), '应保留 <table>');
+  assert.strictEqual((html.match(/<td/g) || []).length, 4, '应有 4 个 <td>');
+  assert.ok(html.includes('<td>$ \\varphi_{k}(°) $</td>'), 'φ 公式应留在第一个 td');
+  assert.ok(html.includes('<td>$ M_{b} $</td>'), 'Mb 公式应留在第二个 td');
+  assert.ok(!html.includes('&lt;/td&gt;'), '不应出现被 escape 的 </td>');
+});
+
+test('前后带空格但内容不像数学的 $...$ 保持字面量', async () => {
+  // "$ 100 $" 这种货币/数字文本不应被当成公式
+  const md = '金额 $ 100 起，另 $ 200';
+  const html = renderMarkdown(md, { softBreaks: false });
+  assert.ok(html.includes('$ 100'), '孤立 $ 应原样显示');
+  assert.ok(!html.includes('MATHBLOCK'), '不应生成 MATHBLOCK');
+});
+
+test('行内 $...$ 前后带空格且为单字母变量时也被保护并还原', async () => {
+  // 用户复现：规范条文 " $ c $——黏聚力" 中 c 是单字母变量
+  const md = ' $ c $——黏聚力； $ \u03BD $ 泊松比';
+  const html = renderMarkdown(md, { softBreaks: false });
+  assert.ok(html.includes('$ c $'), '单字母变量公式应完整保留');
+  assert.ok(html.includes('$ \u03BD $'), '单希腊字母变量公式应完整保留');
+  assert.ok(html.includes('黏聚力') && html.includes('泊松比'), '公式后中文应保留');
+});
+
+test('行内 $...$ 前后带空格且含比较运算符时被保护并还原', async () => {
+  // 用户复现：图注 "$  (e > b/6)  $" 含 > / ( ) /
+  const md = '<div style="text-align: center;">图 5.2.2 偏心荷载  $  (e > b/6)  $</div>';
+  const html = renderMarkdown(md, { softBreaks: false });
+  // 数学块复原时 > 会被 escapeHtml 转义为 &gt;
+  assert.ok(html.includes('$  (e &gt; b/6)  $'), '带空格比较公式应完整保留');
+  assert.ok(!html.includes('katex-ignore'), '不应被 katex-ignore 跳过');
+});
+
+test('原始 HTML table 单元格内数学含 HTML 实体 &lt; &gt; 时只转义一次', async () => {
+  // 用户复现：规范表格中 $ 24 &lt; H_{{g}} \le 60 $ 被复原为 $ 24 &amp;lt; ... $，
+  // 浏览器看到的是 &lt; 字面量，KaTeX 解析失败显示红色。
+  const md = `<table border=1><tr><td>$ 24 &lt; H_{{g}} \\le 60 $</td><td>$ H_{{g}} &gt; 100 $</td></tr></table>`;
+  const html = renderMarkdown(md, { softBreaks: false });
+  // 应只转义一次：最终 HTML 里实体保持 &lt; / &gt;，不应二次转义为 &amp;lt; / &amp;gt;
+  assert.ok(html.includes('<table'), '应保留 <table>');
+  assert.ok(html.includes('$ 24 &lt; H_{{g}} \\le 60 $'), '应只转义一次 &lt;');
+  assert.ok(html.includes('$ H_{{g}} &gt; 100 $'), '应只转义一次 &gt;');
+  assert.ok(!html.includes('&amp;lt;'), '不应出现 &amp;lt;');
+  assert.ok(!html.includes('&amp;gt;'), '不应出现 &amp;gt;');
+});
+
+test('行内 $...$ 前后带空格且含 ASCII 单引号（素数/导数标记）时被保护并还原', async () => {
+  // 用户复现：表格中 "$ R&#x27; $" 经浏览器解码后 inner 为 "R'"，
+  // 启发式需把 ASCII 单引号视为数学标记，避免被当成文本边界 break。
+  const md = '<table border=1><tr><td>再加荷比  $ R&#x27; $</td></tr></table>';
+  const html = renderMarkdown(md, { softBreaks: false });
+  // 复原后应保持为合法的 HTML 实体 &#x27;，浏览器解码后 KaTeX 看到 R'
+  assert.ok(html.includes('$ R&#x27; $'), "R' 公式应完整保留");
+  assert.ok(!html.includes('katex-ignore'), '不应被 katex-ignore 跳过');
+});
+
+test('HTML 实体按 HTML 标准解码（&nbsp; &amp; &lt; &gt; &copy; 等）', async () => {
+  // 内容被原生 HTML 包裹时，实体应交给 HTML 解析器解码，不应残留命名实体字面量。
+  const md = '<div>与 &amp; 或 &lt;b&gt; 及 &copy; 2026 &nbsp;尾</div>';
+  const html = renderMarkdown(md, { softBreaks: false });
+  // 命名实体应被解码，不应残留字面量
+  assert.ok(!html.includes('&amp;'), '不应残留 &amp;');
+  assert.ok(!html.includes('&lt;'), '不应残留 &lt;');
+  assert.ok(!html.includes('&gt;'), '不应残留 &gt;');
+  assert.ok(!html.includes('&copy;'), '不应残留 &copy;');
+  assert.ok(!html.includes('&nbsp;'), '不应残留 &nbsp;');
+  // 解码后的实际字符应出现
+  assert.ok(html.includes('©'), '应解码出 ©');
+  assert.ok(html.includes(' '), '应解码出不换行空格');
+});
+
+test('Word/Excel 命名空间标签与 mso-* 样式被清洗，结构与 class 保留', async () => {
+  // 用户复现：粘入 Word/Excel 导出的 HTML 会带 <o:p>/<w:*> 与 mso-* 样式。
+  const md = '<table class="MsoTableGrid" border="1">'
+    + '<tr><td style="mso-padding:1.0pt; text-align:center">'
+    + '<p class="MsoNormal">中、低压缩性土<o:p></o:p></p></td></tr></table>'
+    + '<w:tbl><w:tr><w:tc>cell</w:tc></w:tr></w:tbl>'
+    + '<div style="mso-element:para; text-align:center">图 1</div>';
+  const html = renderMarkdown(md, { softBreaks: false });
+  // 命名空间标签应被清除
+  assert.ok(!/<o:p/i.test(html), 'o:p 应被清除');
+  assert.ok(!/<w:/i.test(html), 'w: 命名空间标签应被清除');
+  assert.ok(!/mso-/i.test(html), 'mso-* 样式应被清除');
+  // 内部文本 / 结构保留
+  assert.ok(html.includes('中、低压缩性土'), '单元格文本应保留');
+  assert.ok(html.includes('cell'), 'w:tc 内文本应保留');
+  assert.ok(html.includes('图 1'), 'div 文本应保留');
+  // 合法 style 与 class 应保留
+  assert.ok(html.includes('text-align'), '合法 style 应保留');
+  assert.ok(html.includes('MsoTableGrid'), 'class 属性应保留');
+});
+
+

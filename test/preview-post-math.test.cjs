@@ -63,3 +63,40 @@ test('跨单元格的 $ 各自包 span，不配对', async () => {
   const spans = (r.match(/katex-ignore/g) || []).length;
   assert.strictEqual(spans, 2, '两个孤立 $ 各包一个 ignore span');
 });
+
+// ===== 行内 $...$ 前后带空格（用户复现：规范条文公式）=====
+
+test('带空格且含数学标记的 $...$ 保留不包裹（交给 KaTeX 渲染）', async () => {
+  assert.strictEqual(protectUnpairedDollar('$ f_{a} $'), '$ f_{a} $', '下标公式保留');
+  assert.strictEqual(protectUnpairedDollar('$ \\varphi_{k}(°) $'), '$ \\varphi_{k}(°) $', '反斜杠公式保留');
+  assert.strictEqual(protectUnpairedDollar('$ M_{b} $'), '$ M_{b} $', 'Mb 公式保留');
+});
+
+test('带空格但内容不像数学的 $...$ 仍被包 ignore span', async () => {
+  const r = protectUnpairedDollar('$ 100 $');
+  assert.ok(r.includes('<span class="katex-ignore">$</span>'), '货币文本不应被当公式');
+  assert.ok(!r.includes('$ 100 $'), '不应保留完整配对');
+});
+
+test('带空格的单字母变量 $...$ 保留不包裹（交给 KaTeX 渲染）', async () => {
+  assert.strictEqual(protectUnpairedDollar('$ c $'), '$ c $', '单字母 c 保留');
+  assert.strictEqual(protectUnpairedDollar('$ \u03BD $'), '$ \u03BD $', '单希腊字母 ν 保留');
+});
+
+test('带空格且含比较运算符的 $...$ 保留不包裹（交给 KaTeX 渲染）', async () => {
+  assert.strictEqual(protectUnpairedDollar('$ (e > b/6) $'), '$ (e > b/6) $', '比较运算符公式保留');
+  assert.strictEqual(protectUnpairedDollar('$ e = b/6 $'), '$ e = b/6 $', '等号公式保留');
+});
+
+test('带空格且含 ASCII 单引号（素数/导数标记）的 $...$ 保留不包裹', async () => {
+  // 浏览器解码 HTML 实体 &#x27; 后，DOM 文本节点里看到的是 "$ R' $"
+  assert.strictEqual(protectUnpairedDollar("$ R' $"), "$ R' $", "R' 公式保留");
+  assert.strictEqual(protectUnpairedDollar("$ f' $"), "$ f' $", "f' 导数公式保留");
+});
+
+test('带空格但为短英文词的 $...$ 仍被包 ignore span', async () => {
+  // "or" 这类短英文词不是数学变量，不应放行
+  const r = protectUnpairedDollar('$ or $');
+  assert.ok(r.includes('<span class="katex-ignore">$</span>'), '短英文词不应被当公式');
+  assert.ok(!r.includes('$ or $'), '不应保留完整配对');
+});

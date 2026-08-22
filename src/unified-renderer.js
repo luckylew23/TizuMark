@@ -187,6 +187,22 @@ function isAtBlockStart(content, i) {
 }
 
 // Guard math blocks: $$...$$ → <!--MATHBLOCK_N--> and $...$ → <!--MATHBLOCK_N-->
+
+// 行内 $...$ 允许前后带空格，但前后都带空格时容易误把 "$ 100 $" "$ or $" 这类货币/短词当成数学。
+// 用简单启发式判断 inner 是否像数学：含反斜杠、下标/上标、花括号、运算符/关系符等。
+function looksLikeMath(inner) {
+  const t = inner.trim();
+  if (!t) return false;
+  // 包含明显数学标记：反斜杠、下标/上标、花括号、对齐符、
+  // 常用数学运算符/关系符（> < = + - * / |）以及 ° ± × ÷ ≤ ≥ ≠ ≈ ∞ 等符号；
+  // ASCII 单引号 ' 视为求导/素数标记（如 R'、f'）。
+  if (/[\\{}_^&#@=+\-*/|<>°±×÷≤≥≠≈∞∈∪∩⊂⊃∑∏∫√′″']/.test(t)) return true;
+  // 单字母变量（含希腊字母 Unicode 范围）也视为数学符号；
+  // 仅放行单字符，避免 "$ 100 $" "$ or $" 等货币/短词被误判。
+  if (/^[A-Za-z\u0370-\u03FF\u1F00-\u1FFF]$/.test(t)) return true;
+  return false;
+}
+
 function guardMathBlocks(content) {
   const placeholders = [];
   let result = '';
@@ -365,14 +381,26 @@ function guardMathBlocks(content) {
         result += '$$';
         i = start + 2;
       }
-    } else if (!inBacktick && content[i] === '$' && i + 1 < len && content[i + 1] !== ' ' && content[i + 1] !== '\n' && content[i + 1] !== '\r' && content[i + 1] !== '$' && content[i + 1] !== '`') {
-      // Inline math: $...$ — 必须成对且中间不得跨越换行/表格列/块引用，否则当字面量
+    } else if (!inBacktick && content[i] === '$' && i + 1 < len && content[i + 1] !== '\n' && content[i + 1] !== '\r' && content[i + 1] !== '$' && content[i + 1] !== '`' && content[i + 1] !== '<') {
+      // Inline math: $...$ — 允许前后带空格，但前后都带空格且内容不像数学时保守拒绝，
+      // 避免把 "$ 100 $" 这类货币文本当成公式。
       const start = i;
       i += 1;
       let foundEnd = false;
       while (i < len) {
-        if (content[i] === '$' && (i === start + 1 || content[i - 1] !== ' ')) {
+        // 遇到 HTML 标签开头时立即中断：避免 $...$ 跨 <td></td> 等原始 HTML 标签配对，
+        // 把 table 单元格之间的 $ 破坏成字面量（ KaTeX 在 DOM 阶段仍会分别渲染单元格内公式）。
+        if (content[i] === '<' && i + 1 < len && (content[i + 1] === '/' || /[a-zA-Z]/.test(content[i + 1]))) {
+          break;
+        }
+        if (content[i] === '$') {
           const inner = content.substring(start + 1, i);
+          const prev = content[i - 1];
+          const closePrevIsSpace = prev === ' ' || prev === '\n' || prev === '\r' || prev === '\t';
+          // 闭合 $ 前是空白且 inner 不像数学：认为这是文本边界，当前开 $ 不成对。
+          if (closePrevIsSpace && !looksLikeMath(inner)) {
+            break;
+          }
           // 不成对/跨行一律不当公式。
           // | 两侧紧邻空白（" | " 或行首/行尾空白+竖线）时视为表格列分隔符，保守拒绝；
           // 紧邻非空白（如 P(A|B)、k|z）是条件概率/绝对值等合法数学符号，放行并保护占位。
@@ -813,12 +841,24 @@ function escapeHTML(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 }
 
+function decodeHtmlEntities(s) {
+  // 把数学块里用户写的 HTML 实体（&lt; &gt; &amp; 等）先还原成真实字符，
+  // 再经 escapeHTML 重新编码为合法 HTML，避免 &lt; 被二次转义成 &amp;lt;。
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&nbsp;/g, '\u00A0');
+}
+
 function restoreMathBlocks(html, placeholders) {
   let result = html;
   for (let idx = 0; idx < placeholders.length; idx++) {
     const ph = placeholders[idx];
     const text = typeof ph === 'string' ? ph : ph.text;
-    const escaped = escapeHTML(text);
+    const escaped = escapeHTML(decodeHtmlEntities(text));
     if (ph.display) {
       // 显示数学：占位符是 <div class="math-placeholder" data-math-idx="N" ...>，替换为带 data-source-line 的 span
       const marker = '<div class="math-placeholder" data-math-idx="' + idx + '" data-source-line="' + ph.line + '"></div>';
@@ -1273,11 +1313,63 @@ function buildSanitizeSchema() {
     attributes: {
       ...base.attributes,
       // 放开内联 style：具体危险 CSS 由下游 sanitizeHTML -> sanitizeStyleValue 兜底过滤
-      '*': [...(base.attributes['*'] || []), 'style'],
+      '*': [...(base.attributes['*'] || []), 'style', 'class'],
       img: [...(base.attributes.img || ['src', 'alt', 'title']), 'width', 'height', 'srcset', 'loading'],
       progress: ['value', 'max'],
     },
     allowedSchemes: [...(base.allowedSchemes || ['http', 'https', 'mailto', 'tel']), 'file'],
+  };
+}
+
+// ============================================================
+// 清洗 Word / Excel 导出的 HTML 命名空间标签与 mso-* 内联样式
+// ------------------------------------------------------------
+// 用户常把 Word / Excel 导出的表格直接粘进编辑器，这类 HTML 带有大量
+// Office 专属标签（<o:p>、<w:tbl>、<v:rect> 等，标签名含冒号）与 mso-* 样式
+// （mso-padding / mso-element / mso-spacerun …）。它们既不是标准 HTML，也
+// 不被预览 CSS 识别，只会残留成「垃圾标签」。
+// 此 rehype 插件在 rehypeRaw 解析出真实 HTML 树之后运行：
+//   - 含冒号的命名空间元素（<o:p> <w:*> <v:*> …）直接展开为子节点（保留内部文本/结构）；
+//   - 其余元素 style 里的 mso-* / epub-* 等 Office 声明被剥离，合法声明（text-align
+//     等）交给下游 sanitizeStyleValue 兜底过滤。
+// math 占位符是注释节点，不会被触碰；实体解码在 restoreMathBlocks 阶段完成。
+// ============================================================
+function stripOfficeStyle(css) {
+  if (!css || typeof css !== 'string') return '';
+  const out = [];
+  for (const decl of css.split(';')) {
+    const colon = decl.indexOf(':');
+    if (colon === -1) continue;
+    const prop = decl.slice(0, colon).trim().toLowerCase();
+    if (!prop) continue;
+    // 剥离 Office 专属声明（mso-* / epub-*），其余保留由下游 sanitizeStyleValue 处理
+    if (/^(mso-|epub-)/.test(prop)) continue;
+    out.push(decl.trim());
+  }
+  return out.join('; ');
+}
+
+function rehypeCleanOfficeNamespaces() {
+  return (tree) => {
+    visit(tree, 'element', (node, index, parent) => {
+      const tag = node.tagName || '';
+      // 命名空间标签（标签名含冒号）：<o:p> / <w:tbl> / <v:rect> / <wx:*> 等
+      if (tag.includes(':')) {
+        if (parent && typeof index === 'number') {
+          parent.children.splice(index, 1, ...(node.children || []));
+          return index; // 重新访问被提升的子节点
+        }
+        return;
+      }
+      if (node.properties && node.properties.style) {
+        const raw = Array.isArray(node.properties.style)
+          ? node.properties.style.join(' ')
+          : node.properties.style;
+        const cleaned = stripOfficeStyle(raw);
+        if (cleaned) node.properties.style = cleaned;
+        else delete node.properties.style;
+      }
+    });
   };
 }
 
@@ -1463,7 +1555,8 @@ function renderMarkdown(content, options) {
     }
     processor
       .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeRaw);
+      .use(rehypeRaw)
+      .use(rehypeCleanOfficeNamespaces);
     // 若 rehype-sanitize 可用，用扩展 schema：保留 img 的 width/height/srcset（让「指定显示尺寸」生效），
     // 并允许 file: scheme（demo.md 声明支持 file:// 写法）。缺失时跳过，由下方 sanitizeHTML 兜底净化。
     if (rehypeSanitize && rehypeSanitize.defaultSchema) {

@@ -73,6 +73,21 @@ function isLineBoundary(ch) {
   return ch === undefined || ch === '\n' || ch === '\r' || ch === ' ' || ch === '\t';
 }
 
+// 判断行内 $...$ 的内容是否像数学公式（含反斜杠、下标/上标、花括号、运算符等），
+// 用于在前后都带空格时避免把 "$ 100 $" "$ or $" 这类货币/短词误判为公式。
+function looksLikeMath(inner) {
+  const t = inner.trim();
+  if (!t) return false;
+  // 包含明显数学标记：反斜杠、下标/上标、花括号、对齐符、
+  // 常用数学运算符/关系符（> < = + - * / |）以及 ° ± × ÷ ≤ ≥ ≠ ≈ ∞ 等符号；
+  // ASCII 单引号 ' 视为求导/素数标记（如 R'、f'）。
+  if (/[\\{}_^&#@=+\-*/|<>°±×÷≤≥≠≈∞∈∪∩⊂⊃∑∏∫√′″']/.test(t)) return true;
+  // 单字母变量（含希腊字母 Unicode 范围）也视为数学符号；
+  // 仅放行单字符，避免 "$ 100 $" "$ or $" 等货币/短词被误判。
+  if (/^[A-Za-z\u0370-\u03FF\u1F00-\u1FFF]$/.test(t)) return true;
+  return false;
+}
+
 function protectUnpairedDollar(text) {
   let out = '';
   let i = 0;
@@ -97,11 +112,15 @@ function protectUnpairedDollar(text) {
       out += '<span class="katex-ignore">$$</span>';
       i += 2;
     } else if (text[i] === '$') {
-      if (i + 1 < n && text[i + 1] !== ' ' && text[i + 1] !== '\n' && text[i + 1] !== '\r') {
+      // 行内 $...$ 允许前后带空格，但闭合 $ 前是空白且 inner 不像数学时，
+      // 保守视为文本边界（如 "$ 100 $"），避免跨段配对吞掉后续真正公式。
+      if (i + 1 < n && text[i + 1] !== '$' && text[i + 1] !== '\n' && text[i + 1] !== '\r') {
         const close = text.indexOf('$', i + 1);
         const inner = text.substring(i + 1, close);
+        const closePrevIsSpace = close !== -1 &&
+          (text[close - 1] === ' ' || text[close - 1] === '\n' || text[close - 1] === '\r' || text[close - 1] === '\t');
         if (close !== -1 &&
-            text[close - 1] !== ' ' && text[close - 1] !== '\n' && text[close - 1] !== '\r' &&
+            !(closePrevIsSpace && !looksLikeMath(inner)) &&
             !/[\n\r]/.test(inner) &&
             // | 在 inner 内紧邻空白（^|\s \|(?:\s|$)）才是表格列分隔符形态；
             // 紧邻非空白（如 P(A|B)、k|z）是合法数学符号。

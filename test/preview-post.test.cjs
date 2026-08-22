@@ -186,3 +186,39 @@ test('复制按钮：行号关闭时仍复制原始代码（无行号、保留�
   const copied = PP.getRawCodeText(preview.querySelector('pre'));
   assert.strictEqual(copied, 'def bar():\n    pass', '行号关闭时复制内容应与原始代码一致');
 });
+
+// ===== 集成：KaTeX 实际渲染带空格行内公式（用户复现）=====
+
+test('集成：原始 HTML 表格中带空格的行内公式被 KaTeX 渲染', async () => {
+  // 用 Node 的 CommonJS 构建加载 KaTeX（比 jsdom window.eval 可靠：katex.min.js 是 UMD，
+  // 在 window 上下文下可能因 module/exports 检测或内部引用而挂不上 katex/renderMathInElement，
+  // 导致 processMath 走"未加载"分支跳过渲染）。processMath 在 Node 模块作用域运行，
+  // renderMathInElement / document / Node 等都走 global，故挂到 Node global 并补齐
+  // auto-render 内部引用的 Node/Element 等全局。
+  const katex = require('katex');
+  const renderMathInElement = require('katex/contrib/auto-render');
+  const w = _g.ownerDocument.defaultView;
+  const savedRenderMath = global.renderMathInElement;
+  const savedKatex = global.katex;
+  global.katex = katex;
+  global.renderMathInElement = renderMathInElement;
+  global.Node = w.Node;
+  global.Element = w.Element;
+  global.HTMLElement = w.HTMLElement;
+  global.Text = w.Text;
+  global.DocumentFragment = w.DocumentFragment;
+
+  try {
+    const md = `<table border=1><tr><td>$ \\varphi_{k}(°) $</td><td>$ M_{b} $</td><td>$ M_{d} $</td><td>$ M_{c} $</td></tr><tr><td>0</td><td>0</td><td>1.00</td><td>3.14</td></tr></table>`;
+    _g.innerHTML = renderMarkdown(md, { softBreaks: false });
+    PP.processMath(_g);
+    const katexCount = _g.querySelectorAll('.katex').length;
+    const cellCount = _g.querySelectorAll('td').length;
+    assert.ok(katexCount >= 4, `表格内 4 个公式应被 KaTeX 渲染，实际 ${katexCount}`);
+    assert.strictEqual(cellCount, 8, '表格结构应保持 8 个单元格');
+  } finally {
+    global.renderMathInElement = savedRenderMath;
+    global.katex = savedKatex;
+    delete global.Node; delete global.Element; delete global.HTMLElement; delete global.Text; delete global.DocumentFragment;
+  }
+});
