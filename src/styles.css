@@ -1479,6 +1479,15 @@ body.is-resizing .side-btn {
   line-height: 1.6;
 }
 
+/* 明亮主题：CodeMirror default 自带白底，强制跟随主题背景色，与预览区一致 */
+[data-theme="light"] #editor-wrapper .CodeMirror {
+  background-color: var(--bg-primary);
+}
+
+[data-theme="light"] #editor-wrapper .CodeMirror .CodeMirror-gutters {
+  background-color: var(--bg-primary);
+}
+
 [data-theme="dark"] .cm-s-material-darker.CodeMirror {
   background-color: var(--bg-primary);
 }

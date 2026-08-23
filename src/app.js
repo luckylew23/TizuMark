@@ -27,7 +27,7 @@ const SYSTEM_FONT_WHITELIST = [
   // 无衬线
   'Segoe UI', 'Tahoma', 'Arial', 'Helvetica Neue', 'Roboto', 'Ubuntu', 'DejaVu Sans', 'Noto Sans',
   // 衬线
-  'Times New Roman', 'Georgia', 'DejaVu Serif', 'Liberation Serif', 'Cambria',
+  'IBM Plex Serif', 'Times New Roman', 'Georgia', 'DejaVu Serif', 'Liberation Serif', 'Cambria',
 ];
 const SYSTEM_FONT_WHITELIST_SET = new Set(SYSTEM_FONT_WHITELIST.map((s) => s.toLowerCase()));
 
