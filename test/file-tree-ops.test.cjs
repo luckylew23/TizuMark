@@ -237,6 +237,28 @@ test('editorWrapper mousedown：点进编辑器清除树选中态，恢复文本
   } finally { cleanup(w); }
 });
 
+test('fileTreeCopyPath 执行后清除 _fileTreeCtx，避免后续 Ctrl+C 被劫持为文件路径', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    // stub navigator.clipboard.writeText（jsdom 无实现）
+    let written = null;
+    w.navigator.clipboard = { writeText: async (t) => { written = t; } };
+    ed.setStatus = () => {};
+    ed._fileTreeCtx = { path: '/root/a.md', isDir: false, nodeEl: null };
+    await ed.fileTreeCopyPath();
+    // ① 路径已写入剪贴板
+    assert.strictEqual(written, '/root/a.md', '复制路径应把文件路径写入剪贴板');
+    // ② 关键：瞬时动作后必须清掉文件树上下文，否则后续 Ctrl+C 会被 fileTreeCopy 劫持
+    assert.strictEqual(ed._fileTreeCtx, null, '复制路径后 _fileTreeCtx 应被清掉');
+    // ③ 清除后 Ctrl+C 不再走文件树复制（不再复制该路径）
+    let fileCopied = false;
+    ed.fileTreeCopy = () => { fileCopied = true; };
+    assert.strictEqual(ed.cm.somethingSelected(), false, '前置：编辑器无文本选区');
+    w.document.body.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true }));
+    assert.ok(!fileCopied, '复制路径清除上下文后，Ctrl+C 不应再被 fileTreeCopy 劫持');
+  } finally { cleanup(w); }
+});
+
 test('file-ops: 文件树操作不直接 window.__TAURI__.core.invoke（ADR-1 唯一 IPC 边界）', async () => {
   const { w, ed } = await makeEditor();
   try {

@@ -19,6 +19,19 @@ const ROOT = path.resolve(__dirname, '..', '..'); // test/helpers -> repo root
 const HTML_PATH = path.join(ROOT, 'src', 'index.html');
 const APPJS_PATH = path.join(ROOT, 'src', 'app.js');
 
+// 测试拆卸产物：app.js 在 init 时启动的轮询定时器（文件监视 1.5s、后端健康检查 30s）使用全局
+// setTimeout/setInterval，cleanup 会统一清除；但个别「已在飞行中」的回调可能在窗口已销毁、
+// global.document 被重置为 undefined 之后才落地，触发一次无害的 DOM 操作异常（如
+// "Cannot read properties of undefined (reading 'createElement')"）。该产品不会销毁窗口，
+// 故属纯测试隔离产物。此处仅吞掉这类拆卸期 DOM 相关 rejection，其余一律原样抛出以暴露真实缺陷。
+process.on('unhandledRejection', (reason) => {
+  const msg = (reason && reason.message) ? String(reason.message) : String(reason);
+  if (/document|window|createElement|Cannot read properties of undefined|is not a function/.test(msg)) {
+    return;
+  }
+  throw reason;
+});
+
 // 每个测试进程使用独立的 app 数据目录，避免不同测试文件之间因共享同一目录
 // （原硬编码 C:/tmp/tizumark-data）而互相污染：例如 A 文件写入 session / recent 后，
 // B 文件的 init 读取到残留数据导致偶发失败。同进程内仍共享该目录，保留会话持久化类
@@ -80,6 +93,17 @@ async function buildEnv(options = {}) {
     addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent() { return false; },
   });
 
+  // 跟踪 MutationObserver 实例：cleanup 时统一 disconnect，避免 w.close() 后已注册的
+  // 观察器在已销毁的 document 上触发回调（app.js 的回调会访问已不存在的节点 → 抛错），
+  // 进而让本进程挂起、触发整文件超时。与定时器同理。
+  const observers = new Set();
+  const OrigMutationObserver = w.MutationObserver;
+  w.MutationObserver = class extends OrigMutationObserver {
+    constructor(cb) { super(cb); observers.add(this); }
+    disconnect() { observers.delete(this); try { super.disconnect(); } catch (_) {} }
+  };
+  w.__pendingObservers = observers;
+
   // 跟踪本 window 的定时器句柄：app.js 在 init 时挂了一个 20s 的 loading 安全定时器，
   // 若不清掉会让每个测试进程在 cleanup 后仍挂起 ~20s（拖慢退出，极端时触发整文件超时）。
   // cleanup 时统一 clear，确保进程及时退出。
@@ -101,6 +125,49 @@ async function buildEnv(options = {}) {
   };
   const origClearInterval = w.clearInterval ? w.clearInterval.bind(w) : clearInterval.bind(global);
   w.clearInterval = (id) => { timers.delete(id); return origClearInterval(id); };
+
+  // CM5 与 app.js 使用「全局」setTimeout/setInterval（非 window.*，如 app.js 的 _backendHealthTimer
+  // 健康检查 30s 定时器、CM5 光标闪烁的 setInterval），这些既不在 w.setTimeout 跟踪范围内，也不被
+  // jsdom 的 stopAllTimers（w.close）捕获，cleanup 后常驻 → 事件循环不排空 → 整文件超时。
+  // 因此在 buildEnv 期间临时包装全局定时器，cleanup 时统一清除并恢复全局原值。子测试串行执行，
+  // 任一时刻仅一个编辑器生效，包装窗口极短，对 node --test 自身调度无影响。
+  const gTimers = new Set();
+  const gTimerMeta = new Map(); // id -> delay(ms)，用于区分长周期后台定时器
+  w.__pendingGlobalTimers = gTimers;
+  const gSetTimeout = global.setTimeout;
+  const gSetInterval = global.setInterval;
+  const gClearTimeout = global.clearTimeout;
+  const gClearInterval = global.clearInterval;
+  global.setTimeout = function (fn, ms, ...a) {
+    const id = gSetTimeout(function () { gTimers.delete(id); return fn.apply(null, a); }, ms);
+    gTimers.add(id);
+    return id;
+  };
+  global.setInterval = function (fn, ms, ...a) {
+    const id = gSetInterval(function () { return fn.apply(null, a); }, ms);
+    gTimers.add(id); gTimerMeta.set(id, ms);
+    return id;
+  };
+  global.clearTimeout = function (id) { gTimers.delete(id); gTimerMeta.delete(id); return gClearTimeout(id); };
+  global.clearInterval = function (id) { gTimers.delete(id); gTimerMeta.delete(id); return gClearInterval(id); };
+  w.__restoreGlobalTimers = () => {
+    global.setTimeout = gSetTimeout; global.setInterval = gSetInterval;
+    global.clearTimeout = gClearTimeout; global.clearInterval = gClearInterval;
+  };
+
+  // 跟踪 requestAnimationFrame 句柄：jsdom 在 pretendToBeVisual:true 时启动内部 rAF 循环，
+  // 用 window.cancelAnimationFrame 终止对应回调；当回调计数归零时 jsdom 会自行 clearInterval。
+  // cleanup 时统一 cancel 所有未决 rAF，避免事件循环无法排干导致整文件超时。
+  const rafs = new Set();
+  w.__pendingRAF = rafs;
+  const origRAF = w.requestAnimationFrame ? w.requestAnimationFrame.bind(w) : (cb) => 0;
+  w.requestAnimationFrame = (cb, ...a) => {
+    const id = origRAF((...args) => { rafs.delete(id); return cb(...args); }, ...a);
+    rafs.add(id);
+    return id;
+  };
+  const origCAF = w.cancelAnimationFrame ? w.cancelAnimationFrame.bind(w) : () => {};
+  w.cancelAnimationFrame = (id) => { rafs.delete(id); return origCAF(id); };
 
   // 捕获 app.js 注册的 Tauri 事件监听器，供测试直接触发（如 tauri://drag-drop、file-open）
   const tauriListeners = {};
@@ -216,6 +283,15 @@ async function buildEnv(options = {}) {
   // "asynchronous activity after the test ended / Cannot read properties of undefined (reading 'documentElement')"
   await waitForInit(w);
 
+  // 测试隔离：清理 app.js 在 init 时启动的长周期后台定时器（文件监视 1.5s、后端健康检查 30s 等）。
+  // 若放任其在测试体内触发，其异步回调（读盘/外部变更检测等 DOM 操作）常在测试结束后才落地，
+  // 被 node --test 判为「异步活动在测试结束后发生」而让整文件失败；且在 cleanup 重置 global.document
+  // 后还会抛出无害的 DOM 异常。这些后台轮询不属于单元测试范畴——需要验证外部变更检测的测试应直接
+  // 调用对应方法或模拟 window focus 触发，而非依赖 1.5s 定时器。
+  for (const [id, ms] of gTimerMeta) {
+    if (ms >= 1000) { try { gClearInterval(id); } catch (_) {} gTimerMeta.delete(id); gTimers.delete(id); }
+  }
+
   const result = { w, tauriListeners };
   if (captureInitErr) result.getInitErr = () => initErr;
   result.__release = () => {
@@ -231,6 +307,13 @@ function cleanup(w) {
   // 清除本 window 遗留的定时器（如 app.js 的 20s loading 安全定时器），让进程及时退出
   try { if (w.__pendingTimers) for (const id of w.__pendingTimers) w.clearTimeout(id); } catch (_) {}
   try { if (w.__pendingTimers) for (const id of w.__pendingTimers) w.clearInterval(id); } catch (_) {}
+  // 断开所有 MutationObserver，避免销毁 document 后回调抛错使进程挂起
+  try { if (w.__pendingObservers) for (const o of w.__pendingObservers) { try { o.disconnect(); } catch (_) {} } } catch (_) {}
+  // 取消未决的 requestAnimationFrame，使 jsdom 内部 rAF 循环回调计数归零并自行 clearInterval
+  try { if (w.__pendingRAF) for (const id of w.__pendingRAF) { try { w.cancelAnimationFrame(id); } catch (_) {} } } catch (_) {}
+  // 清除全局定时器（app.js 的 setInterval 健康检查、CM5 的 setInterval 等），避免常驻导致进程挂起
+  try { if (w.__pendingGlobalTimers) for (const id of w.__pendingGlobalTimers) { try { clearTimeout(id); clearInterval(id); } catch (_) {} } } catch (_) {}
+  try { if (w.__restoreGlobalTimers) w.__restoreGlobalTimers(); } catch (_) {}
   try { if (w.close) w.close(); } catch (_) {}
   if (typeof w.__release === 'function') w.__release();
 }

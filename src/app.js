@@ -160,6 +160,14 @@ const I18N = {
     image: '图片',
     view: '视图',
     outline: '大纲',
+    outlineFilter: '大纲层级',
+    outlineFilterAll: '全部',
+    outlineFilterH1: '仅 H1',
+    outlineFilterH2: '仅 H1–H2',
+    outlineFilterH3: '仅 H1–H3',
+    outlineFilterH4: '仅 H1–H4',
+    outlineFilterH5: '仅 H1–H5',
+    outlineFilterH6: '仅 H1–H6',
     help: '帮助',
     userGuide: '使用说明',
     about: '关于',
@@ -611,6 +619,14 @@ const I18N = {
     image: 'Image',
     view: 'View',
     outline: 'Outline',
+    outlineFilter: 'Outline level',
+    outlineFilterAll: 'All',
+    outlineFilterH1: 'H1 only',
+    outlineFilterH2: 'H1–H2 only',
+    outlineFilterH3: 'H1–H3 only',
+    outlineFilterH4: 'H1–H4 only',
+    outlineFilterH5: 'H1–H5 only',
+    outlineFilterH6: 'H1–H6 only',
     help: 'Help',
     userGuide: 'User Guide',
     about: 'About',
@@ -1076,6 +1092,8 @@ class MarkdownEditor {
     this.initCrossSearch();
     this.initOutline();
     this.initOutlineResizer();
+    this.initSplitter();
+    this.initPanelHeaders();
     this.initBreadcrumb();
     this.updateOutlineCheck();
     this.initContextMenu();
@@ -1085,6 +1103,7 @@ class MarkdownEditor {
     this.initImagePaste();
     this.initTabScroll();
     this.loadTheme();
+    this.applySplitterRatio();
     this.updatePreview();
     this.applyViewMode();
     this.updateMaximizeIcon();
@@ -1658,6 +1677,7 @@ class MarkdownEditor {
     if (this._schemeSelect) this._schemeSelect.applyI18n(t);
     if (this._imageSourceSelect) this._imageSourceSelect.applyI18n(t);
     if (this._folderSortSelect) this._folderSortSelect.applyI18n(t);
+    if (this._outlineFilterSelect) this._outlineFilterSelect.applyI18n(t);
     // 自定义字体区（空状态 + 编辑/预览字体下拉的「跟随方案」）随语言刷新
     this.renderCustomFontSettings();
   }
@@ -1688,6 +1708,13 @@ class MarkdownEditor {
       closeAction: 'ask',
       toolbarCollapsed: false,
       sidebarHidden: false,
+      // 文件面板高度占比（0~1），分屏改造后用于还原上下比例
+      filesPanelRatio: 0.5,
+      // 大纲层级过滤：0=全部，1~6=仅显示到该层级
+      outlineFilterLevel: 0,
+      // 面板整体折叠：文件/大纲任一收起时，对侧占满剩余高度
+      filesCollapsed: false,
+      outlineCollapsed: false,
       customFonts: [],
       editorFont: '',
       previewFont: '',
@@ -2072,19 +2099,9 @@ class MarkdownEditor {
   }
 
   initOutline() {
+    // 侧边栏关闭统一由「视图 → 侧边栏」菜单（toggleSidebar）控制，不再保留顶部关闭栏。
     const outlineSidebar = document.getElementById('outline-sidebar');
-    const outlineClose = document.getElementById('outline-close');
-
-    outlineClose.addEventListener('click', () => {
-      this.settings.outlineWidth = outlineSidebar.offsetWidth;
-      this.saveSettings();
-      outlineSidebar.style.width = '';
-      outlineSidebar.classList.add('hidden');
-      this.settings.sidebarHidden = true;
-      this.saveSettings();
-      this.updateOutlineCheck();
-      this.updateSideButtons();
-    });
+    if (!outlineSidebar) return;
   }
 
   updateSideButtons() {
@@ -2116,20 +2133,8 @@ class MarkdownEditor {
       this.updateSideButtons();
     }
 
-    setSidebarTab(tab) {
-      const sidebar = document.getElementById('outline-sidebar');
-      const isOutline = tab === 'outline';
-      document.getElementById('tab-outline').classList.toggle('active', isOutline);
-      document.getElementById('tab-files').classList.toggle('active', !isOutline);
-      document.getElementById('outline-content').classList.toggle('hidden', !isOutline);
-      document.getElementById('folder-content').classList.toggle('hidden', isOutline);
-      this.updateSidebarChecks();
-      if (!sidebar.classList.contains('hidden')) this.updateOutline();
-      this.updateSideButtons();
-      if (tab === 'files' && !this.workspaceFolder) this.renderFolderTree();
-    }
-
-    showSidebarTab(tab) {
+    // 仅确保侧边栏可见（分屏改造后无 Tab 切换，文件/大纲双面板常显）。
+    showSidebar() {
       const sidebar = document.getElementById('outline-sidebar');
       if (sidebar.classList.contains('hidden')) {
         sidebar.style.width = (this.settings.outlineWidth ?? 240) + 'px';
@@ -2137,7 +2142,9 @@ class MarkdownEditor {
         this.settings.sidebarHidden = false;
         this.saveSettings();
       }
-      this.setSidebarTab(tab);
+      this.updateSidebarChecks();
+      this.updateSideButtons();
+      if (!sidebar.classList.contains('hidden')) this.updateOutline();
     }
 
     applySidebarState() {
@@ -2151,6 +2158,8 @@ class MarkdownEditor {
       }
       this.updateSidebarChecks();
       this.updateSideButtons();
+      this.applySplitterRatio();
+      this.applyPanelCollapse();
     }
 
   updateSidebarChecks() {
@@ -2158,6 +2167,54 @@ class MarkdownEditor {
     const visible = !sidebar.classList.contains('hidden');
     const sidebarToggle = document.getElementById('btn-sidebar-toggle');
     if (sidebarToggle) sidebarToggle.classList.toggle('checked', visible);
+  }
+
+  initPanelHeaders() {
+    const filesChevron = document.getElementById('files-chevron');
+    const outlineChevron = document.getElementById('outline-chevron');
+    const btnAllFolders = document.getElementById('btn-all-folders');
+    const btnAllOutline = document.getElementById('btn-all-outline');
+    if (filesChevron) {
+      filesChevron.addEventListener('click', () => this.togglePanel('files'));
+    }
+    if (outlineChevron) {
+      outlineChevron.addEventListener('click', () => this.togglePanel('outline'));
+    }
+    // 面板标题（左侧图标+文字）点击等效于点击折叠按钮
+    const filesHeader = document.querySelector('.files-panel-header .panel-title-group');
+    const outlineHeader = document.querySelector('.outline-panel-header .panel-title-group');
+    if (filesHeader) {
+      filesHeader.addEventListener('click', () => this.togglePanel('files'));
+    }
+    if (outlineHeader) {
+      outlineHeader.addEventListener('click', () => this.togglePanel('outline'));
+    }
+    if (btnAllFolders) {
+      btnAllFolders.addEventListener('click', () => {
+        // 基于文件树实际 DOM 状态决定本次动作，避免 _allFoldersExpanded 标志漂移导致
+        // 「再点击不折叠」：只要还有未折叠目录就折叠，否则展开。
+        const treeEl = document.getElementById('folder-tree');
+        const anyExpanded = !!(treeEl && treeEl.querySelector('.tree-node.tree-folder.expanded'));
+        this.toggleAllFolders(!anyExpanded);
+      });
+    }
+    if (btnAllOutline) {
+      btnAllOutline.addEventListener('click', () => {
+        // 基于大纲实际展开状态决定本次动作：只要还有「可见（未折叠）」的大纲子块就折叠，否则展开。
+        // 默认大纲全展开，首点应折叠；图标与 _allOutlineExpanded 同步，避免「点击没反应」。
+        const content = document.getElementById('outline-content');
+        const anyExpanded = !!(content && content.querySelector('.outline-children:not(.collapsed)'));
+        this.toggleAllOutline(!anyExpanded);
+      });
+    }
+    // 初始化「全部」按钮语义：基于 DOM 实际状态，而非硬编码标志，避免图标与实际折叠态不符。
+    // 文件：依据已展开目录集合；大纲：默认全展开（outline.js buildOutlineTree 节点 expanded:true），
+    // 故只要没有 .outline-children.collapsed 就视为「已全展开」，按钮显示「折叠全部」。
+    this._allFoldersExpanded = this.expandedFolders && this.expandedFolders.size > 0;
+    const outlineContent0 = document.getElementById('outline-content');
+    this._allOutlineExpanded = !outlineContent0 || !outlineContent0.querySelector('.outline-children.collapsed');
+    this._updateAllFoldersBtn();
+    this._updateAllOutlineBtn();
   }
 
   initOutlineResizer() {
@@ -2196,6 +2253,311 @@ class MarkdownEditor {
 
   updateOutlineCheck() {
     this.updateSidebarChecks();
+  }
+
+  // 水平分隔条：调整「文件面板 / 大纲面板」上下高度比例。
+  // 仿 initOutlineResizer，但改用 clientY + offsetHeight，并写入 settings.filesPanelRatio。
+  initSplitter() {
+    const resizer = document.getElementById('sidebar-h-resizer');
+    const filesPanel = document.getElementById('folder-content');
+    const outlinePanel = document.getElementById('outline-content');
+    const sidebar = document.getElementById('outline-sidebar');
+    if (!resizer || !filesPanel || !outlinePanel || !sidebar) return;
+
+    const MIN = 120;
+
+    // 两面板实际可分配高度 = 侧栏总高 − 固定 chrome（分隔条 + 大纲标题栏）。
+    // 鼠标对齐的关键：两个面板 flex-basis 之和必须等于该可用高度，否则 flex 引擎会按比例
+    // 压缩，导致分隔线移动量被缩放、与鼠标脱节。
+    const chromeH = () => {
+      let h = resizer.offsetHeight || 4;
+      const oh = sidebar.querySelector('.outline-panel-header');
+      if (oh) h += oh.offsetHeight;
+      return h;
+    };
+    const availH = () => Math.max(0, sidebar.offsetHeight - chromeH());
+
+    let isResizing = false;
+    let startY = 0;
+    let startFilesH = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isResizing = true;
+      startY = e.clientY;
+      startFilesH = filesPanel.offsetHeight;
+      document.body.classList.add('is-resizing-row');
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const avail = availH();
+      const delta = e.clientY - startY;
+      const newH = Math.max(MIN, Math.min(avail - MIN, startFilesH + delta));
+      filesPanel.style.flexBasis = newH + 'px';
+      outlinePanel.style.flexBasis = (avail - newH) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isResizing) return;
+      isResizing = false;
+      document.body.classList.remove('is-resizing-row');
+      const avail = availH();
+      if (avail > 0) {
+        this.settings.filesPanelRatio = filesPanel.offsetHeight / avail;
+        this.saveSettings();
+      }
+    });
+  }
+
+  // 按 settings.filesPanelRatio 还原上下比例（init / 启动 / 切换主题后调用）
+  applySplitterRatio() {
+    const filesPanel = document.getElementById('folder-content');
+    const outlinePanel = document.getElementById('outline-content');
+    const sidebar = document.getElementById('outline-sidebar');
+    if (!filesPanel || !outlinePanel || !sidebar) return;
+    const sidebarH = sidebar.offsetHeight;
+    if (sidebarH <= 0) return;
+    // 扣完整 chrome（分隔条 + 大纲标题栏），保证两面板 basis 之和等于可用高度
+    let chrome = (document.getElementById('sidebar-h-resizer') || {}).offsetHeight || 4;
+    const oh = sidebar.querySelector('.outline-panel-header');
+    if (oh) chrome += oh.offsetHeight;
+    const avail = Math.max(0, sidebarH - chrome);
+    const ratio = Math.max(0.1, Math.min(0.9, this.settings.filesPanelRatio ?? 0.5));
+    const filesH = Math.round(avail * ratio);
+    filesPanel.style.flexBasis = filesH + 'px';
+    outlinePanel.style.flexBasis = (avail - filesH) + 'px';
+  }
+
+  // 还原面板整体折叠态：折叠时仅隐藏内容区、保留标题栏，对侧 flex:1 自动占满；两折叠则均展开。
+  applyPanelCollapse() {
+    const filesPanel = document.getElementById('folder-content');
+    const outlinePanel = document.getElementById('outline-content');
+    const resizer = document.getElementById('sidebar-h-resizer');
+    const sidebar = document.getElementById('outline-sidebar');
+    if (!filesPanel || !outlinePanel) return;
+    let filesCollapsed = !!this.settings.filesCollapsed;
+    let outlineCollapsed = !!this.settings.outlineCollapsed;
+    // 两者同时折叠属异常态：强制都展开，避免整栏空白
+    if (filesCollapsed && outlineCollapsed) {
+      filesCollapsed = false;
+      outlineCollapsed = false;
+      this.settings.filesCollapsed = false;
+      this.settings.outlineCollapsed = false;
+    }
+    // 任一折叠时隐藏水平拖拽条（无占比可言）
+    if (resizer) resizer.classList.toggle('hidden', filesCollapsed || outlineCollapsed);
+    filesPanel.classList.toggle('panel-collapsed', filesCollapsed);
+    outlinePanel.classList.toggle('panel-collapsed', outlineCollapsed);
+    // 状态类：驱动折叠态 CSS（文件折叠→文件面板收缩为标题条、大纲内容占满；
+    // 大纲折叠→大纲内容隐藏、文件内容占满）。两标题相对位置由 DOM 顺序保证，不重排。
+    if (sidebar) {
+      sidebar.classList.toggle('files-collapsed', filesCollapsed);
+      sidebar.classList.toggle('outline-collapsed', outlineCollapsed);
+    }
+    const filesChevron = document.getElementById('files-chevron');
+    const outlineChevron = document.getElementById('outline-chevron');
+    if (filesChevron) {
+      filesChevron.classList.toggle('collapsed', filesCollapsed);
+      filesChevron.title = filesCollapsed ? '展开文件面板' : '收起文件面板';
+      filesChevron.setAttribute('aria-expanded', String(!filesCollapsed));
+    }
+    if (outlineChevron) {
+      outlineChevron.classList.toggle('collapsed', outlineCollapsed);
+      outlineChevron.title = outlineCollapsed ? '展开大纲面板' : '收起大纲面板';
+      outlineChevron.setAttribute('aria-expanded', String(!outlineCollapsed));
+    }
+    if (filesCollapsed || outlineCollapsed) {
+      // 折叠态下不需要按比例分配高度（CSS 接管：可见面板 flex:1 占满，折叠面板 flex:0 0 auto 缩为标题条）
+      filesPanel.style.flexBasis = '';
+      outlinePanel.style.flexBasis = '';
+    } else {
+      // 两面板都展开：恢复由 settings.filesPanelRatio 决定的上下比例（折叠时 basis 被清空过，必须重设）
+      this.applySplitterRatio();
+    }
+  }
+
+  // 面板整体折叠/展开切换
+  togglePanel(which) {
+    if (which !== 'files' && which !== 'outline') return;
+    const willCollapse = which === 'files' ? !this.settings.filesCollapsed : !this.settings.outlineCollapsed;
+    if (willCollapse) {
+      // 收起当前面板时，若另一面板已折叠，则联动展开另一面板——
+      // 保证「文件/大纲至少有一个可见」，同时尊重本次「收起当前」的意图。
+      const other = which === 'files' ? 'outline' : 'files';
+      const otherCollapsed = other === 'files' ? this.settings.filesCollapsed : this.settings.outlineCollapsed;
+      if (otherCollapsed) {
+        if (other === 'files') this.settings.filesCollapsed = false;
+        else this.settings.outlineCollapsed = false;
+      }
+    }
+    if (which === 'files') {
+      this.settings.filesCollapsed = !this.settings.filesCollapsed;
+    } else {
+      this.settings.outlineCollapsed = !this.settings.outlineCollapsed;
+    }
+    this.saveSettings();
+    this.applyPanelCollapse();
+  }
+
+  // 文件树：一键展开/折叠全部目录
+  async toggleAllFolders(expand) {
+    const treeEl = document.getElementById('folder-tree');
+    if (!treeEl) return;
+    const btn = document.getElementById('btn-all-folders');
+    const FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    const FOLDER_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3z"/><path d="M3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+
+    // 取消任何正在进行的展开/折叠任务，防止旧任务在新操作后继续修改 DOM。
+    // 典型场景：展开全部耗时较长，用户在 loading 结束后点折叠，旧展开仍可能异步渲染子目录并重新展开。
+    if (this._folderToggleToken) {
+      this._folderToggleToken.cancelled = true;
+    }
+    const token = { cancelled: false };
+    this._folderToggleToken = token;
+
+    // 显示 loading 覆盖层（防重复点击 + 视觉反馈），并设超时兜底强制清除，避免卡死在 loading。
+    const TIMEOUT_MS = 8000;
+    const overlay = this._showFolderLoading(expand ? '正在展开全部目录…' : '正在折叠全部目录…');
+    if (btn) btn.disabled = true;
+    let timeoutId = null;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('folder-toggle-timeout')), TIMEOUT_MS);
+    });
+
+    try {
+      const work = async () => {
+        if (token.cancelled) return;
+        if (expand) {
+          // 递归展开所有已渲染目录节点（懒加载层级由 renderFolderLevel 补全）
+          const expandNode = async (container) => {
+            if (token.cancelled) return;
+            const folders = container.querySelectorAll(':scope > .tree-node.tree-folder');
+            for (const node of folders) {
+              if (token.cancelled) return;
+              const childContainer = node.querySelector(':scope > .tree-children');
+              const path = node.dataset.path;
+              if (!childContainer) continue;
+              if (childContainer.childElementCount === 0) {
+                // 单个子目录读取失败（无权限/IO 异常）不应中断整棵展开
+                try {
+                  await this.renderFolderLevel(path, childContainer, this._depthOf(node));
+                } catch (_) { /* 忽略，继续展开其余目录 */ }
+                if (token.cancelled) return;
+              }
+              childContainer.classList.remove('hidden');
+              node.classList.add('expanded');
+              const icon = node.querySelector(':scope > .tree-row .tree-icon.folder');
+              if (icon) icon.innerHTML = FOLDER_OPEN;
+              if (path) this.expandedFolders.add(path);
+              await expandNode(childContainer);
+            }
+          };
+          await expandNode(treeEl);
+        } else {
+          // 直接折叠当前所有已展开目录的 DOM，不依赖重建：清空集合 + 隐藏 .tree-children
+          this.expandedFolders.clear();
+          treeEl.querySelectorAll('.tree-children').forEach((c) => c.classList.add('hidden'));
+          treeEl.querySelectorAll('.tree-node.tree-folder.expanded').forEach((n) => n.classList.remove('expanded'));
+          treeEl.querySelectorAll('.tree-row .tree-icon.folder').forEach((icon) => { icon.innerHTML = FOLDER; });
+        }
+      };
+      // 超时强制兜底：无论成功或超时都进 finally 清理；超时不抛错，只提示
+      await Promise.race([work(), timeoutPromise.then(() => { throw new Error('folder-toggle-timeout'); })]);
+    } catch (err) {
+      if (err && err.message === 'folder-toggle-timeout') {
+        // 超时：目录可能过多/IO 慢，强制结束并提示，不让用户卡在 loading
+        token.cancelled = true;
+        this.toast && this.toast(expand ? '展开全部目录超时' : '折叠全部目录超时');
+      }
+      // 其它异常也继续走 finally 清理
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      token.cancelled = true;
+      this._hideFolderLoading(overlay);
+      if (btn) btn.disabled = false;
+      // 仅当本任务仍是当前任务时才更新状态与按钮，避免被更新的操作覆盖。
+      // （如用户在新展开中途点折叠，折叠已设置状态为 false，旧展开的 finally 不应再把它改回 true。）
+      if (this._folderToggleToken === token) {
+        this.saveSession();
+        this._allFoldersExpanded = expand;
+        this._updateAllFoldersBtn();
+      }
+    }
+  }
+
+  // 在文件面板内显示半透明 loading 覆盖层；返回该元素以便后续移除
+  _showFolderLoading(text) {
+    const folderContent = document.getElementById('folder-content');
+    if (!folderContent) return null;
+    let overlay = folderContent.querySelector('.folder-loading-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'folder-loading-overlay';
+      const spinner = document.createElement('div');
+      spinner.className = 'folder-loading-spinner';
+      const label = document.createElement('span');
+      label.className = 'folder-loading-text';
+      overlay.appendChild(spinner);
+      overlay.appendChild(label);
+      folderContent.appendChild(overlay);
+    }
+    overlay.querySelector('.folder-loading-text').textContent = text || '';
+    overlay.classList.remove('hidden');
+    return overlay;
+  }
+
+  _hideFolderLoading(overlay) {
+    if (!overlay || !overlay.parentNode) return;
+    overlay.classList.add('hidden');
+  }
+
+  // 大纲：一键展开/折叠全部
+  toggleAllOutline(expand) {
+    const content = document.getElementById('outline-content');
+    if (!content) return;
+    const childrenBlocks = content.querySelectorAll('.outline-children');
+    childrenBlocks.forEach((block) => {
+      block.classList.toggle('collapsed', !expand);
+    });
+    const toggles = content.querySelectorAll('.outline-toggle:not(.outline-toggle--hidden)');
+    toggles.forEach((tg) => {
+      tg.textContent = expand ? '▼' : '▶';
+    });
+    this._allOutlineExpanded = expand;
+    this._updateAllOutlineBtn();
+  }
+
+  _depthOf(node) {
+    let depth = 0;
+    let p = node.parentElement;
+    while (p && p.id !== 'folder-tree') {
+      if (p.classList.contains('tree-children')) depth++;
+      p = p.parentElement;
+    }
+    return depth;
+  }
+
+  _updateAllFoldersBtn() {
+    const btn = document.getElementById('btn-all-folders');
+    if (!btn) return;
+    // 双态字形：三条横线 + 三角（与单箭头 disclosure 的面板 chevron 明显区分）
+    // 已全展开→「上三角」表示点击将折叠全部；否则→「下三角」表示点击将展开全部
+    const COLLAPSE_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 14 21 11 24 14" transform="translate(-2 0)"/></svg>';
+    const EXPAND_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 10 21 13 24 10" transform="translate(-2 0)"/></svg>';
+    btn.innerHTML = this._allFoldersExpanded ? COLLAPSE_ALL : EXPAND_ALL;
+    btn.title = this._allFoldersExpanded ? '折叠全部目录' : '展开全部目录';
+    btn.setAttribute('aria-pressed', String(this._allFoldersExpanded));
+  }
+
+  _updateAllOutlineBtn() {
+    const btn = document.getElementById('btn-all-outline');
+    if (!btn) return;
+    const COLLAPSE_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 14 21 11 24 14" transform="translate(-2 0)"/></svg>';
+    const EXPAND_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 10 21 13 24 10" transform="translate(-2 0)"/></svg>';
+    btn.innerHTML = this._allOutlineExpanded ? COLLAPSE_ALL : EXPAND_ALL;
+    btn.title = this._allOutlineExpanded ? '折叠全部大纲' : '展开全部大纲';
+    btn.setAttribute('aria-pressed', String(this._allOutlineExpanded));
   }
 
   initBreadcrumb() {
@@ -2318,7 +2680,10 @@ class MarkdownEditor {
     }
 
     const tree = Outline.buildOutlineTree(headings);
-    outlineContent.innerHTML = Outline.renderOutlineHtml(tree, { escapeHtml: (t) => this.escapeHtml(t) });
+    outlineContent.innerHTML = Outline.renderOutlineHtml(tree, {
+      escapeHtml: (t) => this.escapeHtml(t),
+      maxLevel: this.settings.outlineFilterLevel || 0,
+    });
 
     // Event delegation on outline-content
     outlineContent.onclick = (e) => {
@@ -3458,12 +3823,15 @@ class MarkdownEditor {
       builtinTable('nav', this.t('builtinNavGroup')) +
       builtinTable('edit', this.t('builtinEditGroup'));
 
-    const caretHtml = '<svg class="collapse-caret" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const sectionHtml = (key, title, hint, body) => `
+    const caretHtml = '<svg class="collapse-caret" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    // 分类标题左侧图标：与文件/大纲面板头的 panel-title-icon 同一类名，保持视觉统一
+    const ICON_KEYBOARD = '<svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>';
+    const ICON_SLIDERS = '<svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>';
+    const sectionHtml = (key, title, icon, body) => `
       <div class="shortcut-section" data-collapsed="${this._sectionCollapsed[key] ? 'true' : 'false'}">
         <div class="shortcut-section-title" data-toggle="${key}">
+          ${icon}
           <span class="shortcut-section-name">${title}</span>
-          <span class="shortcut-section-hint">${hint}</span>
           ${caretHtml}
         </div>
         <div class="shortcut-section-body">${body}</div>
@@ -3480,8 +3848,8 @@ class MarkdownEditor {
       </div>`;
 
     container.innerHTML =
-      sectionHtml('builtin', this.t('builtinShortcutsTitle'), this.t('builtinShortcutsHint'), builtinHtml) +
-      sectionHtml('config', this.t('configurableShortcutsTitle'), this.t('configurableShortcutsHint'), schemeBlockHtml + configGroupsHtml);
+      sectionHtml('builtin', this.t('builtinShortcutsTitle'), ICON_KEYBOARD, builtinHtml) +
+      sectionHtml('config', this.t('configurableShortcutsTitle'), ICON_SLIDERS, schemeBlockHtml + configGroupsHtml);
 
     // 把方案 Select 的宿主节点移入当前渲染出的占位容器（每次 innerHTML 重建后需重新挂接）。
     if (this._schemeSelect) this._schemeSelect.setValue(this.shortcutScheme || 'default', true);
@@ -4779,6 +5147,29 @@ class MarkdownEditor {
       document.getElementById('file-menu').classList.add('hidden');
       this.openFolder();
     });
+    // 大纲层级过滤下拉：自绘 Select，选项 = 全部 / 仅 H1 / 仅 H1–H2 / ... / 仅 H1–H6
+    const outlineFilterHost = document.getElementById('outline-filter');
+    if (outlineFilterHost) {
+      this._outlineFilterSelect = new Select(outlineFilterHost, {
+        value: String(this.settings.outlineFilterLevel || 0),
+        t: this.t.bind(this),
+        ariaLabelKey: 'outlineFilter',
+        optionsProvider: (t) => ([
+          { value: '0', label: t('outlineFilterAll') },
+          { value: '1', label: t('outlineFilterH1') },
+          { value: '2', label: t('outlineFilterH2') },
+          { value: '3', label: t('outlineFilterH3') },
+          { value: '4', label: t('outlineFilterH4') },
+          { value: '5', label: t('outlineFilterH5') },
+          { value: '6', label: t('outlineFilterH6') },
+        ]),
+        onChange: (v) => {
+          this.settings.outlineFilterLevel = parseInt(v, 10) || 0;
+          this.saveSettings();
+          this.updateOutline();
+        },
+      });
+    }
     // 最近文件子菜单交互
     document.getElementById('btn-recent').addEventListener('mouseenter', () => {
       this.showRecentSubmenu();
@@ -4840,12 +5231,6 @@ class MarkdownEditor {
       });
     }
     this.updateFolderSortOrderButton();
-    document.getElementById('tab-outline').addEventListener('click', () => {
-      this.showSidebarTab('outline');
-    });
-    document.getElementById('tab-files').addEventListener('click', () => {
-      this.showSidebarTab('files');
-    });
     document.getElementById('btn-save').addEventListener('click', () => {
       document.getElementById('file-menu').classList.add('hidden');
       this.saveFile();
@@ -6877,7 +7262,7 @@ class MarkdownEditor {
       this.workspaceFolder = workspaceFolder;
       this.expandedFolders = new Set(session.expandedFolders || []);
       await this.renderFolderTree();
-      this.setSidebarTab('files');
+      this.showSidebar();
       this.saveSession();
       this.startFolderWatch();
     }
@@ -6933,7 +7318,7 @@ class MarkdownEditor {
       this.workspaceFolder = folderPath;
       this.expandedFolders = new Set();
       await this.renderFolderTree();
-      this.showSidebarTab('files');
+      this.showSidebar();
       this.startFolderWatch();
       this.saveSession();
       this.setStatus(this.t('folderOpened', { path: folderPath }));
@@ -7090,12 +7475,13 @@ class MarkdownEditor {
     const el = document.getElementById('folder-sort-order');
     if (!el) return;
     const asc = (this.settings.fileSortOrder || 'asc') !== 'desc';
-    // 升序=上箭头、降序=下箭头（不同图标，直观指示当前方向）
-    el.innerHTML = asc
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><polyline points="6 11 12 5 18 11"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><polyline points="6 13 12 19 18 13"/></svg>';
+    // 排序字形：清晰的上下双箭头（升序=上箭头实色+下箭头淡显；降序反之），与面板 chevron 明显区分
+    const SORT_ASC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 14 12 8 18 14"/><polyline points="6 18 12 12 18 18" opacity="0.32"/></svg>';
+    const SORT_DESC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 10 12 16 18 10" opacity="0.32"/><polyline points="6 6 12 12 18 6"/></svg>';
+    el.innerHTML = asc ? SORT_ASC : SORT_DESC;
     el.classList.toggle('desc', !asc);
     el.title = this.t(asc ? 'sortAsc' : 'sortDesc');
+    el.setAttribute('aria-pressed', String(asc));
   }
 
   // 文件树右键菜单首项文案：文件夹→「打开文件夹」，文件→「打开所在目录」（动态切换，i18n 键均有）
@@ -7372,6 +7758,9 @@ class MarkdownEditor {
   fileTreeCopyPath() {
     const ctx = this._fileTreeCtx;
     if (!ctx) return;
+    // 「复制路径」为瞬时动作，不进入「复制文件待粘贴」状态；执行后清除文件树上下文，
+    // 否则 _fileTreeCtx 持续存在会让后续编辑器内 Ctrl+C 被 fileTreeCopy 劫持、一直复制该路径。
+    this._fileTreeCtx = null;
     navigator.clipboard.writeText(ctx.path).then(() => {
       this.setStatus(this.t('fileCopyPath') + ': ' + ctx.path);
     }).catch(() => {

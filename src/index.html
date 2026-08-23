@@ -380,31 +380,52 @@
 
     <main class="editor-container">
       <div id="outline-sidebar" class="outline-sidebar">
-        <div class="sidebar-tabs">
-          <button class="sidebar-tab active" data-tab="outline" id="tab-outline" data-i18n="outline" type="button">
-            <svg class="sidebar-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
-            <span class="lbl">大纲</span>
-          </button>
-          <button class="sidebar-tab" data-tab="files" id="tab-files" data-i18n="files" type="button">
-            <svg class="sidebar-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
-            <span class="lbl">文件</span>
-          </button>
-          <button id="outline-close" class="outline-close-btn" title="关闭" aria-label="关闭侧边栏" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-          </button>
+        <!-- 上：文件面板 -->
+        <div id="folder-content" class="folder-content sidebar-panel">
+          <div class="files-panel-header panel-header">
+            <span class="panel-title-group">
+              <svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span class="panel-title" data-i18n="files">文件</span>
+            </span>
+            <span class="header-actions">
+              <button id="btn-all-folders" class="panel-action-btn" type="button" title="展开/折叠全部目录" aria-label="展开或折叠全部目录">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 10 21 13 24 10" transform="translate(-2 0)"/></svg>
+              </button>
+      <button id="files-chevron" class="panel-chevron" type="button" title="收起文件面板" aria-label="收起或展开文件面板">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+            </span>
+          </div>
+          <div class="folder-header" id="folder-header">
+            <span class="folder-path" id="folder-path"></span>
+            <div class="folder-sort" id="folder-sort">
+              <div id="folder-sort-key" class="folder-sort-key" title=""></div>
+              <button id="folder-sort-order" class="folder-sort-order" type="button" title="升序" aria-label="切换排序方向"></button>
+            </div>
+            <button id="folder-close" class="folder-close-btn" title="关闭文件夹">&times;</button>
+          </div>
+          <div id="folder-tree" class="folder-tree"></div>
+        </div>
+        <!-- 水平拖拽条：调整文件/大纲面板高度比例 -->
+        <div id="sidebar-h-resizer" class="sidebar-h-resizer" title="拖拽调整上下比例"></div>
+        <!-- 下：大纲面板 -->
+        <div class="outline-panel-header panel-header">
+          <span class="panel-title-group">
+            <svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+            <span class="panel-title" data-i18n="outline">大纲</span>
+          </span>
+          <span class="header-actions">
+            <div id="outline-filter" class="outline-filter"></div>
+            <span class="header-divider" aria-hidden="true"></span>
+            <button id="btn-all-outline" class="panel-action-btn" type="button" title="展开/折叠全部大纲" aria-label="展开或折叠全部大纲">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 10 21 13 24 10" transform="translate(-2 0)"/></svg>
+            </button>
+      <button id="outline-chevron" class="panel-chevron" type="button" title="收起大纲面板" aria-label="收起或展开大纲面板">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+          </span>
         </div>
         <div id="outline-content" class="outline-content sidebar-panel"></div>
-          <div id="folder-content" class="folder-content sidebar-panel hidden">
-            <div class="folder-header" id="folder-header">
-              <span class="folder-path" id="folder-path"></span>
-              <div class="folder-sort" id="folder-sort">
-                <div id="folder-sort-key" class="folder-sort-key" title=""></div>
-                <button id="folder-sort-order" class="folder-sort-order" type="button" title="升序" aria-label="切换排序方向"></button>
-              </div>
-              <button id="folder-close" class="folder-close-btn" title="关闭文件夹">&times;</button>
-            </div>
-            <div id="folder-tree" class="folder-tree"></div>
-          </div>
       </div>
       <div class="outline-resizer" id="outline-resizer"></div>
        <div class="editor-column">

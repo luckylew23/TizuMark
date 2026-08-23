@@ -151,6 +151,37 @@ test('设置布局：内置分类默认收缩置顶，可折叠/展开，状态�
   }
 });
 
+test('样式：快捷键分类标题与文件/大纲面板头一致，弹窗标题收窄精致化', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const STYLES = fs.readFileSync(path.join(__dirname, '..', 'src', 'styles.css'), 'utf8');
+
+  // 快捷键可折叠分类标题须与预览背景一致（bg-primary），防止 sticky 滚动时文字重叠
+  assert.ok(
+    /\.shortcut-section-title\s*\{[^}]*background-color:\s*var\(--bg-primary\)/.test(STYLES),
+    'shortcut-section-title 应使用与预览一致的 bg-primary 背景'
+  );
+  // 分类标题文字颜色使用更醒目的 text-primary（精致扁平风），图标使用主题色
+  assert.ok(
+    /\.shortcut-section-title\s*\{[^}]*color:\s*var\(--text-primary\)/.test(STYLES),
+    'shortcut-section-title 文字应使用更醒目的 text-primary'
+  );
+  // 左侧图标使用与 panel-title-icon 一致的类名与主题色
+  assert.ok(
+    /\.shortcut-section-title\s+\.panel-title-icon\s*\{[^}]*color:\s*var\(--accent-color/.test(STYLES),
+    'shortcut-section-title 内图标应使用主题色'
+  );
+  // 弹窗标题统一收窄
+  assert.ok(
+    /\.dialog-header\s*\{[^}]*padding:\s*(?:8px 14px|10px 16px|8px 12px)/.test(STYLES),
+    'dialog-header 应收窄 padding'
+  );
+  assert.ok(
+    /\.dialog-header h2\s*\{[^}]*font-size:\s*13px/.test(STYLES),
+    'dialog-header 标题字号应为 13px'
+  );
+});
+
 test('布局：快捷键方案下拉归位于「方案与自定义」分类内', async () => {
   const { w } = await buildEnv({ captureInitErr: true });
   try {

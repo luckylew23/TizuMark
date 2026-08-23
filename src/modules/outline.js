@@ -75,9 +75,13 @@ function buildOutlineTree(headings) {
 
 function renderOutlineHtml(tree, opts) {
   const escapeHtml = (opts && opts.escapeHtml) || ((s) => s);
+  // 大纲层级过滤：maxLevel=0 表示全部；>0 时仅渲染 level<=maxLevel 的节点，
+  // 被过滤子树的父节点仍保留（不渲染其更深子节点）。
+  const maxLevel = (opts && opts.maxLevel) || 0;
   const renderTree = (nodes) => {
     let html = '';
     for (const node of nodes) {
+      if (maxLevel && node.level > maxLevel) continue;
       const hasChildren = node.children.length > 0;
       html += '<div class="outline-item-wrapper">';
       html += `<div class="outline-item level-${node.level}" data-id="${node.id}" data-line="${node.line}">`;
@@ -85,10 +89,12 @@ function renderOutlineHtml(tree, opts) {
       // 保留与有子节点项一致的宽度，使各级标签起始位置对齐，避免同级标题因
       // 有无小三角而视觉错位（见 styles.css .outline-toggle--hidden）。
       const toggleCls = hasChildren ? 'outline-toggle' : 'outline-toggle outline-toggle--hidden';
-      html += `<span class="${toggleCls}">▼</span>`;
+      // 小三角参考下拉框右侧小三角：细长倒三角 SVG（7×4），折叠态旋转 -90° 成向右
+      html += `<span class="${toggleCls}"><svg viewBox="0 0 7 4" width="7" height="4" aria-hidden="true"><path d="M0 0l3.5 4 3.5-4z" fill="%23999"/></svg></span>`;
       html += `<span class="outline-label">${escapeHtml(node.text)}</span>`;
       html += '</div>';
       if (hasChildren) {
+        // 过滤生效时不再渲染更深子树（已被上方 continue 跳过），否则正常渲染
         html += `<div class="outline-children">${renderTree(node.children)}</div>`;
       }
       html += '</div>';

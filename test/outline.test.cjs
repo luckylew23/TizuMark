@@ -92,15 +92,15 @@ test('renderOutlineHtml: 无子节点项也渲染隐藏占位 toggle 以保证�
   const tree = buildOutlineTree(hs);
   const html = renderOutlineHtml(tree, opts);
 
-  // 有子节点项：可见 toggle（不含 --hidden）
-  assert.ok(html.includes('class="outline-toggle">▼</span>'), 'A 应为可见 toggle');
+  // 有子节点项：可见 toggle（不含 --hidden），输出细长倒三角 SVG
+  assert.ok(html.includes('class="outline-toggle"><svg'), 'A 应为可见 toggle（含小三角 SVG）');
   // 无子节点项：占位 toggle（含 --hidden），用于对齐
   assert.ok(html.includes('outline-toggle--hidden'), 'B（叶子）应渲染隐藏占位 toggle');
   // 占位 toggle 不应是可见 toggle（类名需区分）
   const leafToggle = html.match(/<span class="(outline-toggle outline-toggle--hidden)">/);
   assert.ok(leafToggle, '叶子 toggle 应带 outline-toggle--hidden 类');
-  // 占位 toggle 保留 ▼ 字形，宽度与可见 toggle 完全一致，保证对齐
-  assert.ok(html.includes('class="outline-toggle outline-toggle--hidden">▼</span>'), '占位 toggle 应保留 ▼ 字形');
+  // 占位 toggle 同样输出小三角 SVG，宽度与可见 toggle 完全一致，保证对齐
+  assert.ok(html.includes('class="outline-toggle outline-toggle--hidden"><svg'), '占位 toggle 应保留小三角 SVG');
 });
 
 test('与旧实现逐字符一致（回归）', async () => {

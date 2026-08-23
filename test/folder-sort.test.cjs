@@ -345,13 +345,16 @@ test('folder-sort: 升/降序按钮显示不同箭头图标（升序=上箭头�
     ed.settings.fileSortOrder = 'asc';
     ed.applyLanguage();
     const ascHtml = orderBtn.innerHTML;
-    assert.ok(ascHtml.includes('M12 19V5'), '升序应渲染上箭头图标');
+    // 新图标：清晰的上下双箭头（polyline），当前方向实色、反方向淡显
+    assert.strictEqual(orderBtn.querySelectorAll('svg polyline').length, 2, '升序 SVG 应含 2 条 polyline（上箭头实色+下箭头淡显）');
+    assert.ok(ascHtml.includes('6 14 12 8 18 14'), '升序应以上箭头为主（尖朝向上）');
     assert.ok(!orderBtn.classList.contains('desc'), '升序不应带 desc class');
 
     ed.settings.fileSortOrder = 'desc';
     ed.applyLanguage();
     const descHtml = orderBtn.innerHTML;
-    assert.ok(descHtml.includes('M12 5v14'), '降序应渲染下箭头图标');
+    assert.strictEqual(orderBtn.querySelectorAll('svg polyline').length, 2, '降序 SVG 应含 2 条 polyline（下箭头实色+上箭头淡显）');
+    assert.ok(descHtml.includes('6 6 12 12 18 6'), '降序应以下箭头为主（尖朝向下）');
     assert.ok(orderBtn.classList.contains('desc'), '降序应带 desc class');
     assert.notStrictEqual(ascHtml, descHtml, '升/降序图标不应是同一个');
   } finally { cleanup(w); }
