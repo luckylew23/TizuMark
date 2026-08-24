@@ -89,8 +89,10 @@ function renderOutlineHtml(tree, opts) {
       // 保留与有子节点项一致的宽度，使各级标签起始位置对齐，避免同级标题因
       // 有无小三角而视觉错位（见 styles.css .outline-toggle--hidden）。
       const toggleCls = hasChildren ? 'outline-toggle' : 'outline-toggle outline-toggle--hidden';
-      // 小三角参考下拉框右侧小三角：细长倒三角 SVG（7×4），折叠态旋转 -90° 成向右
-      html += `<span class="${toggleCls}"><svg viewBox="0 0 7 4" width="7" height="4" aria-hidden="true"><path d="M0 0l3.5 4 3.5-4z" fill="%23999"/></svg></span>`;
+// 大纲 toggle 用实心等腰小三角（fill currentColor）。viewBox 与 CSS 渲染都采用方阵（12×12），
+// 展开时三角位于下半部指向下，折叠态旋转 -90° 后图形尺寸容器不变，避免旋转导致视觉变大/比例变形。
+// 形状：底边较长、高较短的扁平等腰三角形（底 9 / 高 4），避免过于尖锐
+html += `<span class="${toggleCls}"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1.5 4 L10.5 4 L6 8 Z"/></svg></span>`;
       html += `<span class="outline-label">${escapeHtml(node.text)}</span>`;
       html += '</div>';
       if (hasChildren) {

@@ -49,10 +49,10 @@ test('outline-ui: 点击折叠开关切换子级显隐', async () => withEditor(
   assert.ok(children && !children.classList.contains('collapsed'), '初始应展开');
   toggle.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
   assert.ok(children.classList.contains('collapsed'), '点击后应折叠');
-  assert.strictEqual(toggle.textContent, '▶');
+  assert.ok(toggle.classList.contains('collapsed'), '点击后 toggle 应带 collapsed 类（CSS 旋转成 ▶）');
   toggle.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
   assert.ok(!children.classList.contains('collapsed'), '再点应展开');
-  assert.strictEqual(toggle.textContent, '▼');
+  assert.ok(!toggle.classList.contains('collapsed'), '再点后 toggle 不应带 collapsed 类（恢复 ▼ 向下）');
 }));
 
 test('wordcount-ui: updateWordCount 更新状态栏三项计数', async () => withEditor({ captureInitErr: true }, async (w, ed) => {

@@ -312,7 +312,8 @@ const I18N = {
     thirdParty: '第三方组件',
     copyright: '版权声明',
     aboutTitle: '关于 TizuMark',
-    versionInfo: 'TizuMark v1.2.1',
+    appName: 'TizuMark',
+    appVersion: '1.2.1',
     versionDesc: '轻量级跨平台 Markdown 编辑器',
     buildInfo: '基于 Tauri v2.5 + Rust 构建',
     copyrightLine: 'Copyright (c) 2024-2026 TizuMark',
@@ -761,7 +762,8 @@ const I18N = {
     thirdParty: 'Third-Party Components',
     copyright: 'Copyright Notice',
     aboutTitle: 'About TizuMark',
-    versionInfo: 'TizuMark v1.2.1',
+    appName: 'TizuMark',
+    appVersion: '1.2.1',
     versionDesc: 'Lightweight cross-platform Markdown editor',
     buildInfo: 'Built with Tauri v2.5 + Rust',
     copyrightLine: 'Copyright (c) 2024-2026 TizuMark',
@@ -1455,10 +1457,15 @@ class MarkdownEditor {
     if (aboutSections.length >= 1) {
       const title = aboutSections[0].querySelector('.dependency-title .dependency-name');
       if (title) title.textContent = t('version');
-      const vps = aboutSections[0].querySelectorAll('.dependency-body p');
-      if (vps[1]) vps[1].textContent = t('versionInfo');
-      if (vps[2]) vps[2].textContent = t('versionDesc');
-      if (vps[3]) vps[3].textContent = t('buildInfo');
+      const sec = aboutSections[0];
+      const appNameEl = sec.querySelector('.about-app-name');
+      if (appNameEl) appNameEl.textContent = t('appName');
+      const verEl = sec.querySelector('#about-version');
+      if (verEl) verEl.textContent = 'v' + t('appVersion');
+      const descEl = sec.querySelector('#about-version-desc');
+      if (descEl) descEl.textContent = t('versionDesc');
+      const buildEl = sec.querySelector('#about-build');
+      if (buildEl) buildEl.textContent = t('buildInfo');
     }
     if (aboutSections.length >= 2) {
       const title = aboutSections[1].querySelector('.dependency-title .dependency-name');
@@ -2531,7 +2538,8 @@ class MarkdownEditor {
     });
     const toggles = content.querySelectorAll('.outline-toggle:not(.outline-toggle--hidden)');
     toggles.forEach((tg) => {
-      tg.textContent = expand ? '▼' : '▶';
+      // 通过 collapsed 类让 CSS 旋转 SVG（不再用 textContent 写 ▼/▶，否则会破坏矢量三角、变大且风格不一致）
+      tg.classList.toggle('collapsed', !expand);
     });
     this._allOutlineExpanded = expand;
     this._updateAllOutlineBtn();
@@ -2708,7 +2716,8 @@ class MarkdownEditor {
         const children = wrapper?.querySelector('.outline-children');
         if (children) {
           const isCollapsed = children.classList.toggle('collapsed');
-          toggle.textContent = isCollapsed ? '▶' : '▼';
+          // 通过 collapsed 类让 CSS 旋转 SVG（不再用 textContent 写 ▼/▶，否则会破坏矢量三角、变大且风格不一致）
+          toggle.classList.toggle('collapsed', isCollapsed);
         }
         return;
       }
@@ -10543,7 +10552,7 @@ input[type="checkbox"]:checked::after { display: none !important; }
     try {
       const ver = await TauriApi.getVersion();
       const el = document.getElementById('about-version');
-      if (el) el.textContent = 'TizuMark v' + ver;
+      if (el) el.textContent = 'v' + ver;
     } catch (_) {}
   }
 

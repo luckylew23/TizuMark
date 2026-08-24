@@ -285,9 +285,9 @@ test('sidebar-split: 一键全部展开/折叠大纲', async () => {
     // 构造带嵌套的大纲 DOM（H1 > H2 > H3）
     const content = w.document.getElementById('outline-content');
     content.innerHTML = [
-      '<div class="outline-item-wrapper"><div class="outline-item level-1" data-id="1" data-line="1"><span class="outline-toggle">▼</span><span class="outline-label">A</span></div>',
-      '<div class="outline-children"><div class="outline-item-wrapper"><div class="outline-item level-2" data-id="2" data-line="2"><span class="outline-toggle">▼</span><span class="outline-label">B</span></div>',
-      '<div class="outline-children"><div class="outline-item-wrapper"><div class="outline-item level-3" data-id="3" data-line="3"><span class="outline-toggle outline-toggle--hidden">▼</span><span class="outline-label">C</span></div></div></div>',
+      '<div class="outline-item-wrapper"><div class="outline-item level-1" data-id="1" data-line="1"><span class="outline-toggle"><svg viewBox="0 0 10 10" fill="currentColor"><path d="M1.5 1.5 L8.5 1.5 L5 8.5 Z"/></svg></span><span class="outline-label">A</span></div>',
+      '<div class="outline-children"><div class="outline-item-wrapper"><div class="outline-item level-2" data-id="2" data-line="2"><span class="outline-toggle"><svg viewBox="0 0 10 10" fill="currentColor"><path d="M1.5 1.5 L8.5 1.5 L5 8.5 Z"/></svg></span><span class="outline-label">B</span></div>',
+      '<div class="outline-children"><div class="outline-item-wrapper"><div class="outline-item level-3" data-id="3" data-line="3"><span class="outline-toggle outline-toggle--hidden"><svg viewBox="0 0 10 10" fill="currentColor"><path d="M1.5 1.5 L8.5 1.5 L5 8.5 Z"/></svg></span><span class="outline-label">C</span></div></div></div>',
       '</div></div></div>',
     ].join('');
     // 注意：不调用 updateOutline()，否则会用编辑器真实内容覆盖手造的嵌套 DOM。
@@ -302,13 +302,13 @@ test('sidebar-split: 一键全部展开/折叠大纲', async () => {
     collapsed = content.querySelectorAll('.outline-children.collapsed').length;
     assert.strictEqual(collapsed, 2, '折叠后应有 2 个折叠块');
     const toggles = content.querySelectorAll('.outline-toggle:not(.outline-toggle--hidden)');
-    toggles.forEach((t) => assert.strictEqual(t.textContent, '▶', '折叠后 toggle 应为 ▶'));
+    toggles.forEach((t) => assert.ok(t.classList.contains('collapsed'), '折叠后 toggle 应带 collapsed 类（CSS 旋转成 ▶）'));
 
     // 一键展开
     ed.toggleAllOutline(true);
     collapsed = content.querySelectorAll('.outline-children.collapsed').length;
     assert.strictEqual(collapsed, 0, '展开后应无折叠块');
-    toggles.forEach((t) => assert.strictEqual(t.textContent, '▼', '展开后 toggle 应为 ▼'));
+    toggles.forEach((t) => assert.ok(!t.classList.contains('collapsed'), '展开后 toggle 不应带 collapsed 类（恢复 ▼ 向下）'));
   } finally { cleanup(w); }
 });
 

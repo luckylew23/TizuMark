@@ -52,6 +52,10 @@
       this.dropdown = document.createElement('div');
       this.dropdown.className = 'font-picker-dropdown hidden';
       this.root.appendChild(this.input);
+      // 右侧小三角：与折叠面板标题 .collapse-caret 同款 Lucide chevron-down（24×24 / stroke 2 / currentColor），
+      // 由 .picker-caret CSS 统一定位与尺寸（16px）。input 无法容纳子元素，故挂在容器上绝对定位。
+      this.root.insertAdjacentHTML('beforeend',
+        '<svg class="picker-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>');
       this.root.appendChild(this.dropdown);
     }
 

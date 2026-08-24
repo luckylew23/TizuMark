@@ -9,6 +9,9 @@
   --alert-important-rgb: 139, 92, 246;
   --alert-warning-rgb: 245, 158, 11;
   --alert-caution-rgb: 239, 68, 68;
+  /* 全局统一小三角（chevron-down）：原生 select 背景三角的唯一样式源（固定灰，无法继承主题色）。
+     自定义 Select/FontPicker 用 .picker-caret 内联 SVG（与折叠标题 .collapse-caret 同源，继承主题色），不走背景图。 */
+  --caret-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* ========== 默认字体栈（不内置任何字体文件，全部为系统字体） ========== */
@@ -773,9 +776,11 @@ body {
 }
 
 .dropdown-arrow {
-  font-size: 10px;
+  width: 12px;
+  height: 12px;
   margin-left: 2px;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .dropdown-menu {
@@ -867,8 +872,10 @@ body {
 
 .submenu-arrow {
   margin-left: auto;
-  font-size: 10px;
+  width: 14px;
+  height: 14px;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .recent-file-item {
@@ -2635,30 +2642,29 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 .outline-filter .select-component-input {
   font-size: 11px;
-  /* 增大整体高度并垂直居中：height + line-height 让文字与右侧小三角在同一中线上 */
+  /* 盒式下拉框：边框 + bg-primary 底，与折叠标题（--bg-secondary 底）区分，一眼可辨；
+     height + line-height 保证文字与右侧小三角垂直居中 */
   height: 24px;
   line-height: 22px;
-  padding: 0 16px 0 6px;
+  padding: 0 26px 0 8px;
   max-width: 96px;
-  /* 纯文字 + 小箭头样式（参考图）：去边框/背景，hover 才显轻微背景；三角紧贴文字 */
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='%23999'%3E%3Cpath d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
-  background-position: right 5px center;
-  background-repeat: no-repeat;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 4px;
   box-shadow: none;
 }
 .outline-filter .select-component-input:hover {
+  border-color: var(--accent-muted);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
-  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
-  border-radius: 3px;
 }
 .outline-filter .select-component-input:focus {
   outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-soft, rgba(32, 80, 208, 0.15));
   color: var(--text-primary);
-  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
-  border-radius: 3px;
+  background-color: var(--bg-hover);
 }
 
 .sidebar-panel {
@@ -2802,30 +2808,29 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 .folder-sort-key .select-component-input {
   font-size: 11px;
-  /* 增大整体高度并垂直居中：height + line-height 让文字与右侧小三角在同一中线上 */
+  /* 盒式下拉框：边框 + bg-primary 底，与折叠标题（--bg-secondary 底）区分，一眼可辨；
+     height + line-height 保证文字与右侧小三角垂直居中 */
   height: 24px;
   line-height: 22px;
-  padding: 0 16px 0 6px;
+  padding: 0 26px 0 8px;
   max-width: 100px;
-  /* 纯文字 + 小箭头样式（参考图）：去边框/背景，hover 才显轻微背景；三角紧贴文字 */
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='%23999'%3E%3Cpath d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
-  background-position: right 5px center;
-  background-repeat: no-repeat;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 4px;
   box-shadow: none;
 }
 .folder-sort-key .select-component-input:hover {
+  border-color: var(--accent-muted);
+  background-color: var(--bg-hover);
   color: var(--text-primary);
-  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
-  border-radius: 3px;
 }
 .folder-sort-key .select-component-input:focus {
   outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-soft, rgba(32, 80, 208, 0.15));
   color: var(--text-primary);
-  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
-  border-radius: 3px;
+  background-color: var(--bg-hover);
 }
 
 .folder-sort-order {
@@ -3048,12 +3053,15 @@ body.is-resizing-row .sidebar-h-resizer {
   height: 14px;
   border-radius: 4px;
   flex-shrink: 0;
-  color: var(--text-tertiary, #9aa0a6);
+  /* 跟随标题颜色：默认与 .outline-item（--text-secondary）同色；
+     hover/active 时标题变主题色，三角（fill currentColor）一并跟随 */
+  color: inherit;
   transition: transform 0.15s, color 0.15s, background-color 0.15s;
 }
 .outline-toggle svg {
-  width: 7px;
-  height: 4px;
+  /* 等宽高渲染：与方阵 viewBox 配合，让旋转 -90° 后外框仍是 12×12，不会出现视觉变大/比例变化 */
+  width: 12px;
+  height: 12px;
   display: block;
 }
 /* 展开 = 向下（默认）；折叠 = 向右（旋转 -90°），与下拉框箭头、面板 chevron 语义一致 */
@@ -3168,7 +3176,8 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 
 .context-menu-item .submenu-arrow {
-  font-size: 10px;
+  width: 14px;
+  height: 14px;
   color: var(--text-secondary);
   margin-left: 16px;
 }
@@ -3264,17 +3273,27 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 
 .dialog-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 扩大可点击区域（30×30），解决原裸文字按钮难点中的问题 */
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
   background: none;
   border: none;
-  font-size: 20px;
+  border-radius: 6px;
+  font-size: 18px;
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  transition: background-color .12s ease, color .12s ease;
 }
 
 .dialog-close:hover {
   color: var(--text-primary);
+  background-color: var(--bg-hover);
 }
 
 .dialog-content {
@@ -3610,6 +3629,44 @@ body.is-resizing-row .sidebar-h-resizer {
 /* 关于弹框内容区：与快捷键/设置一致，去掉默认 padding，由折叠块首尾留白承担 */
 .about-content {
   padding: 0;
+}
+
+/* 关于弹框版本信息：品牌名 + 版本芯片 + 描述 + 构建信息四行布局（去除重复版本号） */
+.about-version-body {
+  padding: 0;
+}
+.about-app-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px 0;
+}
+.about-app-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+.about-version-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-text, #fff);
+  background: var(--accent-color);
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+.about-version-body .about-version-desc {
+  margin: 0 0 4px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.about-version-body .about-build {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
 }
 
 /* 关于弹框的折叠组件：与快捷键面板共用同一套折叠组件视觉语言
@@ -4076,7 +4133,7 @@ select {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background-color: var(--bg-primary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%23999'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-image: var(--caret-chevron);
   background-repeat: no-repeat;
   background-position: right 10px center;
   color: var(--text-primary);
@@ -4138,10 +4195,10 @@ select option {
   -webkit-appearance: none;
   width: 100%;
   box-sizing: border-box;
-  padding: 4px 24px 4px 8px;
+  padding: 4px 26px 4px 8px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--bg-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%23999'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") no-repeat right 8px center;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
@@ -4209,14 +4266,6 @@ select option {
   background: var(--accent-muted);
   border-left-color: var(--accent-color);
 }
-.font-picker-item-selected::after {
-  content: '\2713';
-  float: right;
-  color: var(--accent-color);
-  font-weight: 700;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  margin-left: 8px;
-}
 .font-picker-group-label {
   position: relative;
   padding: 6px 10px 6px 16px;
@@ -4276,10 +4325,10 @@ select option {
   width: auto;
   min-width: 64px;
   box-sizing: border-box;
-  padding: 4px 20px 4px 8px;
+  padding: 4px 26px 4px 8px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background: var(--bg-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%23999'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") no-repeat right 6px center;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
@@ -4290,6 +4339,26 @@ select option {
   user-select: none;
   caret-color: transparent;
 }
+/* 下拉框右侧小三角：与大纲/文件面板头最右侧 .panel-chevron 完全一致——
+   Lucide chevron-down（24×24 / stroke 2）、14×14、--text-secondary。
+   由 Select/FontPicker 组件在容器内注入内联 SVG（.picker-caret），绝对定位于容器右侧垂直居中。
+   不用背景图/mask（无法继承主题色，且 mask 在低版本 WebView2 渲染不可靠）。 */
+.select-component .picker-caret,
+.font-picker .picker-caret {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.select-component-disabled .picker-caret {
+  opacity: 0.5;
+}
+
 .select-component-input:hover:not([aria-disabled="true"]) {
   border-color: var(--accent-muted);
 }
@@ -4351,14 +4420,6 @@ select option {
   color: var(--accent-color);
   background: var(--accent-muted);
   border-left-color: var(--accent-color);
-}
-.select-component-item-selected::after {
-  content: '\2713';
-  float: right;
-  color: var(--accent-color);
-  font-weight: 700;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  margin-left: 8px;
 }
 
 
