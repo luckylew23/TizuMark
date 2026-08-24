@@ -571,8 +571,13 @@
         </div>
 
         <div class="about-section">
-          <details class="dependency-details">
-            <summary>第三方组件</summary>
+          <div class="dependency-details" data-collapsed="false">
+            <div class="dependency-title" data-toggle>
+              <svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
+              <span class="dependency-name">第三方组件</span>
+              <svg class="collapse-caret" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="dependency-body">
             <div class="dependency-list">
               <div class="dependency-item">
                 <strong>CodeMirror</strong>
@@ -610,7 +615,8 @@
                 <p>桌面应用框架</p>
               </div>
             </div>
-          </details>
+            </div>
+          </div>
         </div>
       </div>
     </div>

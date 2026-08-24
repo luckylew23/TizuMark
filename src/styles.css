@@ -3569,30 +3569,69 @@ body.is-resizing-row .sidebar-h-resizer {
   border-radius: 4px;
 }
 
-.dependency-details summary {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-color);
-  padding: 4px 10px;
-  margin: 0 -10px;
-  border-radius: 4px;
-  /* 与预览背景一致，避免折叠面板出现深浅不一的灰块 */
+/* 关于弹框的折叠展开框：复刻快捷键设置中折叠面板标题（.shortcut-section-title）的视觉语言
+   —— 1:1 复用同一套体系：div 容器 + 标题条（图标+标题+caret）+ 内容体
+   避开 <details>/<summary> 原生行为差异，图标与 caret 在 Tauri webview 下不再丢失 */
+.dependency-details .dependency-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 0;
   background: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  border: none;
+  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-primary);
+  transition: background-color .15s ease;
 }
-
-.dependency-details summary:hover {
-  background: var(--bg-hover, rgba(128, 128, 128, 0.1));
-  border-color: color-mix(in srgb, var(--accent-color, #4a90d9) 22%, transparent);
+.dependency-details .dependency-title:hover {
+  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
+}
+.dependency-details .dependency-title .panel-title-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--accent-color, #4a90d9);
+  opacity: 0.9;
+}
+.dependency-details .dependency-title:hover .panel-title-icon {
+  opacity: 1;
+}
+.dependency-details .dependency-name {
+  flex: 1 1 auto;
+}
+.dependency-details .collapse-caret {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+  transition: transform .18s ease;
+}
+/* 基础为向右的小箭头（表示收起）；展开时顺时针旋转 90° 指向下方，与快捷键一致 */
+.dependency-details[data-collapsed="false"] .collapse-caret {
+  transform: rotate(90deg);
+}
+.dependency-details[data-collapsed="true"] .dependency-body {
+  display: none;
+}
+.dependency-details .dependency-body {
+  /* 与折叠标题条左右边界对齐，避免内容比标题条更宽、显得脱节 */
+  margin: 0 12px;
 }
 
 .dependency-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 10px;
+  /* 上下外边距由 .dependency-body 提供的容器边界承担 */
+  margin: 0;
+  padding-top: 10px;
 }
 
 .about-section p {
@@ -4428,9 +4467,11 @@ select option {
 .shortcut-group-title {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-secondary);
+  /* 面板下的小分类标题使用主题强调色，与设置弹框分类标题（.settings-section h3）保持一致 */
+  color: var(--accent-color);
   padding: 6px 14px 3px;
-  letter-spacing: .03em;
+  letter-spacing: .04em;
+  text-transform: uppercase;
   border-bottom: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
   margin-bottom: 2px;
 }

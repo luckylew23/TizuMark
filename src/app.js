@@ -1480,8 +1480,8 @@ class MarkdownEditor {
       aboutSections[2].querySelector('p:nth-child(4)').textContent = t('noUnauthorized');
     }
     if (aboutSections.length >= 4) {
-      const summary = aboutSections[3].querySelector('summary');
-      if (summary) summary.textContent = t('thirdParty');
+      const title = aboutSections[3].querySelector('.dependency-title .dependency-name');
+      if (title) title.textContent = t('thirdParty');
       const depDescs = aboutSections[3].querySelectorAll('.dependency-item p');
       const depKeys = ['depCodeMirror', 'depHighlight', 'depCmark', 'depKatex', 'depMermaid', 'depHtml2canvas', 'depTauri'];
       depDescs.forEach((p, i) => {
@@ -10459,7 +10459,7 @@ input[type="checkbox"]:checked::after { display: none !important; }
     const dialog = document.getElementById('about-dialog');
     dialog.classList.remove('hidden');
     const details = document.querySelector('#about-dialog .dependency-details');
-    if (details) details.open = false;
+    if (details) details.setAttribute('data-collapsed', 'false');
     if (!dialog._devSetup) {
       dialog._devSetup = true;
       let cnt = 0;
@@ -10481,6 +10481,16 @@ input[type="checkbox"]:checked::after { display: none !important; }
               this.showToast(this.t('devtoolsOpenFailed', { err: e }), 'danger');
             }
           }
+        });
+      }
+      // 「第三方组件」折叠块：点击标题切换展开/收起，与快捷键 section-title 交互一致
+      const titleEl = document.querySelector('#about-dialog .dependency-title');
+      if (titleEl) {
+        titleEl.addEventListener('click', () => {
+          const sec = titleEl.closest('.dependency-details');
+          if (!sec) return;
+          const collapsed = sec.getAttribute('data-collapsed') === 'true';
+          sec.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
         });
       }
     }
