@@ -128,27 +128,47 @@ test('设置布局：内置分类默认收缩置顶，可折叠/展开，状态�
     const sections = [...w.document.querySelectorAll('#shortcuts-list .shortcut-section')];
     assert.strictEqual(sections[0].querySelector('.shortcut-section-title').dataset.toggle, 'builtin', '内置分类应在顶部');
     assert.strictEqual(sections[1].querySelector('.shortcut-section-title').dataset.toggle, 'config', '方案与自定义应在其后');
-    // 默认：内置收缩、方案与自定义展开
+    // 默认：内置与方案与自定义全部展开
     const builtinSection = locate('builtin');
-    assert.strictEqual(builtinSection.getAttribute('data-collapsed'), 'true', '内置分类初始应为收缩');
+    assert.strictEqual(builtinSection.getAttribute('data-collapsed'), 'false', '内置分类初始应为展开');
     const configSection = locate('config');
     assert.strictEqual(configSection.getAttribute('data-collapsed'), 'false', '方案与自定义初始应为展开');
     // 收缩时 body 带 data-collapsed 父级，CSS 规则 .shortcut-section[data-collapsed="true"] .shortcut-section-body { display:none } 生效
     assert.strictEqual(builtinSection.querySelector('.shortcut-section-body').parentElement, builtinSection, '内置 body 应位于内置 section 内');
-    // 点击内置标题展开
+    // 点击内置标题收起
     const title = builtinSection.querySelector('.shortcut-section-title');
     title.dispatchEvent(new w.Event('click', { bubbles: true }));
-    assert.strictEqual(builtinSection.getAttribute('data-collapsed'), 'false', '点击后应展开');
-    // 展开后重渲染应保持展开状态
+    assert.strictEqual(builtinSection.getAttribute('data-collapsed'), 'true', '点击后应收起');
+    // 收起后重渲染应保持收起状态
     ed.renderShortcutsList();
     const reSection = locate('builtin');
-    assert.strictEqual(reSection.getAttribute('data-collapsed'), 'false', '重渲染后应维持展开');
-    // 再点击恢复收缩
+    assert.strictEqual(reSection.getAttribute('data-collapsed'), 'true', '重渲染后应维持收起');
+    // 再点击恢复展开
     reSection.querySelector('.shortcut-section-title').dispatchEvent(new w.Event('click', { bubbles: true }));
-    assert.strictEqual(reSection.getAttribute('data-collapsed'), 'true', '再次点击应收缩');
+    assert.strictEqual(reSection.getAttribute('data-collapsed'), 'false', '再次点击应展开');
   } finally {
     cleanup(w);
   }
+});
+
+test('回归：折叠标题 hover 背景使用 color-mix 实体色，确保不透明（不穿透下层内容）', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const cssPath = path.resolve(__dirname, '..', 'src', 'styles.css');
+  const css = fs.readFileSync(cssPath, 'utf8');
+  // 三处折叠标题（快捷键、设置、关于）的 hover 必须使用 color-mix 实体色，禁止透明 rgba 叠加，
+  // 否则 sticky 标题条下方内容会穿透。
+  const opaque = /color-mix\(in srgb, var\(--bg-secondary\) 88%, var\(--text-primary\) 12%\)/;
+  const strongPattern = /\.shortcut-section-title:hover\s*\{\s*background-color:\s*color-mix/;
+  const settingsStrongPattern = /\.settings-section-title:hover\s*\{\s*background-color:\s*color-mix/;
+  const dependencyStrongPattern = /\.dependency-details \.dependency-title:hover\s*\{\s*background-color:\s*color-mix/;
+  assert.ok(strongPattern.test(css), '快捷键折叠标题 hover 应使用 color-mix 实体色（不透明）');
+  assert.ok(settingsStrongPattern.test(css), '设置折叠标题 hover 应使用 color-mix 实体色（不透明）');
+  assert.ok(dependencyStrongPattern.test(css), '关于折叠标题 hover 应使用 color-mix 实体色（不透明）');
+  // 防止退化回透明 rgba 写法
+  assert.ok(!/\.shortcut-section-title:hover\s*\{\s*background-color: rgba\(/.test(css), '快捷键标题 hover 禁止使用 rgba 透明色');
+  assert.ok(!/\.settings-section-title:hover\s*\{\s*background-color: rgba\(/.test(css), '设置标题 hover 禁止使用 rgba 透明色');
+  assert.ok(!/\.dependency-details \.dependency-title:hover\s*\{\s*background-color: rgba\(/.test(css), '关于标题 hover 禁止使用 rgba 透明色');
 });
 
 test('样式：快捷键分类标题与文件/大纲面板头一致，弹窗标题收窄精致化', async () => {
@@ -156,20 +176,24 @@ test('样式：快捷键分类标题与文件/大纲面板头一致，弹窗标�
   const path = require('path');
   const STYLES = fs.readFileSync(path.join(__dirname, '..', 'src', 'styles.css'), 'utf8');
 
-  // 快捷键可折叠分类标题须与预览背景一致（bg-primary），防止 sticky 滚动时文字重叠
+  // 快捷键可折叠分类标题使用常驻浅灰底（bg-secondary），静态即可辨识为折叠控件
   assert.ok(
-    /\.shortcut-section-title\s*\{[^}]*background-color:\s*var\(--bg-primary\)/.test(STYLES),
-    'shortcut-section-title 应使用与预览一致的 bg-primary 背景'
+    /\.shortcut-section-title\s*\{[^}]*background-color:\s*var\(--bg-secondary\)/.test(STYLES),
+    'shortcut-section-title 应使用 bg-secondary 常驻浅灰底（区别于内容白底）'
   );
   // 分类标题文字颜色使用更醒目的 text-primary（精致扁平风），图标使用主题色
   assert.ok(
     /\.shortcut-section-title\s*\{[^}]*color:\s*var\(--text-primary\)/.test(STYLES),
     'shortcut-section-title 文字应使用更醒目的 text-primary'
   );
-  // 左侧图标使用与 panel-title-icon 一致的类名与主题色
+  // 左侧图标使用与 panel-title-icon 一致的类名：收起态浅灰、展开态随标题一起变主题色
   assert.ok(
-    /\.shortcut-section-title\s+\.panel-title-icon\s*\{[^}]*color:\s*var\(--accent-color/.test(STYLES),
-    'shortcut-section-title 内图标应使用主题色'
+    /\.shortcut-section-title\s+\.panel-title-icon\s*\{[^}]*color:\s*var\(--text-secondary\)/.test(STYLES),
+    'shortcut-section-title 内图标收起态应为浅灰'
+  );
+  assert.ok(
+    /\.shortcut-section\[data-collapsed="false"\]\s+\.shortcut-section-title\s+\.panel-title-icon[^}]*color:\s*var\(--accent-color\)/.test(STYLES),
+    '展开态图标应变主题色'
   );
   // 弹窗标题统一收窄
   assert.ok(

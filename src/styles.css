@@ -42,6 +42,7 @@
   --color-danger: #dc2626;
   --color-warning: #e8a020;
   --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-hover-strong: rgba(0, 0, 0, 0.09);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -79,6 +80,7 @@
   --color-danger: #c0392b;
   --color-warning: #d4a017;
   --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-hover-strong: rgba(0, 0, 0, 0.09);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -116,6 +118,7 @@
   --color-danger: #b84d4d;
   --color-warning: #c89030;
   --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-hover-strong: rgba(0, 0, 0, 0.09);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -153,6 +156,7 @@
   --color-danger: #b84d7a;
   --color-warning: #b88a40;
   --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-hover-strong: rgba(0, 0, 0, 0.09);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -190,6 +194,7 @@
   --color-danger: #c05a4a;
   --color-warning: #c89030;
   --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-hover-strong: rgba(0, 0, 0, 0.09);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -228,6 +233,7 @@
   --color-danger: #f87171;
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover-strong: rgba(255, 255, 255, 0.10);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -265,6 +271,7 @@
   --color-danger: #f87171;
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover-strong: rgba(255, 255, 255, 0.10);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -302,6 +309,7 @@
   --color-danger: #f87171;
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover-strong: rgba(255, 255, 255, 0.10);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -339,6 +347,7 @@
   --color-danger: #f87171;
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover-strong: rgba(255, 255, 255, 0.10);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -376,6 +385,7 @@
   --color-danger: #f87171;
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover-strong: rgba(255, 255, 255, 0.10);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -685,6 +695,12 @@ body {
   align-items: center;
   justify-content: center;
   transition: background-color, color, border-color, opacity, transform, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+
+.window-btn svg {
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
 }
 
@@ -2619,14 +2635,17 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 .outline-filter .select-component-input {
   font-size: 11px;
-  padding: 1px 11px 1px 3px;
+  /* 增大整体高度并垂直居中：height + line-height 让文字与右侧小三角在同一中线上 */
+  height: 24px;
+  line-height: 22px;
+  padding: 0 16px 0 6px;
   max-width: 96px;
   /* 纯文字 + 小箭头样式（参考图）：去边框/背景，hover 才显轻微背景；三角紧贴文字 */
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4' fill='%23999'%3E%3Cpath d='M0 0l3.5 4 3.5-4z'/%3E%3C/svg%3E");
-  background-position: right 2px center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='%23999'%3E%3Cpath d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-position: right 5px center;
   background-repeat: no-repeat;
   box-shadow: none;
 }
@@ -2783,14 +2802,17 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 .folder-sort-key .select-component-input {
   font-size: 11px;
-  padding: 1px 11px 1px 3px;
+  /* 增大整体高度并垂直居中：height + line-height 让文字与右侧小三角在同一中线上 */
+  height: 24px;
+  line-height: 22px;
+  padding: 0 16px 0 6px;
   max-width: 100px;
   /* 纯文字 + 小箭头样式（参考图）：去边框/背景，hover 才显轻微背景；三角紧贴文字 */
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4' fill='%23999'%3E%3Cpath d='M0 0l3.5 4 3.5-4z'/%3E%3C/svg%3E");
-  background-position: right 2px center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='%23999'%3E%3Cpath d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-position: right 5px center;
   background-repeat: no-repeat;
   box-shadow: none;
 }
@@ -2808,8 +2830,9 @@ body.is-resizing-row .sidebar-h-resizer {
 
 .folder-sort-order {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  /* 与左侧排序下拉框高度对齐（24px），保证下拉框右侧小三角与排序图标中心点水平对齐 */
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -3202,12 +3225,19 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 
 .dialog {
+  position: relative;
   background-color: var(--bg-primary);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
-  width: 90%;
-  max-width: 500px;
+  /* 默认宽度锁定为原值 500px（与改动前一致）；
+     放大上限放宽到 90vw，用户拖动/缩放后内联 width 覆盖此处，可自由放大到视区边缘；
+     初始高度上限还原为原值 80vh（改动前一致），内容超出时由 .dialog-content 内部滚动；
+     拖动/缩放时内联 height 覆盖此处，仍可放大到视区边缘；
+     拖动/缩放边界由 dialog-drag-resize.js 视区裁剪兜底 */
+  width: 500px;
+  max-width: 90vw;
   max-height: 80vh;
+  min-height: 240px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3251,6 +3281,9 @@ body.is-resizing-row .sidebar-h-resizer {
   padding: 20px;
   overflow-y: auto;
   flex: 1;
+  /* flex 子项必须 min-height:0，否则内容自然高度会撑大弹框，无法收缩；
+     让内容区独立滚动，弹框总高度由 header + content + footer 紧凑决定 */
+  min-height: 0;
 }
 
 .dialog-content p {
@@ -3290,6 +3323,32 @@ body.is-resizing-row .sidebar-h-resizer {
   gap: 8px;
   padding: 12px 20px;
   border-top: 1px solid var(--border-color);
+}
+
+/* 弹框可拖动：标题栏 grab 手势（避开关闭按钮） */
+.dialog-drag-handle {
+  cursor: move;
+  user-select: none;
+}
+.dialog-drag-handle .dialog-close {
+  cursor: pointer;
+}
+
+/* 弹框右下角缩放手柄：se 方向，视觉表现为淡三角，hover 加深 */
+.dialog-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 6;
+  background: linear-gradient(135deg, transparent 50%, var(--text-secondary) 50%, var(--text-secondary) 60%, transparent 60%);
+  opacity: 0.3;
+  transition: opacity .15s ease;
+}
+.dialog-resize-handle:hover {
+  opacity: 0.7;
 }
 
 .dialog-btn {
@@ -3548,57 +3607,57 @@ body.is-resizing-row .sidebar-h-resizer {
   margin: 0;
 }
 
-.about-section {
-  margin-bottom: 20px;
+/* 关于弹框内容区：与快捷键/设置一致，去掉默认 padding，由折叠块首尾留白承担 */
+.about-content {
+  padding: 0;
 }
 
-.about-section:last-child {
+/* 关于弹框的折叠组件：与快捷键面板共用同一套折叠组件视觉语言
+   （常驻浅灰底标题条 + 展开态底部实线/左侧主题色竖条 + 0 间隔贴合）
+   避开 <details>/<summary> 原生行为差异，图标与 caret 在 Tauri webview 下不再丢失 */
+.dependency-details {
   margin-bottom: 0;
 }
-
-.about-section h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-color);
+.dependency-details[data-collapsed="true"]:last-of-type {
+  margin-bottom: 12px;
 }
-
-.dependency-details {
-  border-radius: 4px;
-}
-
-/* 关于弹框的折叠展开框：复刻快捷键设置中折叠面板标题（.shortcut-section-title）的视觉语言
-   —— 1:1 复用同一套体系：div 容器 + 标题条（图标+标题+caret）+ 内容体
-   避开 <details>/<summary> 原生行为差异，图标与 caret 在 Tauri webview 下不再丢失 */
-.dependency-details .dependency-title {
+.dependency-title {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
-  padding: 7px 10px;
+  padding: 8px 12px;
   border-radius: 0;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   border: none;
-  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   user-select: none;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 650;
   letter-spacing: 0.3px;
   color: var(--text-primary);
   transition: background-color .15s ease;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+/* 仅展开态：底部分隔线 + 图标与标题文字变主题色（无左侧竖条） */
+.dependency-details[data-collapsed="false"] .dependency-title {
+  border-bottom: 1px solid var(--border-color);
+}
+.dependency-details[data-collapsed="false"] .dependency-title .panel-title-icon,
+.dependency-details[data-collapsed="false"] .dependency-title .dependency-name {
+  color: var(--accent-color);
 }
 .dependency-details .dependency-title:hover {
-  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
+  background-color: color-mix(in srgb, var(--bg-secondary) 88%, var(--text-primary) 12%);
 }
 .dependency-details .dependency-title .panel-title-icon {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
-  color: var(--accent-color, #4a90d9);
-  opacity: 0.9;
+  color: var(--text-secondary);
+  opacity: 1;
 }
 .dependency-details .dependency-title:hover .panel-title-icon {
   opacity: 1;
@@ -3606,14 +3665,7 @@ body.is-resizing-row .sidebar-h-resizer {
 .dependency-details .dependency-name {
   flex: 1 1 auto;
 }
-.dependency-details .collapse-caret {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  color: var(--text-secondary);
-  transition: transform .18s ease;
-}
-/* 基础为向右的小箭头（表示收起）；展开时顺时针旋转 90° 指向下方，与快捷键一致 */
+/* caret 使用全局 .collapse-caret（16px 加粗、text-primary），此处无需重复定义 */
 .dependency-details[data-collapsed="false"] .collapse-caret {
   transform: rotate(90deg);
 }
@@ -3621,8 +3673,10 @@ body.is-resizing-row .sidebar-h-resizer {
   display: none;
 }
 .dependency-details .dependency-body {
-  /* 与折叠标题条左右边界对齐，避免内容比标题条更宽、显得脱节 */
+  /* 与折叠标题条左右边界对齐，避免内容比标题条更宽、显得脱节；
+     底部 padding 承担与下一折叠组件贴合时的间距 */
   margin: 0 12px;
+  padding-bottom: 10px;
 }
 
 .dependency-list {
@@ -3634,23 +3688,11 @@ body.is-resizing-row .sidebar-h-resizer {
   padding-top: 10px;
 }
 
-.about-section p {
+.dependency-body p {
   font-size: 13px;
   color: var(--text-secondary);
   margin: 4px 0;
   line-height: 1.5;
-}
-
-.about-contact {
-  background: var(--bg-tertiary);
-  border-radius: 10px;
-  padding: 16px;
-  border: 1px solid var(--border-color);
-}
-
-.about-contact h3 {
-  border-bottom-color: var(--border-color);
-  margin-bottom: 12px;
 }
 
 .gitee-badge {
@@ -3925,7 +3967,8 @@ body.is-resizing-row .sidebar-h-resizer {
 
 /* Settings Dialog */
 .settings-dialog {
-  max-width: 460px;
+  /* 默认宽度保持原值 460px；放大上限沿用 .dialog 的 max-width: 90vw */
+  width: 460px;
 }
 
 .settings-content {
@@ -3933,21 +3976,63 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 
 .settings-section {
-  padding: 10px 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  /* 设置面板折叠组件：与快捷键/关于折叠块同一套视觉体系（0 间隔贴合、浅灰底标题条） */
+  margin-bottom: 0;
 }
-
-.settings-section:last-child {
-  border-bottom: none;
+.settings-section[data-collapsed="true"]:last-of-type {
+  margin-bottom: 12px;
 }
-
-.settings-section h3 {
-  font-size: 12px;
-  font-weight: 600;
+.settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 0;
+  background-color: var(--bg-secondary);
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.3px;
+  color: var(--text-primary);
+  transition: background-color .15s ease;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+/* 仅展开态：底部分隔线 + 图标与标题文字变主题色（无左侧竖条） */
+.settings-section[data-collapsed="false"] .settings-section-title {
+  border-bottom: 1px solid var(--border-color);
+}
+.settings-section[data-collapsed="false"] .settings-section-title .panel-title-icon,
+.settings-section[data-collapsed="false"] .settings-section-title .settings-section-name {
   color: var(--accent-color);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+}
+.settings-section-title:hover {
+  background-color: color-mix(in srgb, var(--bg-secondary) 88%, var(--text-primary) 12%);
+}
+.settings-section-title .panel-title-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  opacity: 1;
+}
+.settings-section-name {
+  flex: 1 1 auto;
+}
+/* caret 使用全局 .collapse-caret（16px 加粗、text-primary），此处无需重复定义 */
+.settings-section[data-collapsed="false"] .collapse-caret {
+  transform: rotate(90deg);
+}
+.settings-section[data-collapsed="true"] .settings-section-body {
+  display: none;
+}
+.settings-section-body {
+  margin: 0 12px;
+  padding-bottom: 10px;
 }
 
 .settings-row {
@@ -4426,13 +4511,14 @@ select option {
 
 
 .shortcuts-dialog {
-  max-width: 520px;
+  /* 默认宽度保持原值 520px；放大上限沿用 .dialog 的 max-width: 90vw */
+  width: 520px;
 }
 
 .shortcuts-content {
   padding: 0;
-  max-height: 420px;
-  overflow-y: auto;
+  /* 去掉固定 max-height，让弹框整体高度由 .dialog 决定；
+     滚动由通用 .dialog-content (overflow-y:auto) 提供 */
 }
 
 .shortcuts-list {
@@ -4467,7 +4553,7 @@ select option {
 .shortcut-group-title {
   font-size: 11.5px;
   font-weight: 600;
-  /* 面板下的小分类标题使用主题强调色，与设置弹框分类标题（.settings-section h3）保持一致 */
+  /* 面板下的小分类标题使用主题强调色，与折叠组件体系中的展开态强调色保持一致 */
   color: var(--accent-color);
   padding: 6px 14px 3px;
   letter-spacing: .04em;
@@ -4579,32 +4665,29 @@ select option {
 
 /* 快捷键设置：两大可折叠分类（内置固定 / 方案与自定义） */
 .shortcut-section {
-  /* 两分类之间不保留空白隔断；内置快捷键顶部留白由首个标题承担 */
+  /* 折叠组件间 0 间隔紧密贴合（收缩时多个折叠条连成一体，无间隔感）；
+     首个组件紧贴弹框内容区顶部（无留白），仅末组件收缩时保底留白 */
   margin-bottom: 0;
 }
-/* 内置快捷键（首分类）顶部留白 */
-.shortcut-section:first-of-type {
-  margin-top: 12px;
-}
-/* 方案与自定义快捷键收缩时，与底部留白缩小，与顶部留白高度一致 */
+/* 收缩态最后组件与底部留白，保证底部不与弹框边缘贴死 */
 .shortcut-section[data-collapsed="true"]:last-of-type {
   margin-bottom: 12px;
 }
-/* 快捷键设置中的折叠分类标题：精致扁平风，与文件/大纲面板头同一体系但更舒展 */
+/* 折叠组件标题条：常驻浅灰底（--bg-secondary），静态即可辨识为可折叠控件；
+   收起态完全无线条；展开态才有底部实线 + 图标与标题文字变主题色 */
 .shortcut-section-title {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
-  padding: 7px 10px;
+  padding: 8px 12px;
   border-radius: 0;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-secondary);
   border: none;
-  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   user-select: none;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 650;
   letter-spacing: 0.3px;
   color: var(--text-primary);
   transition: background-color .15s ease;
@@ -4612,15 +4695,23 @@ select option {
   top: 0;
   z-index: 5;
 }
+/* 仅展开态：标题与内容体之间一条实分隔线 + 图标与标题文字变主题色 */
+.shortcut-section[data-collapsed="false"] .shortcut-section-title {
+  border-bottom: 1px solid var(--border-color);
+}
+.shortcut-section[data-collapsed="false"] .shortcut-section-title .panel-title-icon,
+.shortcut-section[data-collapsed="false"] .shortcut-section-title .shortcut-section-name {
+  color: var(--accent-color);
+}
 .shortcut-section-title:hover {
-  background-color: var(--bg-hover, rgba(128, 128, 128, 0.1));
+  background-color: color-mix(in srgb, var(--bg-secondary) 88%, var(--text-primary) 12%);
 }
 .shortcut-section-title .panel-title-icon {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
-  color: var(--accent-color, #4a90d9);
-  opacity: 0.9;
+  color: var(--text-secondary);
+  opacity: 1;
 }
 .shortcut-section-title:hover .panel-title-icon {
   opacity: 1;
@@ -4633,21 +4724,23 @@ select option {
 }
 .collapse-caret {
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  color: var(--text-secondary);
+  width: 16px;
+  height: 16px;
+  color: var(--text-primary);
   transition: transform .18s ease;
 }
-/* 基础为向右的小箭头（表示收起）；展开时顺时针旋转 90° 指向下方 */
+/* 收起为向右小箭头；展开时顺时针旋转 90° 指向下方，状态一目了然 */
 .shortcut-section[data-collapsed="false"] .collapse-caret {
   transform: rotate(90deg);
 }
 .shortcut-section[data-collapsed="true"] .shortcut-section-body {
   display: none;
 }
-/* 分类内容整体与标题条对齐同一左右边界，避免内容比标题条更宽、显得脱节 */
+/* 分类内容整体与标题条对齐同一左右边界，避免内容比标题条更宽、显得脱节；
+   底部 padding 承担与下一折叠组件贴合时的间距 */
 .shortcut-section-body {
   margin: 0 12px;
+  padding-bottom: 10px;
 }
 
 /* 方案下拉块：置于「方案与自定义」分类顶部（body 已提供左右 12px 边界，这里不再加水平外边距） */

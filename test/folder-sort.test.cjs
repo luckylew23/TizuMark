@@ -345,16 +345,14 @@ test('folder-sort: 升/降序按钮显示不同箭头图标（升序=上箭头�
     ed.settings.fileSortOrder = 'asc';
     ed.applyLanguage();
     const ascHtml = orderBtn.innerHTML;
-    // 新图标：清晰的上下双箭头（polyline），当前方向实色、反方向淡显
-    assert.strictEqual(orderBtn.querySelectorAll('svg polyline').length, 2, '升序 SVG 应含 2 条 polyline（上箭头实色+下箭头淡显）');
-    assert.ok(ascHtml.includes('6 14 12 8 18 14'), '升序应以上箭头为主（尖朝向上）');
+    // 新图标（Lucide）：升序=arrow-up-narrow-wide（向上箭头），降序=arrow-down-wide-narrow（向下箭头），均为 path 型
+    assert.ok(ascHtml.includes('m3 8 4-4 4 4'), '升序应为向上箭头（arrow-up-narrow-wide）');
     assert.ok(!orderBtn.classList.contains('desc'), '升序不应带 desc class');
 
     ed.settings.fileSortOrder = 'desc';
     ed.applyLanguage();
     const descHtml = orderBtn.innerHTML;
-    assert.strictEqual(orderBtn.querySelectorAll('svg polyline').length, 2, '降序 SVG 应含 2 条 polyline（下箭头实色+上箭头淡显）');
-    assert.ok(descHtml.includes('6 6 12 12 18 6'), '降序应以下箭头为主（尖朝向下）');
+    assert.ok(descHtml.includes('m3 16 4 4 4-4'), '降序应为向下箭头（arrow-down-wide-narrow）');
     assert.ok(orderBtn.classList.contains('desc'), '降序应带 desc class');
     assert.notStrictEqual(ascHtml, descHtml, '升/降序图标不应是同一个');
   } finally { cleanup(w); }

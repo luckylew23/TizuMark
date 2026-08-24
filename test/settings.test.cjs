@@ -892,9 +892,9 @@ test('settings: 切换英文后设置对话框无残留中文（除字体预览�
 
     const dlg = w.document.getElementById('settings-dialog');
     assert.ok(dlg, '设置对话框存在');
-    // 标题与 section 标题
+    // 标题与 section 标题（折叠块标题条内名称元素）
     assert.strictEqual(w.document.getElementById('settings-title').textContent, 'Settings');
-    const sections = [...dlg.querySelectorAll('.settings-section h3')].map(h => h.textContent);
+    const sections = [...dlg.querySelectorAll('.settings-section .settings-section-name')].map(h => h.textContent);
     assert.deepStrictEqual(sections, ['Basic', 'Editor', 'Preview', 'Behavior', 'Custom Fonts']);
     // 语言 / 主题 / 关闭行为 / 视图 / Tab / 最大宽度 options（自绘 Select 组件，随语言刷新）
     const lang = ed._selects && ed._selects.language;
@@ -1025,4 +1025,91 @@ test('settings: 添加字体后用户手动选择并应用/保存才生效落盘
     assert.strictEqual(stored.previewFont, added.id, '应用后 previewFont 落盘为新字体');
     assert.strictEqual(stored.customFonts.length, 1);
   } finally { cleanup(w); }
+});
+
+test('设置折叠块：5 个分类为折叠结构，默认展开，点击标题切换收起/展开', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    ed.showSettings();
+    const dlg = w.document.getElementById('settings-dialog');
+    const sections = [...dlg.querySelectorAll('.settings-section')];
+    assert.strictEqual(sections.length, 5, '应有 5 个设置分类');
+    for (const sec of sections) {
+      assert.strictEqual(sec.getAttribute('data-collapsed'), 'false', '设置分类默认展开');
+      assert.ok(sec.querySelector('.settings-section-title'), '分类应含标题条');
+      assert.ok(sec.querySelector('.settings-section-title .panel-title-icon'), '标题条应含图标');
+      assert.ok(sec.querySelector('.settings-section-title .collapse-caret'), '标题条应含 caret');
+      assert.ok(sec.querySelector('.settings-section-body'), '分类应含内容体');
+    }
+    // 点击第一个标题 → 收起
+    const first = sections[0];
+    first.querySelector('.settings-section-title').dispatchEvent(new w.Event('click', { bubbles: true }));
+    assert.strictEqual(first.getAttribute('data-collapsed'), 'true', '点击标题应切换为收起');
+    // 再点 → 展开
+    first.querySelector('.settings-section-title').dispatchEvent(new w.Event('click', { bubbles: true }));
+    assert.strictEqual(first.getAttribute('data-collapsed'), 'false', '再次点击应展开');
+  } finally { cleanup(w); }
+});
+
+test('设置折叠块：每次打开重置为全展开', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    ed.showSettings();
+    const dlg = w.document.getElementById('settings-dialog');
+    const sections = [...dlg.querySelectorAll('.settings-section')];
+    // 收起第一块
+    sections[0].querySelector('.settings-section-title').dispatchEvent(new w.Event('click', { bubbles: true }));
+    assert.strictEqual(sections[0].getAttribute('data-collapsed'), 'true', '点击后应收起');
+    // 重新打开 → 重置为全展开
+    ed.hideSettings();
+    ed.showSettings();
+    const sections2 = [...dlg.querySelectorAll('.settings-section')];
+    for (let i = 0; i < sections2.length; i++) {
+      assert.strictEqual(sections2[i].getAttribute('data-collapsed'), 'false', `重新打开后第 ${i + 1} 块应重置为展开`);
+    }
+  } finally { cleanup(w); }
+});
+
+test('关于折叠块：4 块统一结构，默认全部展开，每次打开重置为全展开，点击标题切换', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    await ed.showAbout();
+    const blocks = [...w.document.querySelectorAll('#about-dialog .dependency-details')];
+    assert.strictEqual(blocks.length, 4, '关于面板应有 4 个折叠块');
+    const names = blocks.map(b => b.querySelector('.dependency-name').textContent);
+    assert.deepStrictEqual(names, ['版本信息', '联系我们', '许可协议', '第三方组件']);
+    // 默认全部展开
+    for (let i = 0; i < blocks.length; i++) {
+      assert.strictEqual(blocks[i].getAttribute('data-collapsed'), 'false', `第 ${i + 1} 块默认展开`);
+    }
+    // 每块标题条含图标 + caret
+    for (const b of blocks) {
+      assert.ok(b.querySelector('.dependency-title .panel-title-icon'), '标题条应含图标');
+      assert.ok(b.querySelector('.dependency-title .collapse-caret'), '标题条应含 caret');
+    }
+    // 点击「联系我们」→ 收起
+    blocks[1].querySelector('.dependency-title').dispatchEvent(new w.Event('click', { bubbles: true }));
+    assert.strictEqual(blocks[1].getAttribute('data-collapsed'), 'true', '点击标题应收起');
+    // 重新打开 → 重置为全部展开
+    ed.hideAbout ? ed.hideAbout() : w.document.getElementById('about-dialog').classList.add('hidden');
+    await ed.showAbout();
+    const blocks2 = [...w.document.querySelectorAll('#about-dialog .dependency-details')];
+    for (let i = 0; i < blocks2.length; i++) {
+      assert.strictEqual(blocks2[i].getAttribute('data-collapsed'), 'false', `重新打开后第 ${i + 1} 块应重置为展开`);
+    }
+  } finally { cleanup(w); }
+});
+
+test('图标源统一为 Lucide（内联 SVG，无 Feather 残留）', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const files = ['index.html', 'app.js', 'modules/file-search.js'];
+  const all = files.map(f => fs.readFileSync(path.resolve(__dirname, '..', 'src', f), 'utf8')).join('\n');
+  // Lucide 特征路径应存在（folder / list / file）
+  assert.ok(/M20 20a2 2 0 0 0 2-2V8/.test(all), '应含 Lucide folder 路径');
+  assert.ok(/M3 5h\.01/.test(all), '应含 Lucide list 路径');
+  assert.ok(/M6 22a2 2 0 0 1-2-2V4/.test(all), '应含 Lucide file 路径');
+  // Feather 旧式 folder/file 路径不应再出现（避免回退）
+  assert.ok(!/M3 7a2 2 0 0 1 2-2h4l2 2h8a2/.test(all), '不应残留 Feather 式 folder 路径');
+  assert.ok(!/M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10/.test(all), '不应残留 Feather 式 file 路径');
 });

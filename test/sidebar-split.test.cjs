@@ -426,12 +426,12 @@ test('sidebar-split: 按钮体系字形族区分 + 无边框 + aria 状态', asy
     const filesChevron = w.document.getElementById('files-chevron');
     const sortOrder = w.document.getElementById('folder-sort-order');
 
-    // 三类按钮字形族不同（解决「区分度」诉求）：
-    // 全部按钮=三条横线 + 三角(3 line + 1 polyline)，面板 chevron=单箭头 disclosure(1 polyline)，排序=上下双箭头(2 polyline)
-    assert.strictEqual(btnAllFolders.querySelectorAll('svg line').length, 3, '全部按钮应有三条横线');
-    assert.strictEqual(btnAllFolders.querySelectorAll('svg polyline').length, 1, '全部按钮应有三角');
+    // 三类按钮字形族不同（解决「区分度」诉求，统一 Lucide path 型图标后）：
+    // 全部按钮=fold/unfold-vertical（多 path 折线收纳图标），面板 chevron=单箭头 disclosure(1 polyline)，排序=arrow-up/down-narrow-wide（多 path）
+    assert.ok(btnAllFolders.querySelector('svg path'), '全部按钮应为 path 型 Lucide 图标（fold/unfold-vertical）');
+    assert.strictEqual(btnAllFolders.querySelectorAll('svg line').length, 0, '全部按钮不应再有旧的三条横线 line');
     assert.strictEqual(filesChevron.querySelectorAll('svg polyline').length, 1, '面板 chevron 应为单箭头 disclosure');
-    assert.ok(sortOrder.querySelector('svg polyline'), '排序按钮应使用 polyline 箭头图标');
+    assert.ok(sortOrder.querySelector('svg path'), '排序按钮应使用 path 型 Lucide 箭头图标');
     assert.notStrictEqual(btnAllFolders.innerHTML, filesChevron.innerHTML, '全部按钮与面板 chevron 字形应不同');
 
     // 面板 chevron 折叠态应向右（CSS transform: rotate(-90deg)）
@@ -453,10 +453,10 @@ test('sidebar-split: 按钮体系字形族区分 + 无边框 + aria 状态', asy
     await ed.renderFolderTree();
     await ed.toggleAllFolders(true);
     assert.strictEqual(btnAllFolders.getAttribute('aria-pressed'), 'true', '全部展开后 aria-pressed=true');
-    assert.ok(btnAllFolders.innerHTML.includes('18 14 21 11 24 14'), '展开态图标应为上三角（点击折叠全部）');
+    assert.ok(btnAllFolders.innerHTML.includes('m15 19-3-3-3 3'), '展开态图标应为 fold-vertical（点击折叠全部）');
     await ed.toggleAllFolders(false);
     assert.strictEqual(btnAllFolders.getAttribute('aria-pressed'), 'false', '全部折叠后 aria-pressed=false');
-    assert.ok(btnAllFolders.innerHTML.includes('18 10 21 13 24 10'), '折叠态图标应为下三角（点击展开全部）');
+    assert.ok(btnAllFolders.innerHTML.includes('m15 19-3 3-3-3'), '折叠态图标应为 unfold-vertical（点击展开全部）');
 
     // 排序按钮点击切换方向与 aria-pressed
     const beforePressed = sortOrder.getAttribute('aria-pressed');
@@ -604,8 +604,8 @@ test('sidebar-split: 全部目录按钮基于 DOM 状态交替（再点击必折
     await delay(80);
     assert.strictEqual(ed._allFoldersExpanded, true, '第1次点击后应标记为已全展开');
     assert.ok(
-      /polyline points="18 14 21 11 24 14"/.test(btn.innerHTML),
-      '第1次点击后图标应为上三角（折叠全部）',
+      /m15 19-3-3-3 3/.test(btn.innerHTML),
+      '第1次点击后图标应为 fold-vertical（折叠全部）',
     );
     assert.ok(w.document.querySelector('.tree-node.tree-folder.expanded'), '目录应已展开');
 
@@ -614,8 +614,8 @@ test('sidebar-split: 全部目录按钮基于 DOM 状态交替（再点击必折
     await delay(80);
     assert.strictEqual(ed._allFoldersExpanded, false, '第2次点击后应标记为已折叠');
     assert.ok(
-      /polyline points="18 10 21 13 24 10"/.test(btn.innerHTML),
-      '第2次点击后图标应为下三角（展开全部）',
+      /m15 19-3 3-3-3/.test(btn.innerHTML),
+      '第2次点击后图标应为 unfold-vertical（展开全部）',
     );
     assert.strictEqual(ed.expandedFolders.size, 0, '第2次点击后展开集合应清空');
   } finally { cleanup(w); }
@@ -651,8 +651,8 @@ test('sidebar-split: 大纲默认全展开时按钮图标应为「折叠全部�
     const content = w.document.getElementById('outline-content');
     // 大纲默认全展开：init 时不应有任何 .outline-children.collapsed
     assert.strictEqual(content.querySelector('.outline-children.collapsed'), null, '默认不应有折叠的大纲子块');
-    // 按钮应显示为「折叠全部」上三角（18 14 21 11 24 14），而非「展开全部」下三角
-    assert.ok(/polyline points="18 14 21 11 24 14"/.test(btn.innerHTML), '默认全展开时图标应为折叠全部（上三角）');
+    // 按钮应显示为「折叠全部」fold-vertical（m15 19-3-3-3 3），而非「展开全部」unfold-vertical
+    assert.ok(/m15 19-3-3-3 3/.test(btn.innerHTML), '默认全展开时图标应为折叠全部（fold-vertical）');
     assert.strictEqual(ed._allOutlineExpanded, true, '_allOutlineExpanded 应初始化为 true');
   } finally { cleanup(w); }
 });
@@ -672,7 +672,7 @@ test('sidebar-split: 点击「折叠全部大纲」按钮应真正折叠（不�
     btn.click();
     assert.ok(content.querySelector('.outline-children.collapsed'), '点击后大纲子块应被折叠');
     assert.strictEqual(ed._allOutlineExpanded, false, '折叠后标志应翻转为 false');
-    assert.ok(/polyline points="18 10 21 13 24 10"/.test(btn.innerHTML), '折叠后图标应变为展开全部（下三角）');
+    assert.ok(/m15 19-3 3-3-3/.test(btn.innerHTML), '折叠后图标应变为展开全部（unfold-vertical）');
   } finally { cleanup(w); }
 });
 

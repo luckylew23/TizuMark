@@ -333,6 +333,7 @@ const I18N = {
     shortcutList: '快捷键',
     crossSearch: '跨文件搜索',
     crossSearchTitle: '跨文件搜索',
+    dialogResizeHint: '已调整窗口，双击标题栏可还原默认大小',
     scopeOpenFiles: '已打开文件',
     scopeDir: '目录',
     loopSearch: '循环查找',
@@ -780,6 +781,7 @@ const I18N = {
     shortcutList: 'Shortcuts',
     crossSearch: 'Cross-file Search',
     crossSearchTitle: 'Cross-file Search',
+    dialogResizeHint: 'Window adjusted. Double-click the title bar to restore the default size',
     scopeOpenFiles: 'Opened Files',
     scopeDir: 'Directory',
     loopSearch: 'Wrap Around',
@@ -1089,6 +1091,8 @@ class MarkdownEditor {
     this.initSettings();
     this.applyWindowBehavior();
     this.initShortcutsDialog();
+    this.bindCollapseToggle();
+    this.initDialogsDragResize();
     this.initCrossSearch();
     this.initOutline();
     this.initOutlineResizer();
@@ -1276,7 +1280,7 @@ class MarkdownEditor {
     document.querySelector('#settings-dialog .dialog-header h2').textContent = t('settings');
     const setSectionTitle = (anchorId, text) => {
       const el = document.getElementById(anchorId);
-      if (el) { const h3 = el.closest('.settings-section').querySelector('h3'); if (h3) h3.textContent = text; }
+      if (el) { const name = el.closest('.settings-section').querySelector('.settings-section-name'); if (name) name.textContent = text; }
     };
     const setRowLabel = (formId, text) => {
       const el = document.getElementById(formId);
@@ -1445,17 +1449,20 @@ class MarkdownEditor {
     // Side buttons
     this.applyViewMode();
 
-    // About dialog
+    // About dialog（4 个折叠块：版本信息/联系我们/许可协议/第三方组件）
     document.querySelector('#about-dialog .dialog-header h2').textContent = t('aboutTitle');
-    const aboutSections = document.querySelectorAll('#about-dialog .about-section');
+    const aboutSections = document.querySelectorAll('#about-dialog .dependency-details');
     if (aboutSections.length >= 1) {
-      aboutSections[0].querySelector('h3').textContent = t('version');
-      aboutSections[0].querySelector('p:nth-child(2)').textContent = t('versionInfo');
-      aboutSections[0].querySelector('p:nth-child(3)').textContent = t('versionDesc');
-      aboutSections[0].querySelector('p:nth-child(4)').textContent = t('buildInfo');
+      const title = aboutSections[0].querySelector('.dependency-title .dependency-name');
+      if (title) title.textContent = t('version');
+      const vps = aboutSections[0].querySelectorAll('.dependency-body p');
+      if (vps[1]) vps[1].textContent = t('versionInfo');
+      if (vps[2]) vps[2].textContent = t('versionDesc');
+      if (vps[3]) vps[3].textContent = t('buildInfo');
     }
     if (aboutSections.length >= 2) {
-      aboutSections[1].querySelector('h3').textContent = t('contact');
+      const title = aboutSections[1].querySelector('.dependency-title .dependency-name');
+      if (title) title.textContent = t('contact');
       const contactDesc = aboutSections[1].querySelector('.contact-desc');
       const qqLabel = aboutSections[1].querySelector('.qq-label');
       const qqJoinText = aboutSections[1].querySelector('.qq-join-text');
@@ -1474,10 +1481,12 @@ class MarkdownEditor {
       if (githubBadge) githubBadge.title = t('githubTitle');
     }
     if (aboutSections.length >= 3) {
-      aboutSections[2].querySelector('h3').textContent = t('license');
-      aboutSections[2].querySelector('p:nth-child(2)').textContent = t('copyrightLine');
-      aboutSections[2].querySelector('p:nth-child(3)').textContent = t('proprietary');
-      aboutSections[2].querySelector('p:nth-child(4)').textContent = t('noUnauthorized');
+      const title = aboutSections[2].querySelector('.dependency-title .dependency-name');
+      if (title) title.textContent = t('license');
+      const lps = aboutSections[2].querySelectorAll('.dependency-body p');
+      if (lps[0]) lps[0].textContent = t('copyrightLine');
+      if (lps[1]) lps[1].textContent = t('proprietary');
+      if (lps[2]) lps[2].textContent = t('noUnauthorized');
     }
     if (aboutSections.length >= 4) {
       const title = aboutSections[3].querySelector('.dependency-title .dependency-name');
@@ -2405,8 +2414,8 @@ class MarkdownEditor {
     const treeEl = document.getElementById('folder-tree');
     if (!treeEl) return;
     const btn = document.getElementById('btn-all-folders');
-    const FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
-    const FOLDER_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3z"/><path d="M3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+    const FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>';
+    const FOLDER_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>';
 
     // 取消任何正在进行的展开/折叠任务，防止旧任务在新操作后继续修改 DOM。
     // 典型场景：展开全部耗时较长，用户在 loading 结束后点折叠，旧展开仍可能异步渲染子目录并重新展开。
@@ -2543,8 +2552,9 @@ class MarkdownEditor {
     if (!btn) return;
     // 双态字形：三条横线 + 三角（与单箭头 disclosure 的面板 chevron 明显区分）
     // 已全展开→「上三角」表示点击将折叠全部；否则→「下三角」表示点击将展开全部
-    const COLLAPSE_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 14 21 11 24 14" transform="translate(-2 0)"/></svg>';
-    const EXPAND_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 10 21 13 24 10" transform="translate(-2 0)"/></svg>';
+    // 展开/折叠全部：使用 Lucide fold-vertical / unfold-vertical（收纳/展开，二者互为镜像，语义清晰）
+    const COLLAPSE_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3-3-3 3"/><path d="m15 5-3 3-3-3"/></svg>';
+    const EXPAND_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3 3-3-3"/><path d="m15 5-3-3-3 3"/></svg>';
     btn.innerHTML = this._allFoldersExpanded ? COLLAPSE_ALL : EXPAND_ALL;
     btn.title = this._allFoldersExpanded ? '折叠全部目录' : '展开全部目录';
     btn.setAttribute('aria-pressed', String(this._allFoldersExpanded));
@@ -2553,8 +2563,9 @@ class MarkdownEditor {
   _updateAllOutlineBtn() {
     const btn = document.getElementById('btn-all-outline');
     if (!btn) return;
-    const COLLAPSE_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 14 21 11 24 14" transform="translate(-2 0)"/></svg>';
-    const EXPAND_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="14" y2="7"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/><polyline points="18 10 21 13 24 10" transform="translate(-2 0)"/></svg>';
+    // 展开/折叠全部：使用 Lucide fold-vertical / unfold-vertical（收纳/展开，二者互为镜像，语义清晰）
+    const COLLAPSE_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3-3-3 3"/><path d="m15 5-3 3-3-3"/></svg>';
+    const EXPAND_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3 3-3-3"/><path d="m15 5-3-3-3 3"/></svg>';
     btn.innerHTML = this._allOutlineExpanded ? COLLAPSE_ALL : EXPAND_ALL;
     btn.title = this._allOutlineExpanded ? '折叠全部大纲' : '展开全部大纲';
     btn.setAttribute('aria-pressed', String(this._allOutlineExpanded));
@@ -2645,7 +2656,7 @@ class MarkdownEditor {
     }
 
     bc.classList.remove('hidden');
-    const fileIcon = '<svg class="breadcrumb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>';
+    const fileIcon = '<svg class="breadcrumb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /></svg>';
     content.innerHTML = Outline.renderBreadcrumbHtml(path, rawFileName || this.t('untitled'), {
       iconSvg: fileIcon,
     });
@@ -3291,9 +3302,15 @@ class MarkdownEditor {
   }
 
   showSettings() {
+    // 每次打开重置为默认居中尺寸（拖动/缩放状态不记忆，符合预期）
+    const sd = document.getElementById('settings-dialog');
+    const sp = sd ? sd.querySelector('.dialog') : null;
+    if (sp && typeof window.resetDialog === 'function') window.resetDialog(sp);
     // 打开设置面板：备份当前设置快照。应用式：面板内改动只改内存与控件显示，
     // 点「应用/保存」才生效并落盘，未生效直接关闭（取消 / ×）时按快照恢复。
     this._settingsSnapshot = JSON.parse(JSON.stringify(this.settings));
+    // 每次打开重置折叠状态：所有分类默认展开
+    sd.querySelectorAll('.settings-section').forEach((sec) => sec.setAttribute('data-collapsed', 'false'));
     document.getElementById('settings-dialog').classList.remove('hidden');
   }
 
@@ -3769,7 +3786,7 @@ class MarkdownEditor {
 
     // 折叠状态在对话框会话内保持（重渲染不丢失用户的展开/收起选择）。
     // 内置区默认收缩（内容多、且不可改），放在顶部；方案与自定义默认展开。
-    if (!this._sectionCollapsed) this._sectionCollapsed = { builtin: true, config: false };
+    if (!this._sectionCollapsed) this._sectionCollapsed = { builtin: false, config: false };
 
     // —— 可配置区（方案与自定义）：保留原有按功能分组 + 录制/清除按钮 ——
     const configGroupsHtml = groups.map(group => {
@@ -3823,10 +3840,10 @@ class MarkdownEditor {
       builtinTable('nav', this.t('builtinNavGroup')) +
       builtinTable('edit', this.t('builtinEditGroup'));
 
-    const caretHtml = '<svg class="collapse-caret" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const caretHtml = '<svg class="collapse-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
     // 分类标题左侧图标：与文件/大纲面板头的 panel-title-icon 同一类名，保持视觉统一
-    const ICON_KEYBOARD = '<svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>';
-    const ICON_SLIDERS = '<svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>';
+    const ICON_KEYBOARD = '<svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 8h.01" /><path d="M12 12h.01" /><path d="M14 8h.01" /><path d="M16 12h.01" /><path d="M18 8h.01" /><path d="M6 8h.01" /><path d="M7 16h10" /><path d="M8 12h.01" /><rect width="20" height="16" x="2" y="4" rx="2" /></svg>';
+    const ICON_SLIDERS = '<svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 8h4" /><path d="M12 21v-9" /><path d="M12 8V3" /><path d="M17 16h4" /><path d="M19 12V3" /><path d="M19 21v-5" /><path d="M3 14h4" /><path d="M5 10V3" /><path d="M5 21v-7" /></svg>';
     const sectionHtml = (key, title, icon, body) => `
       <div class="shortcut-section" data-collapsed="${this._sectionCollapsed[key] ? 'true' : 'false'}">
         <div class="shortcut-section-title" data-toggle="${key}">
@@ -3858,14 +3875,8 @@ class MarkdownEditor {
       schemePlaceholder.appendChild(this._schemeHost);
     }
 
-    // 折叠/展开：点击分类标题切换对应区，保留折叠状态供后续重渲染
-    container.querySelectorAll('.shortcut-section-title').forEach(title => {
-      title.addEventListener('click', () => {
-        const sec = title.dataset.toggle;
-        this._sectionCollapsed[sec] = !this._sectionCollapsed[sec];
-        title.closest('.shortcut-section').setAttribute('data-collapsed', this._sectionCollapsed[sec] ? 'true' : 'false');
-      });
-    });
+    // 折叠/展开：由全局事件委托统一处理（bindCollapseToggle），
+    // 每次 innerHTML 重建后新节点自动生效，无需逐节点绑定。
 
     container.querySelectorAll('.shortcut-record-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -4009,14 +4020,53 @@ class MarkdownEditor {
     this.populateSchemeSelect();
   }
 
+  // 折叠组件统一点击委托：设置面板 / 关于面板 / 快捷键面板 的折叠块标题
+  // （.shortcut-section-title / .dependency-title / .settings-section-title）
+  // 点击切换最近 [data-collapsed] 容器的展开/收起；快捷键面板额外同步 _sectionCollapsed 供重渲染保持。
+  // 事件委托挂在 document，各面板 innerHTML 重建后无需逐节点重新绑定。
+  bindCollapseToggle() {
+    document.addEventListener('click', (e) => {
+      const title = e.target.closest('.shortcut-section-title, .dependency-title, .settings-section-title');
+      if (!title) return;
+      const panel = title.closest('.shortcut-section, .dependency-details, .settings-section');
+      if (!panel) return;
+      const collapsed = panel.getAttribute('data-collapsed') === 'true';
+      panel.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+      const sec = title.dataset.toggle;
+      if (sec && this._sectionCollapsed && Object.prototype.hasOwnProperty.call(this._sectionCollapsed, sec)) {
+        this._sectionCollapsed[sec] = !collapsed;
+      }
+    });
+  }
+
+  // 为设置 / 快捷键 / 关于三个居中弹框接入拖动 + 缩放（dialog-drag-resize.js）。
+  // 首次（任一弹框）拖动或缩放时给出一次性引导提示，告知可双击标题栏还原默认尺寸。
+  initDialogsDragResize() {
+    if (typeof window.initDialogDragResize !== 'function') return;
+    const hinted = { value: false };
+    const onFirstInteract = () => {
+      if (hinted.value) return;
+      hinted.value = true;
+      this.showToast(this.t('dialogResizeHint'), 'info');
+    };
+    ['settings-dialog', 'shortcuts-dialog', 'about-dialog'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) window.initDialogDragResize(el, { minWidth: 360, minHeight: 260, onFirstInteract });
+    });
+  }
+
   showShortcutsDialog() {
+    // 每次打开重置为默认居中尺寸（拖动/缩放状态不记忆，符合预期）
+    const kd = document.getElementById('shortcuts-dialog');
+    const kp = kd ? kd.querySelector('.dialog') : null;
+    if (kp && typeof window.resetDialog === 'function') window.resetDialog(kp);
     this.recordingAction = null;
     // 每次打开都从 localStorage 重新加载已保存键位 + 方案，作为编辑基线。
     // 这样「未点确认就关闭面板」留下的内存草稿不会残留，重开仍显示已保存值。
     this.shortcuts = this.loadShortcuts();
     this.shortcutScheme = this.loadShortcutScheme();
     // 每次打开重置折叠默认：内置固定区收缩、方案与自定义区展开。
-    this._sectionCollapsed = { builtin: true, config: false };
+    this._sectionCollapsed = { builtin: false, config: false };
     this.renderShortcutsList();
     this.populateSchemeSelect();
     document.getElementById('shortcuts-dialog').classList.remove('hidden');
@@ -7476,8 +7526,9 @@ class MarkdownEditor {
     if (!el) return;
     const asc = (this.settings.fileSortOrder || 'asc') !== 'desc';
     // 排序字形：清晰的上下双箭头（升序=上箭头实色+下箭头淡显；降序反之），与面板 chevron 明显区分
-    const SORT_ASC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 14 12 8 18 14"/><polyline points="6 18 12 12 18 18" opacity="0.32"/></svg>';
-    const SORT_DESC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 10 12 16 18 10" opacity="0.32"/><polyline points="6 6 12 12 18 6"/></svg>';
+    // 升序/降序：使用 Lucide arrow-up-narrow-wide / arrow-down-wide-narrow（条形由窄到宽表征顺序方向）
+    const SORT_ASC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M11 12h4"/><path d="M11 16h7"/><path d="M11 20h10"/></svg>';
+    const SORT_DESC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/></svg>';
     el.innerHTML = asc ? SORT_ASC : SORT_DESC;
     el.classList.toggle('desc', !asc);
     el.title = this.t(asc ? 'sortAsc' : 'sortDesc');
@@ -7789,10 +7840,10 @@ class MarkdownEditor {
 
   async renderFolderLevel(dirPath, containerEl, depth) {
     if (depth > 20) return; // 防御：限制目录递归深度，避免深层嵌套/符号链接环导致浏览器卡死
-    const CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>';
-    const FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
-    const FOLDER_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3z"/><path d="M3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
-    const FILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>';
+    const CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>';
+    const FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>';
+    const FOLDER_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>';
+    const FILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /></svg>';
 
     let entries;
     try {
@@ -10457,9 +10508,14 @@ input[type="checkbox"]:checked::after { display: none !important; }
 
   async showAbout() {
     const dialog = document.getElementById('about-dialog');
+    // 每次打开重置为默认居中尺寸（拖动/缩放状态不记忆，符合预期）
+    const ap = dialog ? dialog.querySelector('.dialog') : null;
+    if (ap && typeof window.resetDialog === 'function') window.resetDialog(ap);
+    // 每次打开重置折叠状态：所有分类默认展开
+    dialog.querySelectorAll('.dependency-details').forEach((sec) => sec.setAttribute('data-collapsed', 'false'));
     dialog.classList.remove('hidden');
-    const details = document.querySelector('#about-dialog .dependency-details');
-    if (details) details.setAttribute('data-collapsed', 'false');
+    // 折叠块展开/收起由全局委托 bindCollapseToggle 统一处理，
+    // 各块默认状态（展开/收起）由 HTML data-collapsed 初始值决定，此处不再干预。
     if (!dialog._devSetup) {
       dialog._devSetup = true;
       let cnt = 0;
@@ -10481,16 +10537,6 @@ input[type="checkbox"]:checked::after { display: none !important; }
               this.showToast(this.t('devtoolsOpenFailed', { err: e }), 'danger');
             }
           }
-        });
-      }
-      // 「第三方组件」折叠块：点击标题切换展开/收起，与快捷键 section-title 交互一致
-      const titleEl = document.querySelector('#about-dialog .dependency-title');
-      if (titleEl) {
-        titleEl.addEventListener('click', () => {
-          const sec = titleEl.closest('.dependency-details');
-          if (!sec) return;
-          const collapsed = sec.getAttribute('data-collapsed') === 'true';
-          sec.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
         });
       }
     }
@@ -10715,9 +10761,9 @@ input[type="checkbox"]:checked::after { display: none !important; }
       const isMaximized = await appWindow.isMaximized();
       const btn = document.getElementById('btn-maximize');
       if (isMaximized) {
-        btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.2"/><polyline points="2.5,2.5 2.5,0.5 9.5,0.5 9.5,7.5 7.5,7.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
       } else {
-        btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>';
       }
     } catch (e) {
       console.warn('updateMaximizeIcon failed:', e);
