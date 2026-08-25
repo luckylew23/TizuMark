@@ -3440,6 +3440,10 @@ class MarkdownEditor {
       // Eclipse/VS Code 风格：在当前行下方/上方插入空行，光标移到新行行首，不截断当前行、不继承缩进
       insertLineBelow: { key: 'Ctrl+Enter', label: '在下方插入行' },
       insertLineAbove: { key: 'Ctrl+Shift+Enter', label: '在上方插入行' },
+      // 表格编辑增强（用户反馈）：Enter 已在表格内自动整理；加行/加列默认无键位，
+      // 可在「自定义快捷键」中绑定（避免占用 Ctrl+F 等高频键）。
+      addTableRow: { key: '', label: '表格插入行' },
+      addTableColumn: { key: '', label: '表格插入列' },
     };
   }
 
@@ -3788,7 +3792,7 @@ class MarkdownEditor {
       { key: 'search', ids: ['find', 'crossSearch', 'fileSearch'] },
       { key: 'tabView', ids: ['nextTab', 'prevTab', 'toggleView', 'toggleSidebar', 'toggleTheme'] },
       { key: 'format', ids: ['bold', 'italic', 'strikethrough', 'inlineCode', 'highlight', 'insertSuperscript', 'insertSubscript', 'moveLineUp', 'moveLineDown', 'insertLineBelow', 'insertLineAbove'] },
-      { key: 'insert', ids: ['insertLink', 'insertImage', 'insertTable', 'insertUl', 'insertOl', 'insertTask', 'insertHr', 'codeBlock', 'blockquote', 'insertMathBlock', 'insertMermaid', 'insertToc'] },
+      { key: 'insert', ids: ['insertLink', 'insertImage', 'insertTable', 'addTableRow', 'addTableColumn', 'insertUl', 'insertOl', 'insertTask', 'insertHr', 'codeBlock', 'blockquote', 'insertMathBlock', 'insertMermaid', 'insertToc'] },
       { key: 'heading', ids: ['insertH1', 'insertH2', 'insertH3', 'insertH4', 'insertH5', 'insertH6'] },
       { key: 'callout', ids: ['insertCalloutNote', 'insertCalloutTip', 'insertCalloutWarning', 'insertCalloutCaution', 'insertCalloutImportant'] },
     ];
@@ -4143,6 +4147,8 @@ class MarkdownEditor {
       codeBlock: () => this.insertBlock('```javascript\n// code here\n```', 14),
       blockquote: () => this.insertLinePrefix('> '),
       insertTable: () => this.insertBlock('| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |', 2),
+      addTableRow: () => this._addTableRow(cm),
+      addTableColumn: () => this._addTableColumn(cm),
       insertUl: () => this.insertLinePrefix('- '),
       insertOl: () => this.insertLinePrefix('1. ', true),
       insertTask: () => this.insertLinePrefix('- [ ] '),
@@ -10936,41 +10942,34 @@ input[type="checkbox"]:checked::after { display: none !important; }
   }
 
   // 表格行内按 Enter 自动补充表格结构
+  // 表格行内 Enter：整理整段表格（对齐/补齐分隔行/统一列数）并在当前行下方插入等列空白行。
+  // 整理规则（用户反馈）：① 缺分隔行→自动补齐；② 分隔行数量不足→补全；
+  // ③ 分隔行不规范（如 |--|）→规范为 | --- |；④ 各行列数不统一→缺失行补空白格；
+  // ⑤ 单元格不规范（如 |内容 |）→规范为 | 内容 |。
   _handleTableEnter(cm) {
     const TABLE_ROW_RE = /^\|.*\|\s*$/;
     const TABLE_SEPARATOR_RE = /^\|\s*[-:][-:\s]*\|/;
     const pos = cm.getCursor();
     const line = cm.getLine(pos.line);
-    // 非表格行或分隔行 → 交回原有列表延续逻辑
+    // 非表格行或分隔行 → 走正常换行/列表延续
     if (!TABLE_ROW_RE.test(line) || TABLE_SEPARATOR_RE.test(line)) {
-      const cmdName = 'newlineAndIndentContinueMarkdownList';
-      if (CodeMirror.commands[cmdName]) {
-        cm.execCommand(cmdName);
-      } else {
-        cm.execCommand('newlineAndIndent');
-      }
+      this._newlineAndIndent(cm);
       return;
     }
-    // 有选区（多行选择）→ 交回原有逻辑
+    // 有选区 → 交回原有逻辑
     if (cm.somethingSelected()) {
-      const cmdName = 'newlineAndIndentContinueMarkdownList';
-      if (CodeMirror.commands[cmdName]) {
-        cm.execCommand(cmdName);
-      } else {
-        cm.execCommand('newlineAndIndent');
-      }
+      this._newlineAndIndent(cm);
       return;
     }
     // 计算列数
     const colCount = (line.match(/\|/g) || []).length - 1;
     if (colCount < 1) {
-      cm.execCommand('newlineAndIndentContinueMarkdownList');
+      this._newlineAndIndent(cm);
       return;
     }
-    // 判断是否空行（去除 | 和空白后无内容）
+    // 空表格行（去除 | 与空白后无内容）→ 退出表格：删除本行
     const stripped = line.replace(/\|/g, '').trim();
     if (stripped === '') {
-      // 空表格行 → 退出表格：删除本行
       const nextLine = cm.getLine(pos.line + 1);
       if (nextLine !== undefined) {
         cm.replaceRange('', { line: pos.line, ch: 0 }, { line: pos.line + 1, ch: 0 });
@@ -10981,12 +10980,169 @@ input[type="checkbox"]:checked::after { display: none !important; }
       cm.setCursor({ line: pos.line, ch: 0 });
       return;
     }
-    // 正常表格行 → 插入等列新行，光标置于第一格
-    const cells = [];
-    for (let i = 0; i < colCount; i++) cells.push(' ');
-    const newRow = '| ' + cells.join(' | ') + ' |';
-    cm.replaceRange('\n' + newRow, { line: pos.line, ch: line.length });
-    cm.setCursor({ line: pos.line + 1, ch: 2 });
+    // 正常表格行 → 整理整段表格 + 在当前行下方插入等列空白新行
+    cm.operation(() => {
+      const res = this._normalizeTableBlock(cm, pos.line, TABLE_ROW_RE, TABLE_SEPARATOR_RE, pos.line);
+      if (!res) { this._newlineAndIndent(cm); return; }
+      cm.setCursor({ line: res.newRowLine, ch: 2 });
+    });
+  }
+
+  // 在光标所在表格行下方插入等列空白行（同时整理整段表格），光标置于新行第一格。
+  // 默认无键位，可在「自定义快捷键」中为 addTableRow 绑定（用户反馈：表格加行）。
+  _addTableRow(cm) {
+    if (!cm) return;
+    const pos = cm.getCursor();
+    const line = cm.getLine(pos.line);
+    const TABLE_ROW_RE = /^\|.*\|\s*$/;
+    const TABLE_SEPARATOR_RE = /^\|\s*[-:][-:\s]*\|/;
+    if (!TABLE_ROW_RE.test(line) || TABLE_SEPARATOR_RE.test(line)) return; // 不在表格数据行 → 不操作
+    const colCount = (line.match(/\|/g) || []).length - 1;
+    if (colCount < 1) return;
+    cm.operation(() => {
+      const res = this._normalizeTableBlock(cm, pos.line, TABLE_ROW_RE, TABLE_SEPARATOR_RE, pos.line);
+      if (res) cm.setCursor({ line: res.newRowLine, ch: 2 });
+    });
+    cm.focus();
+  }
+
+  // 在光标所在列右侧插入空白列（跨整段表格），光标置于新列首格。
+  // 默认无键位，可在「自定义快捷键」中为 addTableColumn 绑定（用户反馈：表格加列）。
+  _addTableColumn(cm) {
+    if (!cm) return;
+    const pos = cm.getCursor();
+    const line = cm.getLine(pos.line);
+    const TABLE_ROW_RE = /^\|.*\|\s*$/;
+    const TABLE_SEPARATOR_RE = /^\|\s*[-:][-:\s]*\|/;
+    if (!TABLE_ROW_RE.test(line)) return; // 不在表格行 → 不操作
+    const colIdx = this._cursorColumnIndex(line, pos.ch); // 光标所在列（0 起）
+    if (colIdx < 0) return;
+    // 扩展表格块范围
+    let start = pos.line, end = pos.line;
+    while (start - 1 >= 0 && TABLE_ROW_RE.test(cm.getLine(start - 1))) start--;
+    while (end + 1 <= cm.lastLine() && TABLE_ROW_RE.test(cm.getLine(end + 1))) end++;
+    cm.operation(() => {
+      let curStarts = null;
+      for (let i = start; i <= end; i++) {
+        const l = cm.getLine(i);
+        const isSep = TABLE_SEPARATOR_RE.test(l);
+        const cells = this._splitCells(l);
+        const insertIdx = Math.min(colIdx + 1, cells.length); // 插到光标列右侧
+        cells.splice(insertIdx, 0, isSep ? '---' : '');
+        const { text, starts } = this._buildRow(cells);
+        cm.replaceRange(text, { line: i, ch: 0 }, { line: i, ch: l.length });
+        if (i === pos.line) curStarts = starts;
+      }
+      if (curStarts) {
+        const target = Math.min(colIdx + 1, curStarts.length - 1);
+        cm.setCursor({ line: pos.line, ch: curStarts[target] });
+      }
+    });
+    cm.focus();
+  }
+
+  // 返回光标所在列的 0 起索引；越界时回落到最近列。
+  _cursorColumnIndex(line, ch) {
+    let pipes = 0;
+    for (let i = 0; i < ch && i < line.length; i++) {
+      if (line[i] === '|') pipes++;
+    }
+    // 首个 | 开启第 0 列，故列索引 = 其前的 | 数 - 1
+    return Math.max(0, pipes - 1);
+  }
+
+  // 整理光标所在表格块：补齐/规范分隔行、统一单元格对齐与列数；可选在 blankAfterLine
+  // 指定的原始数据行下方追加一条等列空白行。返回 { newRowLine }（追加行的绝对行号；未追加为 -1）。
+  _normalizeTableBlock(cm, cursorLine, TABLE_ROW_RE, TABLE_SEPARATOR_RE, blankAfterLine) {
+    let start = cursorLine, end = cursorLine;
+    while (start - 1 >= 0 && TABLE_ROW_RE.test(cm.getLine(start - 1))) start--;
+    while (end + 1 <= cm.lastLine() && TABLE_ROW_RE.test(cm.getLine(end + 1))) end++;
+    const raws = [];
+    for (let i = start; i <= end; i++) {
+      const t = cm.getLine(i);
+      raws.push({ text: t, isSep: TABLE_SEPARATOR_RE.test(t), origLine: i });
+    }
+    let colCount = 0;
+    for (const r of raws) if (!r.isSep) colCount = Math.max(colCount, this._splitCells(r.text).length);
+    if (colCount === 0) return null;
+    const hasSep = raws.some((r) => r.isSep);
+    const out = [];
+    let newRowLine = -1;
+    let pendingBlank = false; // 标记：在当前数据行之后（跨过紧随的分隔行）插入空白行
+    const pushBlank = () => {
+      const blankIdx = out.length;
+      out.push(this._buildRow(Array(colCount).fill('')).text);
+      newRowLine = start + blankIdx;
+    };
+    for (let i = 0; i < raws.length; i++) {
+      const r = raws[i];
+      if (r.isSep) {
+        out.push(this._buildRow(this._normalizeSepCells(r.text, colCount)).text);
+        if (pendingBlank) { pushBlank(); pendingBlank = false; }
+        continue;
+      }
+      const cells = this._splitCells(r.text);
+      while (cells.length < colCount) cells.push('');
+      out.push(this._buildRow(cells).text);
+      // 在指定数据行下方追加空白行（若紧随其后是分隔行，则延后到分隔行之后，保证表头→分隔→正文顺序）
+      if (blankAfterLine != null && r.origLine === blankAfterLine) {
+        pendingBlank = true;
+      }
+      // 缺分隔行 → 在首行（表头/首数据行）下方补齐
+      if (!hasSep && i === 0 && !r.isSep) {
+        out.push(this._buildRow(Array(colCount).fill('---')).text);
+        if (pendingBlank) { pushBlank(); pendingBlank = false; }
+      }
+    }
+    if (pendingBlank) pushBlank();
+    const newText = out.join('\n');
+    cm.replaceRange(newText, { line: start, ch: 0 }, { line: end, ch: cm.getLine(end).length });
+    return { newRowLine };
+  }
+
+  // 把表格行拆分为单元格数组（去首尾 | 并按 | 切分、trim）。
+  _splitCells(text) {
+    let t = text.trim();
+    if (t.startsWith('|')) t = t.slice(1);
+    if (t.endsWith('|')) t = t.slice(0, -1);
+    return t.split('|').map((c) => c.trim());
+  }
+
+  // 把单元格数组组装为标准表格行，返回 { text, starts }；starts[k] 为第 k 列内容起始 ch。
+  _buildRow(cells) {
+    let text = '| ';
+    const starts = [];
+    for (let k = 0; k < cells.length; k++) {
+      starts.push(text.length);
+      text += cells[k];
+      if (k < cells.length - 1) text += ' | ';
+    }
+    text += ' |';
+    return { text, starts };
+  }
+
+  // 规范分隔行单元格：保留对齐标记（:-- / --: / :-:），不足列数补 ---。
+  _normalizeSepCells(sepText, colCount) {
+    const cells = this._splitCells(sepText);
+    while (cells.length < colCount) cells.push('---');
+    return cells.map((c) => {
+      const t = c.trim();
+      const left = t.startsWith(':');
+      const right = t.endsWith(':');
+      let s = '---';
+      if (left) s = ':' + s;
+      if (right) s = s + ':';
+      return s;
+    });
+  }
+
+  _newlineAndIndent(cm) {
+    const cmdName = 'newlineAndIndentContinueMarkdownList';
+    if (CodeMirror.commands[cmdName]) {
+      cm.execCommand(cmdName);
+    } else {
+      cm.execCommand('newlineAndIndent');
+    }
   }
 
   insertBlock(text, cursorOffset) {

@@ -495,7 +495,8 @@ function getAlertType(line) {
 
 function getAlertTitleHTML(type, customTitle) {
   // callout 图标统一使用 Lucide（内联 SVG，currentColor 继承各类型主题色）。
-  // note→sticky-note / tip→lightbulb / important→info / warning→alert-triangle / caution→alert-octagon
+  // note→sticky-note / tip→lightbulb / important→info / warning→triangle-alert / caution→octagon-alert
+  //（Lucide 规范名：triangle-alert / octagon-alert，旧名 alert-triangle / alert-octagon 为 alias）
   const icons = {
     note: '<svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="M15 3v5a1 1 0 0 0 1 1h5"/></svg>',
     tip: '<svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>',
