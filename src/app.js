@@ -2657,12 +2657,11 @@ class MarkdownEditor {
     if (this._breadcrumbLastKey === key) return;
     this._breadcrumbLastKey = key;
 
-    if (!path || path.length === 0) {
-      bc.classList.add('hidden');
-      content.innerHTML = '';
-      return;
-    }
+    if (!path) path = [];
 
+    // 始终显示面包屑（含文件名）。即使光标在第一标题前导致 path 为空，
+    // 也只渲染文件名占位、保留栏体高度，避免编辑区因 .hidden{display:none}
+    // 上下跳动；标题链由后续 for 循环按 path 长度追加。
     bc.classList.remove('hidden');
     const fileIcon = '<svg class="breadcrumb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /></svg>';
     content.innerHTML = Outline.renderBreadcrumbHtml(path, rawFileName || this.t('untitled'), {

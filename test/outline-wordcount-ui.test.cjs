@@ -83,6 +83,67 @@ test('outline-ui: escapeHtml / escapeAttr / escapeMdText 转义', async () => wi
   assert.strictEqual(ed.escapeMdText('a]b\\c'), 'a\\]b\\\\c');
 }));
 
+function setActiveFileName(ed, name) {
+  // activeTab 是 getter（指向 tabs[activeTabIndex]），直接改 tab 对象即可
+  ed.tabs[ed.activeTabIndex].name = name;
+}
+
+test('breadcrumb-ui: 有标题时面包屑显示文件名+标题链', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  setActiveFileName(ed, 'a.md');
+  ed.cm.setValue('# 一级\n正文\n## 二级');
+  ed.cm.setCursor({ line: 2, ch: 0 });
+  ed.updateOutline();
+  const bc = w.document.getElementById('editor-breadcrumb');
+  const content = bc.querySelector('.editor-breadcrumb-content');
+  assert.ok(!bc.classList.contains('hidden'), '有标题时不应被隐藏');
+  assert.ok(content.textContent.includes('a.md'), '应显示文件名 a.md，实际：' + content.textContent);
+  assert.ok(content.textContent.includes('一级'), '应显示一级标题');
+  assert.ok(content.textContent.includes('二级'), '应显示二级标题');
+}));
+
+test('breadcrumb-ui: 光标在第一标题前时仍显示文件名（不隐藏，避免编辑区跳动）', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  setActiveFileName(ed, '1L1FUPSRCDEFAULTBUF.md');
+  // 模拟截图中的文档：4 行空行 + 标题 + 表格起始
+  ed.cm.setValue('\n\n\n\n# HW 接口\n\n| 端口 | 方向 |\n');
+  ed.cm.setCursor({ line: 1, ch: 0 });
+  ed.updateOutline();
+  const bc = w.document.getElementById('editor-breadcrumb');
+  const content = bc.querySelector('.editor-breadcrumb-content');
+  assert.ok(!bc.classList.contains('hidden'), '光标在第一标题前时面包屑也不应被隐藏');
+  const fileEl = content.querySelector('.editor-breadcrumb-file');
+  assert.ok(fileEl, '应保留文件名项');
+  assert.ok(fileEl.textContent.includes('1L1FUPSRCDEFAULTBUF.md'), '文件名应保留，实际：' + fileEl.textContent);
+  // 不应有标题层级
+  assert.strictEqual(content.querySelectorAll('.editor-breadcrumb-item').length, 0, '无路径时不应渲染标题项');
+}));
+
+test('breadcrumb-ui: updateBreadcrumb 路径：光标在标题前不隐藏', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  setActiveFileName(ed, 'b.md');
+  ed.cm.setValue('# 标题 A\n\n## 标题 B');
+  // 先用 updateOutline 预热
+  ed.updateOutline();
+  const bc = w.document.getElementById('editor-breadcrumb');
+  assert.ok(!bc.classList.contains('hidden'), '初始有标题时应显示');
+  // 把光标移到第一标题前
+  ed.cm.setCursor({ line: 0, ch: 0 });
+  // 显式传 line=-1 模拟「光标在所有标题之前」的极端情况
+  ed.updateBreadcrumb(false, -1);
+  assert.ok(!bc.classList.contains('hidden'), '光标在第一标题前时仍应保留栏体（不 .hidden），避免编辑区上下跳动');
+  const content = bc.querySelector('.editor-breadcrumb-content');
+  assert.ok(content.querySelector('.editor-breadcrumb-file'), '应保留文件名项');
+  assert.strictEqual(content.querySelectorAll('.editor-breadcrumb-item').length, 0, '无路径时不应追加标题项');
+}));
+
+test('breadcrumb-ui: 无标题文档仍显示文件名（不隐藏）', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  setActiveFileName(ed, 'plain.md');
+  ed.cm.setValue('只有正文，没有标题\n第二行');
+  ed.updateOutline();
+  const bc = w.document.getElementById('editor-breadcrumb');
+  const content = bc.querySelector('.editor-breadcrumb-content');
+  assert.ok(!bc.classList.contains('hidden'), '无标题文档也不应隐藏面包屑');
+  assert.ok(content.textContent.includes('plain.md'), '应显示文件名');
+}));
+
 test('outline-ui: 纯符号标题点击不抛 SyntaxError', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
   // headingToId('===') 产出空串；点击空 data-id 时 querySelector('#') 曾抛 SyntaxError
   ed.cm.setValue('# ===\n\n## 正常标题');
