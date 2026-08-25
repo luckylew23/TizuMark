@@ -38,6 +38,14 @@
     panel.style.height = '';
   }
 
+  // 仅重置尺寸（清 width/height），保留 panel 的 position/left/top —— 浮动面板（Ctrl+P / Ctrl+H）
+  // 关闭后再打开时回到 CSS 默认尺寸、但保留上次拖动位置，与各自 open 流程的
+  // 「panel.style.left 存在则用之、否则用默认」逻辑配合（openCrossSearchDialog / openFileSearchDialog）。
+  function resetSize(panel) {
+    panel.style.width = '';
+    panel.style.height = '';
+  }
+
   /**
    * 为单个弹框初始化拖动 + 缩放。
    * @param {HTMLElement} dialogEl .dialog-overlay 容器
@@ -53,6 +61,21 @@
     const header = panel.querySelector('.dialog-header');
     const resizeHandle = panel.querySelector('.dialog-resize-handle');
     if (!header) return;
+
+    // 打开即重置：每次显示（hidden 被移除）时回到 CSS 默认。
+    //   - 浮动面板（file-search / cross-search）：用 resetSize 只清尺寸，保留位置
+    //     （位置由 open 流程根据 style.left 是否存在决定「恢复上次拖动」或「用默认」）。
+    //   - 其余居中弹框：用 resetDialog 完全清，回到 flex 居中 + 默认尺寸。
+    const isFloating = dialogEl.classList.contains('file-search-overlay') ||
+      dialogEl.classList.contains('cross-search-overlay');
+    if (typeof MutationObserver !== 'undefined') {
+      const mo = new MutationObserver(() => {
+        if (!dialogEl.classList.contains('hidden')) {
+          (isFloating ? resetSize : resetDialog)(panel);
+        }
+      });
+      mo.observe(dialogEl, { attributes: true, attributeFilter: ['class'] });
+    }
 
     const minWidth = opts.minWidth || 320;
     const minHeight = opts.minHeight || 240;
@@ -134,5 +157,6 @@
 
   global.initDialogDragResize = initDialogDragResize;
   global.resetDialog = resetDialog;
+  global.resetSize = resetSize;
 })(window);
 

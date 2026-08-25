@@ -4061,7 +4061,8 @@ class MarkdownEditor {
     });
   }
 
-  // 为设置 / 快捷键 / 关于三个居中弹框接入拖动 + 缩放（dialog-drag-resize.js）。
+  // 为所有弹框（任意 .dialog-overlay）统一接入拖动 + 缩放（dialog-drag-resize.js）。
+  // 一套逻辑复用给全部弹框：标题栏拖动、右下角手柄缩放、双击标题栏还原默认尺寸。
   // 首次（任一弹框）拖动或缩放时给出一次性引导提示，告知可双击标题栏还原默认尺寸。
   initDialogsDragResize() {
     if (typeof window.initDialogDragResize !== 'function') return;
@@ -4071,9 +4072,10 @@ class MarkdownEditor {
       hinted.value = true;
       this.showToast(this.t('dialogResizeHint'), 'info');
     };
-    ['settings-dialog', 'shortcuts-dialog', 'about-dialog'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) window.initDialogDragResize(el, { minWidth: 360, minHeight: 260, onFirstInteract });
+    document.querySelectorAll('.dialog-overlay').forEach((el) => {
+      if (el.querySelector('.dialog')) {
+        window.initDialogDragResize(el, { minWidth: 360, minHeight: 260, onFirstInteract });
+      }
     });
   }
 
@@ -6255,34 +6257,8 @@ class MarkdownEditor {
   initCrossSearch() {
     const dlg = document.getElementById('cross-search-dialog');
     if (!dlg) return;
-    const panel = document.getElementById('cs-panel');
-    const handle = document.getElementById('cs-drag-handle');
-
-    // 拖动：从标题栏拖动浮动面板到其他位置（避开正文）。关闭按钮不触发拖动。
-    if (handle && panel) {
-      handle.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.dialog-close')) return;
-        e.preventDefault();
-        const startX = e.clientX, startY = e.clientY;
-        const startLeft = panel.offsetLeft, startTop = panel.offsetTop;
-        const onMove = (ev) => {
-          let nl = startLeft + (ev.clientX - startX);
-          let nt = startTop + (ev.clientY - startY);
-          nl = Math.max(0, Math.min(nl, (window.innerWidth || 1200) - 80));
-          nt = Math.max(0, Math.min(nt, (window.innerHeight || 800) - 40));
-          panel.style.left = nl + 'px';
-          panel.style.top = nt + 'px';
-        };
-        const onUp = () => {
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          document.body.style.userSelect = '';
-        };
-        document.body.style.userSelect = 'none';
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    }
+    // 标题栏拖动 + 缩放统一交由 dialog-drag-resize.js（在 initDialogsDragResize 中遍历所有 .dialog-overlay 接入），
+    // 此处不再自写拖动逻辑，保证一套逻辑复用所有弹框。
 
     document.getElementById('cs-close').addEventListener('click', () => {
       dlg.classList.add('hidden');
@@ -11742,31 +11718,73 @@ input[type="checkbox"]:checked::after { display: none !important; }
   }
 
   // 指针事件拖拽重排（项目红线：页内拖拽用指针事件，不用 HTML5 DnD）。
+// 交互模型（用户原话：「拖出来浮动跟着鼠标然后放回去到对应位置」）：
+//   - mousedown in handle：克隆源行作为 ghost（position: fixed，跟手），源行加 dragging-source 视觉占位
+//   - mousemove：ghost 跟随鼠标（clientX/Y - 起始偏移）；目标行加 drop-target 高亮
+//   - mouseup：根据 ghost 中心 Y 计算目标位置，draft 一次性 splice + 重渲染；移除 ghost/占位/高亮
+// 中间态不重排 list（保持其他行原位，避免实时重排造成视觉抖动与索引混乱）。
   _startSlashOrderDrag(e, idx, row) {
     e.preventDefault();
     const list = document.getElementById('slash-order-list');
     if (!list) return;
+    const rect = row.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const offsetX = startX - rect.left;
+    const offsetY = startY - rect.top;
+    const startIdx = idx;
     let curIdx = idx;
-    row.classList.add('dragging');
+
+    // 创建 ghost：克隆源行，position: fixed 跟手（Z 抬高、阴影制造浮动感、不响应鼠标）
+    const ghost = row.cloneNode(true);
+    ghost.classList.add('slash-order-ghost');
+    ghost.style.cssText = `position:fixed !important;left:${rect.left}px !important;top:${rect.top}px !important;width:${rect.width}px !important;height:${rect.height}px !important;z-index:9999 !important;pointer-events:none !important;margin:0 !important;`;
+    document.body.appendChild(ghost);
+
+    // 源行：原位置视觉占位（半透明）+ 行高保留，避免落点计算时位置跳变
+    row.classList.add('dragging-source');
+
     const onMove = (ev) => {
-      const y = ev.clientY;
-      const rows = Array.from(list.querySelectorAll('.slash-order-row'));
-      let targetIdx = rows.length - 1;
+      ghost.style.left = (ev.clientX - offsetX) + 'px';
+      ghost.style.top = (ev.clientY - offsetY) + 'px';
+
+      // 实时目标高亮：根据 ghost 中心 Y 找最接近的行
+      const centerY = ev.clientY;
+      const rows = Array.from(list.querySelectorAll('.slash-order-row:not(.dragging-source)'));
+      let hitIdx = -1;
       for (let i = 0; i < rows.length; i++) {
-        const rect = rows[i].getBoundingClientRect();
-        if (y < rect.top + rect.height / 2) { targetIdx = i; break; }
+        const tr = rows[i].getBoundingClientRect();
+        if (centerY >= tr.top && centerY <= tr.bottom) { hitIdx = i; break; }
       }
-      if (targetIdx !== curIdx) {
-        this._moveSlashOrderItem(curIdx, targetIdx);
-        curIdx = targetIdx;
-        this._renderSlashOrderList();
-      }
+      rows.forEach((el, i) => el.classList.toggle('drop-target', i === hitIdx));
     };
+
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      // 计算落点 draft 索引：visible 位置 → draft 位置映射（curIdx 之前的行不受 source 抽出影响）
+      const centerY = parseFloat(ghost.style.top) + (ghost.getBoundingClientRect().height / 2);
+      const rows = Array.from(list.querySelectorAll('.slash-order-row:not(.dragging-source)'));
+      let visualInsert = rows.length; // 默认末尾
+      for (let i = 0; i < rows.length; i++) {
+        const tr = rows[i].getBoundingClientRect();
+        if (centerY < tr.top + tr.height / 2) { visualInsert = i; break; }
+      }
+      // 把"visible 位置"映射回 draft 索引：curIdx 之上的行 draft 索引 = visual 索引，
+      //   curIdx 之下（含自身之后）的行 draft 索引 = visual 索引 + 1。
+      let targetDraftIdx = visualInsert < curIdx ? visualInsert : visualInsert + 1;
+      targetDraftIdx = Math.max(0, Math.min(targetDraftIdx, this._slashOrderDraft.length - 1));
+      if (targetDraftIdx !== curIdx) {
+        this._moveSlashOrderItem(curIdx, targetDraftIdx);
+      }
+      // 清理视觉状态并重渲染
+      ghost.parentNode && ghost.parentNode.removeChild(ghost);
+      list.querySelectorAll('.dragging-source').forEach(el => el.classList.remove('dragging-source'));
+      list.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
       this._renderSlashOrderList();
+      // 抑制未使用变量告警（startIdx 仅作语意保留）
+      void startIdx;
     };
+
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
   }

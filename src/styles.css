@@ -963,6 +963,11 @@ body {
   flex-direction: column;
   padding: 12px 14px;
 }
+/* 抵消全局 .dialog-content > .form-hint:first-child 的 margin-top:-16px，
+   让顶部提示框与标题条保持间距而非贴死 */
+#slash-order-dialog .dialog-content > .form-hint:first-child {
+  margin-top: 0;
+}
 
 .slash-order-list {
   overflow-y: auto;
@@ -989,6 +994,26 @@ body {
 
 .slash-order-row.dragging {
   opacity: 0.5;
+}
+/* 拖拽中：源行原位置视觉占位（半透明 + dashed 边框标记"放手时回到这里"）。
+   行高保留以避免 ghost 拖动时其他行位置跳变，影响落点计算。 */
+.slash-order-row.dragging-source {
+  opacity: 0.4;
+  outline: 2px dashed var(--accent-color, #2050d0);
+  outline-offset: -2px;
+}
+/* ghost：浮动克隆，跟手 fixed 定位，大阴影制造"脱离表面"感。 */
+.slash-order-ghost {
+  background-color: var(--bg-primary) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 6px !important;
+  cursor: grabbing !important;
+}
+/* 拖拽时 hover 的目标行（松手将插入到此行附近） */
+.slash-order-row.drop-target {
+  background-color: var(--accent-soft, #e8f0fb) !important;
+  outline: 1px solid var(--accent-color, #2050d0);
+  outline-offset: -1px;
 }
 
 .slash-order-row.hidden-cmd {
@@ -3514,6 +3539,13 @@ body.is-resizing-row .sidebar-h-resizer {
 }
 
 /* 弹框可拖动：标题栏 grab 手势（避开关闭按钮） */
+.dialog-header {
+  cursor: move;
+  user-select: none;
+}
+.dialog-header .dialog-close {
+  cursor: pointer;
+}
 .dialog-drag-handle {
   cursor: move;
   user-select: none;

@@ -64,8 +64,8 @@ function initFileSearch() {
     }
   });
 
-  // 拖动：与跨文件搜索(Ctrl+H)一致，从标题栏拖动浮动面板到其他位置。
-  initFsDrag();
+  // 标题栏拖动 + 缩放统一交由 dialog-drag-resize.js（在 initDialogsDragResize 中遍历所有 .dialog-overlay 接入），
+  // 不再自写拖动逻辑，保证一套逻辑复用所有弹框。
 
   // 实时性：对话框已打开时，若应用窗口重新获得焦点（例如在别处/文件树新建了文件后切回），
   // 重新扫描工作区，让新建文件即时出现在列表里。
@@ -74,34 +74,8 @@ function initFileSearch() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) onFsRefocus(); });
 }
 
-// 标题栏拖动浮动面板（与跨文件搜索 Ctrl+H 的 cs-drag-handle 行为一致）。
-function initFsDrag() {
-  const panel = document.getElementById('fs-panel');
-  const handle = document.getElementById('fs-drag-handle');
-  if (!panel || !handle) return;
-  handle.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.dialog-close')) return; // 关闭按钮不触发拖动
-    e.preventDefault();
-    const startX = e.clientX, startY = e.clientY;
-    const startLeft = panel.offsetLeft, startTop = panel.offsetTop;
-    const onMove = (ev) => {
-      let nl = startLeft + (ev.clientX - startX);
-      let nt = startTop + (ev.clientY - startY);
-      nl = Math.max(0, Math.min(nl, (window.innerWidth || 1200) - 80));
-      nt = Math.max(0, Math.min(nt, (window.innerHeight || 800) - 40));
-      panel.style.left = nl + 'px';
-      panel.style.top = nt + 'px';
-    };
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.userSelect = '';
-    };
-    document.body.style.userSelect = 'none';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
-}
+// 标题栏拖动 + 缩放统一交由 dialog-drag-resize.js（在 initDialogsDragResize 中遍历所有 .dialog-overlay 接入），
+// 不再自写拖动逻辑，保证一套逻辑复用所有弹框。
 
 function isFsOpen() {
   return !!__fs_dialog && !__fs_dialog.classList.contains('hidden');

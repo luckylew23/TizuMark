@@ -172,14 +172,15 @@ test('crossSearch: 拖动时面板位置被夹取在视口内', async () => {
       let left = parseInt(panel.style.left, 10);
       let top = parseInt(panel.style.top, 10);
       assert.ok(left >= 0 && top >= 0, `极左上拖动后面板应夹在视口内 (left=${left}, top=${top})`);
-      // 再拖到极右下方 -> left <= vw-80, top <= vh-40
+      // 再拖到极右下方 -> 面板应被夹取在视口内（通用模块按 innerWidth - panel.offsetWidth 夹取，
+      // jsdom 下 offsetWidth=0 故夹取到 innerWidth/innerHeight）。
       handle.dispatchEvent(new w.MouseEvent('mousedown', { clientX: 0, clientY: 0, bubbles: true }));
       w.document.dispatchEvent(new w.MouseEvent('mousemove', { clientX: 5000, clientY: 5000, bubbles: true }));
       w.document.dispatchEvent(new w.MouseEvent('mouseup', { clientX: 5000, clientY: 5000, bubbles: true }));
       left = parseInt(panel.style.left, 10);
       top = parseInt(panel.style.top, 10);
-      assert.ok(left <= vw - 80, `极右下拖动后 left 应 <= vw-80 (left=${left}, vw=${vw})`);
-      assert.ok(top <= vh - 40, `极右下拖动后 top 应 <= vh-40 (top=${top}, vh=${vh})`);
+      assert.ok(left <= vw, `极右下拖动后 left 应 <= vw (left=${left}, vw=${vw})`);
+      assert.ok(top <= vh, `极右下拖动后 top 应 <= vh (top=${top}, vh=${vh})`);
       cleanup(w);
       resolve();
     }, 300);

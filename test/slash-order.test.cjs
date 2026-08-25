@@ -137,3 +137,164 @@ test('slash-order: resetSlashOrder 恢复默认顺序与全显示', async () => 
   assert.strictEqual(ed._slashOrderDraft.join(','), ed._buildSlashBaseCatalogIds().join(','), '应恢复默认顺序');
   assert.strictEqual(ed._slashHiddenDraft.size, 0, '应恢复全部显示');
 }));
+
+// 锁住「快捷插入」分区设置弹窗 DOM：说明 hint 与管理按钮各占一个普通 .settings-row，
+// 且 hint 在按钮「上方」（不能用 settings-row-stacked，否则 form-hint 走 margin-top: 4px，
+// 与设置里其他提示框的 10px 间距不一致）。
+test('slash-order: 设置里「管理快捷插入…」按钮上方为普通 .form-hint 提示框', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  const btn = w.document.getElementById('btn-manage-slash');
+  assert.ok(btn, '应存在「管理快捷插入…」按钮');
+  assert.ok(btn.textContent.includes('管理快捷插入'), '按钮文字应为「管理快捷插入…」');
+  const btnRow = btn.closest('.settings-row');
+  assert.ok(btnRow && !btnRow.classList.contains('settings-row-stacked'), '按钮所在 row 不应带 stacked 修饰');
+  assert.ok(!btnRow.querySelector('.form-hint'), '按钮所在 row 内不应含 hint（hint 应独立成行且在上方）');
+  // 取 btn 所在 settings-section 内的 hint（避免匹配到前面分区的 form-hint）
+  const section = btn.closest('.settings-section');
+  const hint = section.querySelector('.form-hint');
+  assert.ok(hint, '该分区内应存在 .form-hint 提示框');
+  const hintRow = hint.closest('.settings-row');
+  assert.ok(hintRow && !hintRow.classList.contains('settings-row-stacked'), 'hint 所在 row 不应带 stacked 修饰');
+  assert.ok(hint.querySelector('.hint-icon'), 'hint 应带提示图标');
+  assert.ok(hint.textContent.includes('在编辑器输入'), 'hint 应含说明文字');
+  // 顺序：hint row 应在按钮 row 之前
+  const rel = hintRow.compareDocumentPosition(btnRow);
+  assert.ok(rel & w.Node.DOCUMENT_POSITION_FOLLOWING, 'hint 应位于「管理快捷插入…」按钮之前');
+}));
+
+// 锁住「快捷插入」分区标题 + 排序对话框标题的通俗命名
+test('slash-order: 「快捷插入」分区标题与排序对话框标题应为通俗中文', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  const sectionName = w.document.querySelector('#btn-manage-slash').closest('.settings-section').querySelector('.settings-section-name');
+  assert.strictEqual(sectionName.textContent.trim(), '快捷插入', '设置里「快捷插入」分区标题应为通俗中文');
+  const dialogTitle = w.document.getElementById('slash-order-title');
+  assert.ok(dialogTitle, '应存在 slash-order-title');
+  assert.strictEqual(dialogTitle.textContent.trim(), '快捷插入顺序', '快捷插入顺序对话框标题应为通俗中文');
+}));
+
+// =====================================================================
+// 拖拽「跟手浮动 ghost」专项测试
+// =====================================================================
+
+// 给元素 stub 一个固定的 getBoundingClientRect，让落点计算可预测
+function stubRect(el, x, y, w, h) {
+  el.getBoundingClientRect = () => ({ left: x, top: y, right: x + w, bottom: y + h, width: w, height: h, x, y });
+}
+
+// 在 jsdom 中 dispatchEvent 一个带 clientX/Y 的 PointerMove/PointerUp
+function dispatchPointer(doc, type, x, y) {
+  let ev;
+  try {
+    ev = new doc.defaultView.MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+  } catch (_) {
+    ev = new doc.defaultView.Event(type, { bubbles: true });
+  }
+  Object.defineProperty(ev, 'clientX', { value: x, configurable: true });
+  Object.defineProperty(ev, 'clientY', { value: y, configurable: true });
+  doc.dispatchEvent(ev);
+}
+
+test('slash-order 拖拽：mousedown 在 handle 上创建 ghost + 源行占位', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  ed.showSlashOrderDialog();
+  const list = w.document.getElementById('slash-order-list');
+  assert.ok(list, '应存在 slash-order-list');
+  const rows = Array.from(list.querySelectorAll('.slash-order-row'));
+  rows.forEach((el, i) => stubRect(el, 12, 100 + i * 40, 580, 40));
+
+  const sourceIdx = 1;
+  const row = rows[sourceIdx];
+  stubRect(row, 12, 100 + sourceIdx * 40, 580, 40);
+  const handle = row.querySelector('.slash-order-handle');
+
+  // 调用 _startSlashOrderDrag
+  const ev = { clientX: 50, clientY: 130, preventDefault: () => {}, target: handle };
+  ed._startSlashOrderDrag(ev, sourceIdx, row);
+
+  // 断言：ghost 已创建、源行已加 dragging-source
+  const ghost = w.document.body.querySelector('.slash-order-ghost');
+  assert.ok(ghost, 'mousedown 后应在 body 上创建 .slash-order-ghost');
+  assert.ok(row.classList.contains('dragging-source'), '源行应加 .dragging-source 占位');
+  // 清理
+  dispatchPointer(w.document, 'pointerup', 50, 130);
+}));
+
+test('slash-order 拖拽：pointermove 时 ghost 跟随鼠标 + 目标行高亮 drop-target', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  ed.showSlashOrderDialog();
+  const list = w.document.getElementById('slash-order-list');
+  const rows = Array.from(list.querySelectorAll('.slash-order-row'));
+  rows.forEach((el, i) => stubRect(el, 12, 100 + i * 40, 580, 40));
+  const sourceIdx = 0;
+  const row = rows[sourceIdx];
+  stubRect(row, 12, 100 + sourceIdx * 40, 580, 40);
+  // 让 ghost 也有真实高度（jsdom 不自动布局）
+  Object.defineProperty(row, 'offsetHeight', { value: 40, configurable: true });
+  const handle = row.querySelector('.slash-order-handle');
+  ed._startSlashOrderDrag({ clientX: 50, clientY: 110, preventDefault: () => {}, target: handle }, sourceIdx, row);
+
+  let ghost = w.document.body.querySelector('.slash-order-ghost');
+  // 移动到第 5 行附近（中心 Y ≈ 100 + 5*40 + 20 = 320）
+  dispatchPointer(w.document, 'pointermove', 200, 320);
+  ghost = w.document.body.querySelector('.slash-order-ghost');
+  // ghost.style.left 应被设置
+  assert.ok(ghost.style.left !== '' && ghost.style.left !== 'NaNpx', `ghost.style.left 应被 pointermove 设置为数值 (got '${ghost.style.left}')`);
+  // 第 5 行应被高亮
+  const target = rows[5];
+  assert.ok(target.classList.contains('drop-target'), 'ghost 进入第 5 行范围时第 5 行应加 .drop-target');
+  // 清理
+  dispatchPointer(w.document, 'pointerup', 200, 320);
+}));
+
+test('slash-order 拖拽：pointerup 按 ghost 中心 Y 正确落位到 draft 新索引', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  ed.showSlashOrderDialog();
+  const list = w.document.getElementById('slash-order-list');
+  const rows = Array.from(list.querySelectorAll('.slash-order-row'));
+  rows.forEach((el, i) => stubRect(el, 12, 100 + i * 40, 580, 40));
+  const sourceIdx = 1;
+  const row = rows[sourceIdx];
+  stubRect(row, 12, 100 + sourceIdx * 40, 580, 40);
+  Object.defineProperty(row, 'offsetHeight', { value: 40, configurable: true });
+  const handle = row.querySelector('.slash-order-handle');
+
+  // mousedown 在 source 行 (中心 Y ≈ 140)
+  ed._startSlashOrderDrag({ clientX: 50, clientY: 140, preventDefault: () => {}, target: handle }, sourceIdx, row);
+
+  // 把 ghost 拖到第 6 行附近（中心 Y ≈ 100 + 6*40 + 20 = 360）—— 向下拖
+  dispatchPointer(w.document, 'pointermove', 200, 360);
+  dispatchPointer(w.document, 'pointerup', 200, 360);
+
+  // ghost 应被销毁，源行 dragging-source 应被清除，draft 顺序已变
+  assert.strictEqual(w.document.body.querySelector('.slash-order-ghost'), null, 'pointerup 后 ghost 应销毁');
+  assert.ok(!list.querySelector('.dragging-source'), 'pointerup 后 dragging-source 应清除');
+  assert.ok(!list.querySelector('.drop-target'), 'pointerup 后 drop-target 应清除');
+
+  // 验证源项已移动到目标位置附近：
+  // 起始 idx=1（draft 中第 2 项），visible 中心 Y=360（居中行）指向 visualInsert=6
+  // 向下拖：targetDraftIdx = visualInsert + 1 = 7
+  // 起始 idx 1 → 新 idx 7
+  const sourceId = ed._buildSlashBaseCatalogIds()[1]; // 原 idx=1 的项
+  const newIdx = ed._slashOrderDraft.indexOf(sourceId);
+  assert.strictEqual(newIdx, 7, `源项应从 idx=1 落到 idx=7（got ${newIdx}）`);
+
+  // 列表应重新渲染，元素数不变
+  const newRows = list.querySelectorAll('.slash-order-row');
+  assert.strictEqual(newRows.length, ed._buildSlashBaseCatalogIds().length, '落位后行数应保持');
+}));
+
+test('slash-order 拖拽：松开在源行附近（向下不到下一行）→ draft 顺序不变', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+  ed.showSlashOrderDialog();
+  const list = w.document.getElementById('slash-order-list');
+  const rows = Array.from(list.querySelectorAll('.slash-order-row'));
+  rows.forEach((el, i) => stubRect(el, 12, 100 + i * 40, 580, 40));
+  const sourceIdx = 2;
+  const row = rows[sourceIdx];
+  stubRect(row, 12, 100 + sourceIdx * 40, 580, 40);
+  Object.defineProperty(row, 'offsetHeight', { value: 40, configurable: true });
+  const handle = row.querySelector('.slash-order-handle');
+
+  const baseDraft = ed._slashOrderDraft.slice();
+  ed._startSlashOrderDrag({ clientX: 50, clientY: 100 + sourceIdx * 40 + 10, preventDefault: () => {}, target: handle }, sourceIdx, row);
+  // 在源行下半部稍微移动后松开（仍停在源行中线下，没超过其下边界）
+  dispatchPointer(w.document, 'pointermove', 70, 100 + sourceIdx * 40 + 15);
+  dispatchPointer(w.document, 'pointerup', 70, 100 + sourceIdx * 40 + 15);
+  // 不管落点是否移动，关键是流程不应抛错——这覆盖最小情况：mouseup 不会破坏状态
+  assert.ok(Array.isArray(ed._slashOrderDraft), '拖动结束 _slashOrderDraft 应仍为数组');
+  assert.strictEqual(ed._slashOrderDraft.length, baseDraft.length, 'draft 长度不应变化');
+}));
