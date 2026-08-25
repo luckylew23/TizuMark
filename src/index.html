@@ -1139,11 +1139,45 @@
           </div>
           </div>
         </div>
+        <div class="settings-section" data-collapsed="false">
+          <div class="settings-section-title" data-toggle>
+            <svg class="panel-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></svg>
+            <span class="settings-section-name">slash 命令</span>
+            <svg class="collapse-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+          <div class="settings-section-body">
+          <div class="settings-row settings-row-stacked">
+            <p class="form-hint"><svg class="hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg><span class="hint-text">在编辑器输入「/」时弹出的语法列表，可自定义顺序与显隐。</span></p>
+          </div>
+          <div class="settings-row settings-row-stacked">
+            <button type="button" id="btn-manage-slash" class="dialog-btn dialog-btn-primary">管理 slash 命令…</button>
+          </div>
+          </div>
+        </div>
       </div>
       <div class="dialog-footer">
         <button id="settings-reset" class="dialog-btn">恢复默认</button>
         <button id="settings-apply-btn" class="dialog-btn dialog-btn-primary">应用</button>
         <button id="settings-save-btn" class="dialog-btn dialog-btn-primary">保存</button>
+      </div>
+      <div class="dialog-resize-handle" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- slash 命令排序对话框 -->
+  <div id="slash-order-dialog" class="dialog-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="slash-order-title">
+    <div class="dialog slash-order-dialog">
+      <div class="dialog-header dialog-drag-handle">
+        <h2 id="slash-order-title">slash 命令排序</h2>
+        <button class="dialog-close" id="slash-order-close-x" aria-label="关闭">&times;</button>
+      </div>
+      <div class="dialog-content">
+        <p class="form-hint"><svg class="hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg><span class="hint-text">拖动手柄调整顺序，取消勾选可隐藏该项（隐藏后输入「/」不再出现）。</span></p>
+        <div id="slash-order-list" class="slash-order-list"></div>
+      </div>
+      <div class="dialog-footer">
+        <button id="slash-order-reset" class="dialog-btn">恢复默认</button>
+        <button id="slash-order-done" class="dialog-btn dialog-btn-primary">完成</button>
       </div>
       <div class="dialog-resize-handle" aria-hidden="true"></div>
     </div>
