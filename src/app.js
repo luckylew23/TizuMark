@@ -9,6 +9,15 @@ const HEAD_RENDER_CHAR_CAP = 1.5 * 1024 * 1024;
 const PREVIEW_WINDOW_LINES = 1200;  // 窗口源码行数上限
 const PREVIEW_WINDOW_LEAD = 200;    // 焦点行前预留行数（让焦点不至于贴顶）
 
+// 快捷插入（slash）命令分类：
+//  - 字体相关操作（加粗/斜体/删除线/高亮）默认隐藏并置底；
+//  - 前置高频项（行内代码/水平线/引用块/代码块）默认排在最前；
+//  - 其余项默认显示、保持原相对顺序排在中间。
+const SLASH_FONT_ACTIONS = ['insert-bold', 'insert-italic', 'insert-strikethrough', 'insert-highlight'];
+const SLASH_FRONT_ACTIONS = ['insert-inline-code', 'insert-hr', 'insert-quote', 'insert-code-block'];
+// 默认隐藏集合 = 字体类（开关默认关闭）；其余开关默认开启
+const DEFAULT_SLASH_HIDDEN = SLASH_FONT_ACTIONS.slice();
+
 // 系统字体由 Rust 命令 list_system_fonts 精确枚举（fontdb，跨平台），
 // 不内置任何字体文件（等线/微软雅黑/苹方等版权字体绝不打包分发）。
 // 下拉框仅展示白名单内、且本机确实已安装的字体（避免几百个系统字体刷屏）；
@@ -11607,7 +11616,8 @@ input[type="checkbox"]:checked::after { display: none !important; }
       : baseIds.slice();
     this._slashOrderDraft = saved.filter((id) => baseIds.includes(id));
     for (const id of baseIds) if (!this._slashOrderDraft.includes(id)) this._slashOrderDraft.push(id);
-    this._slashHiddenDraft = new Set(this.settings.slashHidden || []);
+    // 默认隐藏 = 字体类（开关默认关闭），其余开关默认开启；已保存设置优先
+    this._slashHiddenDraft = new Set(this.settings.slashHidden || DEFAULT_SLASH_HIDDEN);
     this._slashOrderOpen = true;
     this._renderSlashOrderList();
     const dlg = document.getElementById('slash-order-dialog');
@@ -11633,16 +11643,17 @@ input[type="checkbox"]:checked::after { display: none !important; }
     this.hideSlashOrderDialog();
   }
 
-  // 恢复默认：顺序回到内置频率序、全部显示
+  // 恢复默认：顺序回到内置默认序、字体类隐藏置底（其余默认显示）
   resetSlashOrder() {
     this._slashOrderDraft = this._buildSlashBaseCatalogIds();
-    this._slashHiddenDraft = new Set();
+    this._slashHiddenDraft = new Set(DEFAULT_SLASH_HIDDEN);
     this._renderSlashOrderList();
   }
 
   _buildSlashBaseCatalogIds() {
-    // 与 _buildSlashCommands 的基础目录保持一致（仅取 action 顺序）
-    return [
+    // 与 _buildSlashCommands 的基础目录保持一致（仅取 action 顺序）。
+    // 默认顺序：前置高频项 → 其余项（保持原相对顺序）→ 字体类置底（默认隐藏）。
+    const all = [
       'insert-h1', 'insert-h2', 'insert-h3',
       'insert-ul', 'insert-ol', 'insert-task',
       'insert-quote', 'insert-code-block', 'insert-table',
@@ -11652,6 +11663,10 @@ input[type="checkbox"]:checked::after { display: none !important; }
       'insert-strikethrough', 'insert-highlight',
       'insert-h4', 'insert-h5', 'insert-h6',
     ];
+    const front = SLASH_FRONT_ACTIONS.filter((id) => all.includes(id));
+    const font = SLASH_FONT_ACTIONS.filter((id) => all.includes(id));
+    const middle = all.filter((id) => !front.includes(id) && !font.includes(id));
+    return [...front, ...middle, ...font];
   }
 
   // 完整基础目录（含所有 28 项，供对话框渲染标签/hint，不受隐藏影响）
@@ -11720,8 +11735,8 @@ input[type="checkbox"]:checked::after { display: none !important; }
   // 指针事件拖拽重排（项目红线：页内拖拽用指针事件，不用 HTML5 DnD）。
 // 交互模型（用户原话：「拖出来浮动跟着鼠标然后放回去到对应位置」）：
 //   - mousedown in handle：克隆源行作为 ghost（position: fixed，跟手），源行加 dragging-source 视觉占位
-//   - mousemove：ghost 跟随鼠标（clientX/Y - 起始偏移）；目标行加 drop-target 高亮
-//   - mouseup：根据 ghost 中心 Y 计算目标位置，draft 一次性 splice + 重渲染；移除 ghost/占位/高亮
+//   - mousemove：ghost 跟随鼠标；用一条蓝色线（.slash-order-drop-line）精准指示"将插入到哪两项之间"
+//   - mouseup：根据 ghost 中心 Y 计算目标位置，draft 一次性 splice + 重渲染；移除 ghost/占位/蓝线
 // 中间态不重排 list（保持其他行原位，避免实时重排造成视觉抖动与索引混乱）。
   _startSlashOrderDrag(e, idx, row) {
     e.preventDefault();
@@ -11731,8 +11746,7 @@ input[type="checkbox"]:checked::after { display: none !important; }
     const startX = e.clientX, startY = e.clientY;
     const offsetX = startX - rect.left;
     const offsetY = startY - rect.top;
-    const startIdx = idx;
-    let curIdx = idx;
+    const curIdx = idx;
 
     // 创建 ghost：克隆源行，position: fixed 跟手（Z 抬高、阴影制造浮动感、不响应鼠标）
     const ghost = row.cloneNode(true);
@@ -11743,46 +11757,58 @@ input[type="checkbox"]:checked::after { display: none !important; }
     // 源行：原位置视觉占位（半透明）+ 行高保留，避免落点计算时位置跳变
     row.classList.add('dragging-source');
 
+    // 蓝色插入线：随鼠标在 list 内流动，精准指示插入缝隙（置于某行之前 = 插入到该行之前）
+    const dropLine = document.createElement('div');
+    dropLine.className = 'slash-order-drop-line';
+
+    // 计算插入位置（visible 列表下标）：第一个「中心在光标之上」的行之前
+    const computeVisualInsert = (centerY) => {
+      const rows = Array.from(list.querySelectorAll('.slash-order-row:not(.dragging-source)'));
+      for (let i = 0; i < rows.length; i++) {
+        const tr = rows[i].getBoundingClientRect();
+        if (centerY < tr.top + tr.height / 2) return i;
+      }
+      return rows.length;
+    };
+
+    const placeDropLine = (centerY) => {
+      const rows = Array.from(list.querySelectorAll('.slash-order-row:not(.dragging-source)'));
+      const v = computeVisualInsert(centerY);
+      if (v >= rows.length) list.appendChild(dropLine);
+      else list.insertBefore(dropLine, rows[v]);
+    };
+
+    // 统一参考点：拖拽全程用「ghost 中心 Y」判定插入位置（与用户看到的浮动项一致），
+    // 蓝线放置与松手落点共用同一数值，保证「所见即所得」。
+    let ghostCenterY = rect.top + rect.height / 2; // 初始：源行中心
+
     const onMove = (ev) => {
       ghost.style.left = (ev.clientX - offsetX) + 'px';
       ghost.style.top = (ev.clientY - offsetY) + 'px';
-
-      // 实时目标高亮：根据 ghost 中心 Y 找最接近的行
-      const centerY = ev.clientY;
-      const rows = Array.from(list.querySelectorAll('.slash-order-row:not(.dragging-source)'));
-      let hitIdx = -1;
-      for (let i = 0; i < rows.length; i++) {
-        const tr = rows[i].getBoundingClientRect();
-        if (centerY >= tr.top && centerY <= tr.bottom) { hitIdx = i; break; }
-      }
-      rows.forEach((el, i) => el.classList.toggle('drop-target', i === hitIdx));
+      ghostCenterY = (ev.clientY - offsetY) + rect.height / 2;
+      placeDropLine(ghostCenterY);
     };
 
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
-      // 计算落点 draft 索引：visible 位置 → draft 位置映射（curIdx 之前的行不受 source 抽出影响）
-      const centerY = parseFloat(ghost.style.top) + (ghost.getBoundingClientRect().height / 2);
       const rows = Array.from(list.querySelectorAll('.slash-order-row:not(.dragging-source)'));
       let visualInsert = rows.length; // 默认末尾
       for (let i = 0; i < rows.length; i++) {
         const tr = rows[i].getBoundingClientRect();
-        if (centerY < tr.top + tr.height / 2) { visualInsert = i; break; }
+        if (ghostCenterY < tr.top + tr.height / 2) { visualInsert = i; break; }
       }
-      // 把"visible 位置"映射回 draft 索引：curIdx 之上的行 draft 索引 = visual 索引，
-      //   curIdx 之下（含自身之后）的行 draft 索引 = visual 索引 + 1。
-      let targetDraftIdx = visualInsert < curIdx ? visualInsert : visualInsert + 1;
-      targetDraftIdx = Math.max(0, Math.min(targetDraftIdx, this._slashOrderDraft.length - 1));
+      // 蓝线指示的 visible 下标即最终 draft 索引（移除 source 后按此下标插入），
+      // 不再 +1——旧逻辑的 +1 会让落点落到蓝线所示位置的下一项。
+      let targetDraftIdx = Math.max(0, Math.min(visualInsert, this._slashOrderDraft.length - 1));
       if (targetDraftIdx !== curIdx) {
         this._moveSlashOrderItem(curIdx, targetDraftIdx);
       }
       // 清理视觉状态并重渲染
       ghost.parentNode && ghost.parentNode.removeChild(ghost);
+      if (dropLine.parentNode) dropLine.parentNode.removeChild(dropLine);
       list.querySelectorAll('.dragging-source').forEach(el => el.classList.remove('dragging-source'));
-      list.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
       this._renderSlashOrderList();
-      // 抑制未使用变量告警（startIdx 仅作语意保留）
-      void startIdx;
     };
 
     document.addEventListener('pointermove', onMove);

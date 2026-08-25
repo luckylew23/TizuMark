@@ -17,6 +17,15 @@ test('slash-order: _buildSlashBaseCatalogIds 含全部 28 项', async () => with
   const ids = ed._buildSlashBaseCatalogIds();
   assert.strictEqual(ids.length, 28, '基础目录应为 28 项，实际: ' + ids.length);
   assert.ok(ids.includes('insert-h1') && ids.includes('insert-h6'), '应含首尾标题');
+  // 默认顺序：前置高频项置顶
+  assert.strictEqual(
+    ids.slice(0, 4).join(','),
+    'insert-inline-code,insert-hr,insert-quote,insert-code-block',
+    '前置高频项（行内代码/水平线/引用块/代码块）应排最前'
+  );
+  // 字体类（加粗/斜体/删除线/高亮）应沉底
+  const font = ['insert-bold', 'insert-italic', 'insert-strikethrough', 'insert-highlight'];
+  assert.ok(font.every((f) => ids.indexOf(f) >= ids.length - 4), '字体类应置底');
 }));
 
 test('slash-order: _applySlashLayout 按 slashOrder 重排', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
@@ -78,7 +87,10 @@ test('slash-order: showSlashOrderDialog 初始化草稿为全 28 项、对话框
   ed.showSlashOrderDialog();
   assert.strictEqual(ed._slashOrderOpen, true, '对话框应标记为打开');
   assert.strictEqual(ed._slashOrderDraft.length, 28, '草稿应为 28 项');
-  assert.strictEqual(ed._slashHiddenDraft.size, 0, '默认无隐藏');
+  // 默认仅字体类（加粗/斜体/删除线/高亮）隐藏，其余开关默认开启
+  assert.strictEqual(ed._slashHiddenDraft.size, 4, '默认仅字体类 4 项隐藏，实际: ' + ed._slashHiddenDraft.size);
+  assert.ok(ed._slashHiddenDraft.has('insert-bold'), '加粗应默认隐藏');
+  assert.ok(!ed._slashHiddenDraft.has('insert-h1'), '非字体项（如标题1）默认应显示');
   const list = w.document.getElementById('slash-order-list');
   assert.strictEqual(list.children.length, 28, '对话框应渲染 28 行，实际: ' + list.children.length);
   assert.strictEqual(w.document.getElementById('slash-order-dialog').classList.contains('hidden'), false, '对话框应可见');
@@ -117,11 +129,11 @@ test('slash-order: applySlashOrder 写盘、清缓存、面板仅显示非隐藏
   assert.strictEqual(ed._slashOrderOpen, false, '保存后对话框应关闭');
   assert.ok(ed.settings.slashHidden.includes('insert-image'), '设置应记录隐藏项');
   assert.strictEqual(ed._slashCommands, null, '应清缓存');
-  // 面板仅显示 27 项，无「图片」
+  // 面板仅显示 23 项（默认字体类 4 项隐藏 + 本测试隐藏的「图片」1 项），无「图片」
   ed.cm.setValue('');
   typeSlash(ed, 0, 0);
   const items = w.document.querySelectorAll('#slash-panel .slash-item');
-  assert.strictEqual(items.length, 27, '面板应显示 27 项，实际: ' + items.length);
+  assert.strictEqual(items.length, 23, '面板应显示 23 项，实际: ' + items.length);
   const labels = Array.from(items).map((i) => i.querySelector('.slash-label').textContent);
   assert.ok(!labels.includes('图片'), '面板不应含被隐藏的「图片」');
 }));
@@ -135,7 +147,8 @@ test('slash-order: resetSlashOrder 恢复默认顺序与全显示', async () => 
   ed._slashHiddenDraft = new Set(['insert-h1']);
   ed.resetSlashOrder();
   assert.strictEqual(ed._slashOrderDraft.join(','), ed._buildSlashBaseCatalogIds().join(','), '应恢复默认顺序');
-  assert.strictEqual(ed._slashHiddenDraft.size, 0, '应恢复全部显示');
+  assert.strictEqual(ed._slashHiddenDraft.size, 4, '恢复默认应隐藏字体类 4 项，实际: ' + ed._slashHiddenDraft.size);
+  assert.ok(ed._slashHiddenDraft.has('insert-bold'), '恢复默认后加粗应隐藏');
 }));
 
 // 锁住「快捷插入」分区设置弹窗 DOM：说明 hint 与管理按钮各占一个普通 .settings-row，
@@ -216,7 +229,7 @@ test('slash-order 拖拽：mousedown 在 handle 上创建 ghost + 源行占位',
   dispatchPointer(w.document, 'pointerup', 50, 130);
 }));
 
-test('slash-order 拖拽：pointermove 时 ghost 跟随鼠标 + 目标行高亮 drop-target', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
+test('slash-order 拖拽：pointermove 时 ghost 跟随鼠标 + 蓝色插入线定位', async () => withEditor({ captureInitErr: true }, async (w, ed) => {
   ed.showSlashOrderDialog();
   const list = w.document.getElementById('slash-order-list');
   const rows = Array.from(list.querySelectorAll('.slash-order-row'));
@@ -235,9 +248,10 @@ test('slash-order 拖拽：pointermove 时 ghost 跟随鼠标 + 目标行高亮 
   ghost = w.document.body.querySelector('.slash-order-ghost');
   // ghost.style.left 应被设置
   assert.ok(ghost.style.left !== '' && ghost.style.left !== 'NaNpx', `ghost.style.left 应被 pointermove 设置为数值 (got '${ghost.style.left}')`);
-  // 第 5 行应被高亮
-  const target = rows[5];
-  assert.ok(target.classList.contains('drop-target'), 'ghost 进入第 5 行范围时第 5 行应加 .drop-target');
+  // 应出现一条蓝色插入线，且位于第 5 行之后（指向插入到第 5、6 行之间）
+  const dropLine = list.querySelector('.slash-order-drop-line');
+  assert.ok(dropLine, '拖动时应出现一条蓝色插入线');
+  assert.strictEqual(rows[5].nextElementSibling, dropLine, '插入线应在第 5 行之后（指示插入到 5、6 之间）');
   // 清理
   dispatchPointer(w.document, 'pointerup', 200, 320);
 }));
@@ -258,20 +272,31 @@ test('slash-order 拖拽：pointerup 按 ghost 中心 Y 正确落位到 draft �
 
   // 把 ghost 拖到第 6 行附近（中心 Y ≈ 100 + 6*40 + 20 = 360）—— 向下拖
   dispatchPointer(w.document, 'pointermove', 200, 360);
+  // 松手前先记录蓝线指示的插入缝隙（蓝线下一项 = 源项最终的后邻）
+  const line = list.querySelector('.slash-order-drop-line');
+  assert.ok(line, '拖动中应存在蓝色插入线');
+  const lineNextLabel = line.nextElementSibling
+    ? line.nextElementSibling.querySelector('.slash-order-label').textContent
+    : '(末尾)';
   dispatchPointer(w.document, 'pointerup', 200, 360);
 
-  // ghost 应被销毁，源行 dragging-source 应被清除，draft 顺序已变
+  // ghost 应被销毁，源行 dragging-source 应被清除，蓝色插入线应移除
   assert.strictEqual(w.document.body.querySelector('.slash-order-ghost'), null, 'pointerup 后 ghost 应销毁');
   assert.ok(!list.querySelector('.dragging-source'), 'pointerup 后 dragging-source 应清除');
-  assert.ok(!list.querySelector('.drop-target'), 'pointerup 后 drop-target 应清除');
+  assert.ok(!list.querySelector('.slash-order-drop-line'), 'pointerup 后插入线应清除');
 
-  // 验证源项已移动到目标位置附近：
-  // 起始 idx=1（draft 中第 2 项），visible 中心 Y=360（居中行）指向 visualInsert=6
-  // 向下拖：targetDraftIdx = visualInsert + 1 = 7
-  // 起始 idx 1 → 新 idx 7
+  // 验证源项已移动到蓝线指示的位置（所见即所得）：
+  // 起始 idx=1（draft 中第 2 项，新默认序为 insert-hr），源行 DOM1 rect.top=140
+  // offsetY = 140-140 = 0 → ghost 中心 Y = (360-0)+40/2 = 380
+  // visible 行首个中心>380 为 DOM7(无序列表, 中心400) → visible 下标 6
+  // 落点 draft 索引 = visualInsert = 6（不再 +1），与蓝线位置一致
   const sourceId = ed._buildSlashBaseCatalogIds()[1]; // 原 idx=1 的项
   const newIdx = ed._slashOrderDraft.indexOf(sourceId);
-  assert.strictEqual(newIdx, 7, `源项应从 idx=1 落到 idx=7（got ${newIdx}）`);
+  assert.strictEqual(newIdx, 6, `源项应从 idx=1 落到蓝线指示的 idx=6（got ${newIdx}）`);
+  // 所见即所得：落点后邻 = 松手前蓝线的下一项
+  const after = ed._slashBaseCatalogFull().find((c) => c.action === ed._slashOrderDraft[newIdx + 1]);
+  assert.strictEqual(after ? after.label : '(末尾)', lineNextLabel,
+    '落点后邻应等于蓝线所示插入缝隙的下一项');
 
   // 列表应重新渲染，元素数不变
   const newRows = list.querySelectorAll('.slash-order-row');
