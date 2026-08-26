@@ -6723,6 +6723,7 @@ class MarkdownEditor {
     } else {
       el = document.createElement('img');
       el.src = content;
+      el.referrerPolicy = 'no-referrer';
     }
     const hint = document.createElement('div');
     hint.className = 'lightbox-hint';
@@ -7689,12 +7690,13 @@ class MarkdownEditor {
   async fileTreeNewFile() {
     const ctx = this._fileTreeCtx;
     if (!ctx || !ctx.isDir) return;
-    const name = await this.showPromptDialog({
+    let name = await this.showPromptDialog({
       title: this.t('fileNewFile'),
       message: this.t('newFileNamePrompt'),
       placeholder: 'note.md'
     });
     if (name === null) return;
+    if (!name.includes('.')) name += '.md';
     const err = this.validateFileName(name);
     if (err) { this.showToast(err, 'danger'); return; }
     const newPath = this.joinPath(ctx.path, name);
@@ -7736,13 +7738,15 @@ class MarkdownEditor {
     const ctx = this._fileTreeCtx;
     if (!ctx) return;
     const oldName = this.baseName(ctx.path);
-    const newName = await this.showPromptDialog({
+    let newName = await this.showPromptDialog({
       title: this.t('fileRename'),
       message: this.t('renamePrompt'),
       value: oldName,
       selectBase: true
     });
     if (newName === null) return;
+    const oldExt = oldName.includes('.') ? oldName.slice(oldName.lastIndexOf('.')) : '';
+    if (!newName.includes('.') && (oldExt === '' || oldExt === '.md')) newName += '.md';
     const err = this.validateFileName(newName);
     if (err) { this.showToast(err, 'danger'); return; }
     if (newName === oldName) return;

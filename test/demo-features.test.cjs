@@ -446,7 +446,7 @@ test('图片：file:// 协议被保留（sanitize 允许 file scheme）', async 
 
 test('图片：原生 HTML <img width height> 透传', async () => {
   const { off } = renderBoth('<img src="screenshots/01-main.png" width="400" alt="限制宽度展示">');
-  assert.ok(/<img src="screenshots\/01-main\.png" width="400" alt="限制宽度展示">/.test(off), 'img 的 width/height 应保留');
+  assert.ok(/<img src="screenshots\/01-main\.png" width="400" alt="限制宽度展示"[^>]*>/.test(off), 'img 的 width/height 应保留');
 });
 
 test('图片：Base64 内联', async () => {
@@ -531,6 +531,11 @@ test('转义：\\* \\# \\[ \\\\ 均还原为字面量', async () => {
   assert.ok(/井号不再是标题/.test(off) && !/<h/.test(off.split('井号')[0].slice(-50)), '\\# 不应生成标题');
   assert.ok(/不再被解析为链接/.test(off), '\\[ 应还原');
   assert.ok(/反斜杠本身/.test(off), '\\\\ 应还原为单个反斜杠');
+  // 配对 \[...\] / \(...\) 也应还原为字面括号（回归：文献引用 \[J/OL\] 不应被当公式）
+  const { off: off2 } = renderBoth('引用 \\[J/OL\\] 与 \\(x\\) 均作字面量');
+  assert.ok(/\[J\/OL\]/.test(off2), '成对的 \\[...\\] 应还原为字面 [J/OL]');
+  assert.ok(/\(x\)/.test(off2), '成对的 \\(...\\) 应还原为字面 (x)');
+  assert.ok(!/math/.test(off2), '不应生成数学块');
 });
 
 // ============================================================

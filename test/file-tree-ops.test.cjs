@@ -152,6 +152,48 @@ test('file-ops: fileTreeNewFile / fileTreeNewFolder 走 TauriApi 写盘', async 
   } finally { cleanup(w); }
 });
 
+test('file-ops: 新建文件缺省扩展名自动补全 .md', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    const writes = [];
+    stubUi(ed, { prompt: async () => 'note' });
+    w.TauriApi.writeFile = async (args) => { writes.push(args); };
+    w.TauriApi.listDir = async () => [];
+    ed._fileTreeCtx = { path: '/root/docs', isDir: true };
+    await ed.fileTreeNewFile();
+    assert.strictEqual(writes.length, 1, '应写入一个文件');
+    assert.strictEqual(writes[0].path, '/root/docs/note.md', '缺扩展名应自动补 .md');
+  } finally { cleanup(w); }
+});
+
+test('file-ops: 重命名缺省扩展名（原 md）自动补全 .md', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    const renames = [];
+    stubUi(ed, { prompt: async () => 'mynote' });
+    w.TauriApi.renamePath = async (args) => { renames.push(args); };
+    w.TauriApi.listDir = async () => [];
+    ed._fileTreeCtx = { path: '/root/docs/note.md', isDir: false };
+    await ed.fileTreeRename();
+    assert.strictEqual(renames.length, 1, 'renamePath 应被调用一次');
+    assert.strictEqual(renames[0].to, '/root/docs/mynote.md', '重命名 md 文件缺扩展名应补 .md');
+  } finally { cleanup(w); }
+});
+
+test('file-ops: 重命名非 md 文件不强行补 .md', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    const renames = [];
+    stubUi(ed, { prompt: async () => 'config2' });
+    w.TauriApi.renamePath = async (args) => { renames.push(args); };
+    w.TauriApi.listDir = async () => [];
+    ed._fileTreeCtx = { path: '/root/docs/config.json', isDir: false };
+    await ed.fileTreeRename();
+    assert.strictEqual(renames.length, 1, 'renamePath 应被调用一次');
+    assert.strictEqual(renames[0].to, '/root/docs/config2', '非 md 文件重命名不强行补 .md');
+  } finally { cleanup(w); }
+});
+
 test('keydown: 树选中文件后 Ctrl+C 复制文件（即便编辑器聚焦、无文本选区）', async () => {
   const { w, ed } = await makeEditor();
   try {
