@@ -59,6 +59,48 @@ test('format: 标题 H1-H6 在行首加 # 前缀', async () => {
   } finally { cleanup(w); }
 });
 
+test('format: 标题层级切换原位替换（## 标题 + H3 → ### 标题，不叠加 #）', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    setContent(ed, '## 标题');
+    ed.cm.setCursor({ line: 0, ch: 6 }); // 行尾
+    ed.executeMenuAction('insert-h3');
+    assert.strictEqual(ed.cm.getValue(), '### 标题', 'H2 应按 H3 原位替换，而不是「### ## 标题」');
+    assert.strictEqual(ed.cm.getCursor().ch, 6, '光标应保持在行尾');
+  } finally { cleanup(w); }
+});
+
+test('format: 同级标题再按一次取消标题（### 标题 + H3 → 标题）', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    setContent(ed, '### 标题');
+    ed.cm.setCursor({ line: 0, ch: 6 });
+    ed.executeMenuAction('insert-h3');
+    assert.strictEqual(ed.cm.getValue(), '标题', '同级按 H3 应移除标题标记回到正文');
+    assert.strictEqual(ed.cm.getCursor().ch, 2, '光标应随前缀移除左移');
+  } finally { cleanup(w); }
+});
+
+test('format: 无空格标题标记同样被替换（##标题 + H3 → ### 标题）', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    setContent(ed, '##标题');
+    ed.cm.setCursor({ line: 0, ch: 4 });
+    ed.executeMenuAction('insert-h3');
+    assert.strictEqual(ed.cm.getValue(), '### 标题', '无空格 # 前缀应被规范替换');
+  } finally { cleanup(w); }
+});
+
+test('format: 多行选区统一标题层级（# A / B / ## C + H3 → 全 ###）', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    setContent(ed, '# A\nB\n## C');
+    ed.cm.setSelection({ line: 0, ch: 0 }, { line: 2, ch: 4 });
+    ed.executeMenuAction('insert-h3');
+    assert.strictEqual(ed.cm.getValue(), '### A\n### B\n### C', '选区每行应统一为 H3（已有标题替换、普通行追加）');
+  } finally { cleanup(w); }
+});
+
 test('format: 块插入 代码块/表格/引用/数学/Mermaid/分隔线/TOC/callout', async () => {
   const { w, ed } = await makeEditor();
   try {

@@ -10969,6 +10969,62 @@ input[type="checkbox"]:checked::after { display: none !important; }
     cm.focus();
   }
 
+  // 标题快捷键：智能设置 / 切换标题层级（替代原先的「行首盲目加 #」）。
+  // - 行首已是标题（^#{1,6}\s*）：目标层级不同 → 原位替换旧的 # 前缀（如 ## 标题 + Ctrl+3 → ### 标题）；
+  //   目标层级相同 → 取消标题（移除 # 前缀回到正文，Typora 式 toggle）。
+  // - 行首无标题标记：沿用 insertLinePrefix 的插入行为（含上一行非空时自动换行）。
+  // 多行选区：对选区内每一行分别执行「替换 / 取消 / 追加」，不触发换行逻辑，整体一次 undo。
+  applyHeadingLevel(level) {
+    const cm = this.cm;
+    const prefix = '#'.repeat(level) + ' ';
+    const HEADING_RE = /^(#{1,6})\s*/;
+
+    if (cm.somethingSelected()) {
+      cm.operation(() => {
+        const selections = cm.listSelections();
+        const newSelections = [];
+        for (const sel of selections) {
+          const startLine = Math.min(sel.anchor.line, sel.head.line);
+          const endLine = Math.max(sel.anchor.line, sel.head.line);
+          for (let ln = startLine; ln <= endLine; ln++) {
+            const text = cm.getLine(ln);
+            const m = text.match(HEADING_RE);
+            if (m) {
+              const newPrefix = m[1].length === level ? '' : prefix;
+              cm.replaceRange(newPrefix, { line: ln, ch: 0 }, { line: ln, ch: m[0].length });
+            } else {
+              cm.replaceRange(prefix + text, { line: ln, ch: 0 }, { line: ln, ch: text.length });
+            }
+          }
+          const lastLineText = cm.getLine(endLine);
+          newSelections.push({
+            anchor: { line: startLine, ch: 0 },
+            head: { line: endLine, ch: lastLineText.length },
+          });
+        }
+        cm.setSelections(newSelections);
+      });
+      cm.focus();
+      return;
+    }
+
+    // 无选区：单行
+    const cursor = cm.getCursor();
+    const line = cm.getLine(cursor.line);
+    const m = line.match(HEADING_RE);
+    if (m) {
+      const newPrefix = m[1].length === level ? '' : prefix;
+      const delta = newPrefix.length - m[0].length;
+      cm.replaceRange(newPrefix, { line: cursor.line, ch: 0 }, { line: cursor.line, ch: m[0].length });
+      const newCh = Math.max(0, Math.min(cursor.ch + delta, (newPrefix + line.slice(m[0].length)).length));
+      cm.setCursor({ line: cursor.line, ch: newCh });
+      cm.focus();
+      return;
+    }
+    // 无标题标记 → 沿用原有插入行为（含上一行非空时自动换行）
+    this.insertLinePrefix(prefix);
+  }
+
   // 表格行内按 Enter 自动补充表格结构
   // 表格行内 Enter：整理整段表格（对齐/补齐分隔行/统一列数）并在当前行下方插入等列空白行。
   // 整理规则（用户反馈）：① 缺分隔行→自动补齐；② 分隔行数量不足→补全；
@@ -11838,12 +11894,12 @@ input[type="checkbox"]:checked::after { display: none !important; }
       case 'insert-superscript': this.wrapSelection('<sup>', '</sup>'); break;
       case 'insert-subscript': this.wrapSelection('<sub>', '</sub>'); break;
 
-      case 'insert-h1': this.insertLinePrefix('# '); break;
-      case 'insert-h2': this.insertLinePrefix('## '); break;
-      case 'insert-h3': this.insertLinePrefix('### '); break;
-      case 'insert-h4': this.insertLinePrefix('#### '); break;
-      case 'insert-h5': this.insertLinePrefix('##### '); break;
-      case 'insert-h6': this.insertLinePrefix('###### '); break;
+      case 'insert-h1': this.applyHeadingLevel(1); break;
+      case 'insert-h2': this.applyHeadingLevel(2); break;
+      case 'insert-h3': this.applyHeadingLevel(3); break;
+      case 'insert-h4': this.applyHeadingLevel(4); break;
+      case 'insert-h5': this.applyHeadingLevel(5); break;
+      case 'insert-h6': this.applyHeadingLevel(6); break;
 
       case 'insert-code-block': this.insertBlock('```javascript\n// code here\n```', 14); break;
       case 'insert-table': this.insertBlock('| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |', 2); break;
