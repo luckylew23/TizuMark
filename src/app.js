@@ -542,6 +542,13 @@ const I18N = {
     sortBy: '排序',
     sortByName: '名称',
     sortByTime: '修改时间',
+    sortByCreated: '创建时间',
+    modifiedLabel: '修改',
+    createdLabel: '创建',
+    createdUnknown: '创建时间未知',
+    modifiedFullTitle: '修改时间: ',
+    createdFullTitle: '创建时间: ',
+    sizeFullTitle: '大小: ',
     fileSort: '排序方式',
     sortAsc: '升序',
     sortDesc: '降序',
@@ -992,6 +999,13 @@ const I18N = {
     sortBy: 'Sort',
     sortByName: 'Name',
     sortByTime: 'Modified',
+    sortByCreated: 'Created',
+    modifiedLabel: 'Mod',
+    createdLabel: 'Created',
+    createdUnknown: 'Creation time unavailable',
+    modifiedFullTitle: 'Modified: ',
+    createdFullTitle: 'Created: ',
+    sizeFullTitle: 'Size: ',
     fileSort: 'Sort by',
     sortAsc: 'Ascending',
     sortDesc: 'Descending',
@@ -5315,6 +5329,7 @@ class MarkdownEditor {
         optionsProvider: (t) => ([
           { value: 'name', label: t('sortByName') },
           { value: 'time', label: t('sortByTime') },
+          { value: 'created', label: t('sortByCreated') },
         ]),
         onChange: (v) => {
           this.settings.fileSortKey = v;
@@ -7529,6 +7544,8 @@ class MarkdownEditor {
       let cmp;
       if (key === 'time') {
         cmp = (a.mtime || 0) - (b.mtime || 0);
+      } else if (key === 'created') {
+        cmp = (a.created || a.mtime || 0) - (b.created || b.mtime || 0);
       } else {
         cmp = String(a.name).toLowerCase().localeCompare(String(b.name).toLowerCase());
       }
@@ -7996,10 +8013,28 @@ class MarkdownEditor {
         sizeEl.textContent = this.formatFileSize(entry.size);
         meta.appendChild(sizeEl);
       }
-      const timeEl = document.createElement('span');
-      timeEl.className = 'tree-time';
-      timeEl.textContent = this.formatFileTime(entry.mtime);
-      meta.appendChild(timeEl);
+      const mtime = Number(entry.mtime) || 0;
+      const created = Number(entry.created) || 0;
+      // 上下文时间戳：显示当前排序依据的那种时间（按创建时间排序→创建，否则→修改）；
+      // 另一时间 + 大小收进 hover tooltip，避免每行常驻两串时间导致拥挤。
+      const byCreated = this.settings.fileSortKey === 'created';
+      let primaryVal = 0, primaryLabelKey = 'modifiedLabel';
+      if (byCreated && created) { primaryVal = created; primaryLabelKey = 'createdLabel'; }
+      else if (!byCreated && mtime) { primaryVal = mtime; primaryLabelKey = 'modifiedLabel'; }
+      else { primaryVal = byCreated ? mtime : created; primaryLabelKey = byCreated ? 'modifiedLabel' : 'createdLabel'; }
+      const timeLine = document.createElement('span');
+      timeLine.className = 'tree-time-line';
+      const lab = document.createElement('span');
+      lab.className = 'tree-meta-label';
+      lab.textContent = this.t(primaryLabelKey);
+      timeLine.appendChild(lab);
+      timeLine.appendChild(document.createTextNode(' ' + this.formatFileTime(primaryVal)));
+      const titleParts = [];
+      if (mtime) titleParts.push(this.t('modifiedFullTitle') + new Date(mtime).toLocaleString());
+      if (created) titleParts.push(this.t('createdFullTitle') + new Date(created).toLocaleString());
+      if (!entry.is_dir && entry.size != null) titleParts.push(this.t('sizeFullTitle') + this.formatFileSize(entry.size));
+      if (titleParts.length) timeLine.title = titleParts.join('\n');
+      meta.appendChild(timeLine);
       row.appendChild(meta);
 
       containerEl.appendChild(node);

@@ -3203,8 +3203,33 @@ body.is-resizing-row .sidebar-h-resizer {
   font-variant-numeric: tabular-nums;
 }
 
+.tree-meta .tree-time-line {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tree-meta .tree-time-sep {
+  color: var(--text-quaternary, #b0b4b8);
+  opacity: 0.7;
+  margin: 0 3px;
+}
+
+.tree-meta .tree-created--unknown {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.tree-meta-label {
+  opacity: 0.8;
+  margin-right: 2px;
+}
+
 .tree-row:hover .tree-meta,
-.tree-row.active .tree-meta {
+.tree-row.active .tree-meta,
+.tree-row:hover .tree-meta .tree-size,
+.tree-row.active .tree-meta .tree-size,
+.tree-row:hover .tree-meta .tree-time-sep,
+.tree-row.active .tree-meta .tree-time-sep {
   color: var(--text-secondary);
 }
 

@@ -311,6 +311,7 @@ struct DirEntryInfo {
     name: String,
     path: String,
     is_dir: bool,
+    created: u64,
     mtime: u64,
     size: u64,
 }
@@ -353,11 +354,18 @@ fn list_dir(path: String) -> Result<Vec<DirEntryInfo>, String> {
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
+        let created = meta
+            .created()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
         let size = meta.len();
         entries.push(DirEntryInfo {
             name,
             path: entry.path().to_string_lossy().to_string(),
             is_dir,
+            created,
             mtime,
             size,
         });

@@ -59,6 +59,67 @@ test('folder-sort: sortFolderEntries time 升序/降序（目录恒置顶）', a
   } finally { cleanup(w); }
 });
 
+test('folder-sort: sortFolderEntries created 升序/降序（目录恒置顶 + 缺失回退 mtime）', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    const entries = [
+      { name: 'a.md', path: '/a', is_dir: false, mtime: 300, created: 100 },
+      { name: 'b.md', path: '/b', is_dir: false, mtime: 100, created: 300 },
+      { name: 'dir1', path: '/d1', is_dir: true, mtime: 999, created: 1 },
+      { name: 'dir2', path: '/d2', is_dir: true, mtime: 1, created: 999 },
+    ];
+    const asc = ed.sortFolderEntries(entries, 'created', 'asc');
+    assert.deepStrictEqual(asc.map((e) => e.name), ['dir1', 'dir2', 'a.md', 'b.md']);
+    const desc = ed.sortFolderEntries(entries, 'created', 'desc');
+    assert.deepStrictEqual(desc.map((e) => e.name), ['dir2', 'dir1', 'b.md', 'a.md']);
+    // created 缺失时回退 mtime
+    const fallback = ed.sortFolderEntries(
+      [
+        { name: 'x', path: '/x', is_dir: false, mtime: 200 },
+        { name: 'y', path: '/y', is_dir: false, mtime: 50 },
+      ],
+      'created', 'asc'
+    );
+    assert.deepStrictEqual(fallback.map((e) => e.name), ['y', 'x']);
+  } finally { cleanup(w); }
+});
+
+test('folder-sort: 侧边栏按上下文显示单一时间戳，tooltip 含修改/创建/大小', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    w.TauriApi.listDir = async () => ([
+      { name: 'a.md', path: '/root/a.md', is_dir: false, mtime: 100, created: 50, size: 10 },
+      { name: 'docs', path: '/root/docs', is_dir: true, mtime: 200, created: 20, size: 0 },
+    ]);
+    ed.workspaceFolder = '/root';
+    ed.settings.fileSortKey = 'name';
+    await ed.renderFolderTree();
+    const lines = w.document.querySelectorAll('#folder-tree .tree-time-line');
+    assert.strictEqual(lines.length, 2, '每个条目渲染一个时间行');
+    // 默认按名称排序 → 显示修改时间（不常驻创建时间，避免拥挤）
+    assert.ok([...lines].every(el => el.textContent.includes('修改')), '默认排序显示修改时间');
+    assert.ok([...lines].every(el => !el.textContent.includes('创建')), '默认排序不常驻创建时间');
+    // 创建时间与大小进入 tooltip
+    const titles = [...lines].map(el => el.title || '');
+    assert.ok(titles.some(t => t.includes('创建')), 'tooltip 含创建时间');
+    assert.ok(titles.some(t => t.includes('大小')), 'tooltip 含大小');
+  } finally { cleanup(w); }
+});
+
+test('folder-sort: 按创建时间排序时侧边栏显示创建时间', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    w.TauriApi.listDir = async () => ([
+      { name: 'a.md', path: '/root/a.md', is_dir: false, mtime: 100, created: 50, size: 10 },
+    ]);
+    ed.workspaceFolder = '/root';
+    ed.settings.fileSortKey = 'created';
+    await ed.renderFolderTree();
+    const line = w.document.querySelector('#folder-tree .tree-time-line');
+    assert.ok(line.textContent.includes('创建'), '按创建排序应显示创建时间');
+  } finally { cleanup(w); }
+});
+
 test('folder-sort: sortFolderEntries dirFirst=false 时按维度纯混排', async () => {
   const { w, ed } = await makeEditor();
   try {
@@ -114,11 +175,12 @@ test('folder-sort: renderFolderTree 按 name 升序渲染，并显示大小/时�
     await ed.renderFolderTree();
     const labels = Array.from(w.document.querySelectorAll('#folder-tree .tree-label')).map((e) => e.textContent);
     assert.deepStrictEqual(labels, ['docs', 'proj', 'a.md', 'c.md']);
-    // 仅文件显示大小；顺序对应 a.md(512 B) 在前、c.md(2.0 KB) 在后
-    const sizes = Array.from(w.document.querySelectorAll('#folder-tree .tree-size')).map((e) => e.textContent);
-    assert.deepStrictEqual(sizes, ['512 B', '2.0 KB']);
+    // 大小收进 tooltip（不再常驻渲染），按文件名顺序 a.md(512 B) / c.md(2.0 KB) 应出现在 tooltip
+    const titles = Array.from(w.document.querySelectorAll('#folder-tree .tree-time-line')).map((e) => e.title || '');
+    assert.ok(titles.some((t) => t.includes('512 B')), 'a.md 大小应出现在 tooltip');
+    assert.ok(titles.some((t) => t.includes('2.0 KB')), 'c.md 大小应出现在 tooltip');
     // 每个条目都显示时间，且非空
-    const times = Array.from(w.document.querySelectorAll('#folder-tree .tree-time')).map((e) => e.textContent);
+    const times = Array.from(w.document.querySelectorAll('#folder-tree .tree-time-line')).map((e) => e.textContent);
     assert.strictEqual(times.length, 4);
     times.forEach((t) => assert.ok(t.length > 0, '时间文本不应为空'));
   } finally { cleanup(w); }
@@ -163,7 +225,7 @@ test('folder-sort: 旧后端未返回 size 时文件不显示大小（仅时间�
     ed.settings.fileSortOrder = 'asc';
     await ed.renderFolderTree();
     assert.strictEqual(w.document.querySelectorAll('#folder-tree .tree-size').length, 0, '旧后端无 size 不应渲染大小');
-    const times = Array.from(w.document.querySelectorAll('#folder-tree .tree-time')).map((e) => e.textContent);
+    const times = Array.from(w.document.querySelectorAll('#folder-tree .tree-time-line')).map((e) => e.textContent);
     assert.strictEqual(times.length, 2);
     times.forEach((t) => assert.ok(t.length > 0));
   } finally { cleanup(w); }
