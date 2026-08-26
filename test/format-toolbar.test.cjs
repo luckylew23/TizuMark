@@ -101,6 +101,20 @@ test('format: 多行选区统一标题层级（# A / B / ## C + H3 → 全 ###�
   } finally { cleanup(w); }
 });
 
+test('format: 文件树复制/剪切后清除 _fileTreeCtx，避免劫持编辑器/预览区 Ctrl+C/V', async () => {
+  const { w, ed } = await makeEditor();
+  try {
+    const fakeNode = w.document.createElement('div');
+    ed._fileTreeCtx = { path: '/tmp/a.md', isDir: false, nodeEl: fakeNode };
+    ed.fileTreeCopy();
+    assert.strictEqual(ed._fileTreeCtx, null, 'fileTreeCopy 后应清除 _fileTreeCtx');
+
+    ed._fileTreeCtx = { path: '/tmp/b.md', isDir: false, nodeEl: fakeNode };
+    ed.fileTreeCut();
+    assert.strictEqual(ed._fileTreeCtx, null, 'fileTreeCut 后应清除 _fileTreeCtx');
+  } finally { cleanup(w); }
+});
+
 test('format: 块插入 代码块/表格/引用/数学/Mermaid/分隔线/TOC/callout', async () => {
   const { w, ed } = await makeEditor();
   try {

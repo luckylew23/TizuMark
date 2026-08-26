@@ -7790,6 +7790,10 @@ class MarkdownEditor {
     if (!ctx) return;
     this._fileClipboard = { op: 'cut', path: ctx.path, isDir: ctx.isDir };
     this.setStatus(this.t('fileCutDone') + ': ' + this.baseName(ctx.path));
+    // 操作完成后清除文件树上下文，避免残留的 _fileTreeCtx 继续劫持编辑器/预览区的
+    // Ctrl+C/V（见 fileTreeCopyPath 的同类处理）：用户复制/剪切文件后回到正文 Ctrl+V
+    // 不应被 fileTreePaste 当成文件粘贴。
+    this._fileTreeCtx = null;
   }
 
   fileTreeCopy() {
@@ -7797,6 +7801,8 @@ class MarkdownEditor {
     if (!ctx) return;
     this._fileClipboard = { op: 'copy', path: ctx.path, isDir: ctx.isDir };
     this.setStatus(this.t('fileCopyDone') + ': ' + this.baseName(ctx.path));
+    // 同上：复制完成后清除上下文，避免残留劫持编辑器/预览区的 Ctrl+C/V。
+    this._fileTreeCtx = null;
   }
 
   async fileTreePaste() {
@@ -7848,6 +7854,8 @@ class MarkdownEditor {
       this.expandedFolders.add(targetDir);
       this.renderFolderTree();
       this.setStatus(this.t('filePasteDone') + ': ' + this.baseName(dstPath));
+      // 粘贴完成后清除文件树上下文，避免残留劫持编辑器/预览区的 Ctrl+C/V（与 copy/cut 一致）。
+      this._fileTreeCtx = null;
     } catch (e) {
       this.showToast(this.t('filePasteDone') + ': ' + e, 'danger');
     }
