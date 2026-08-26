@@ -1450,6 +1450,7 @@ function normalizeListIndentation(content, tabSize) {
 function renderMarkdown(content, options) {
   const opts = options || {};
   const softBreaks = opts.softBreaks === true;
+  const extendedSyntax = opts.extendedSyntax !== false;
   // 0. 统一换行符为 LF，避免 CRLF 的 \r 污染后续行数统计
   content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
@@ -1537,8 +1538,10 @@ function renderMarkdown(content, options) {
   // 保留未知属性，故不会被剥除；rehype-sanitize 已在管线内早于此处执行，不再二次净化。
   html = html.replace(/<img([^>]*)>/g, '<img$1 referrerpolicy="no-referrer">');
 
-  // 10. Convert ==highlight== to <mark>
-  html = convertHighlights(html);
+  // 10. Convert ==highlight== to <mark>（可由 extendedSyntax 关闭）
+  if (extendedSyntax) {
+    html = convertHighlights(html);
+  }
 
   // 11. Render footnotes (references + definition section)
   html = renderFootnotes(html, footnoteDefs);

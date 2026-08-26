@@ -269,6 +269,8 @@ const I18N = {
     scrollSync: '滚动同步',
     softBreaks: '软换行（回车即换行）',
     softBreaksHint: '开启后，段落内单个回车直接换行（与「空格+空格+回车」一致），更符合日常写作习惯，也便于从其他笔记软件迁移。关闭则恢复 CommonMark 标准（回车视为空格）。',
+    extendedSyntax: '扩展语法高亮（==文字==）',
+    extendedSyntaxHint: '开启后，==文字== 会渲染为黄色高亮（TizuMark 扩展语法）。关闭则 ==文字== 原样显示为普通文本，适合粘贴 AI 生成、未遵循该语法的 Markdown，避免被误当成高亮。',
     showTrayIcon: '显示托盘图标',
     showTrayIconHint: '关闭后隐藏系统托盘图标；此时关闭窗口会直接退出应用（否则无法通过托盘恢复窗口）。',
     tabSizeHint: '每按一次 Tab 键缩进几个空格。列表要往里缩一级（做子列表）也靠这个宽度，建议用 4，最稳。',
@@ -726,6 +728,8 @@ const I18N = {
     scrollSync: 'Scroll Sync',
     softBreaks: 'Soft Line Break (Enter = newline)',
     softBreaksHint: 'When enabled, a single Enter inside a paragraph creates a line break (same as "two spaces + Enter"), matching everyday writing and easing migration from other note apps. When disabled, CommonMark standard applies (Enter is treated as a space).',
+    extendedSyntax: 'Extended syntax highlight (==text==)',
+    extendedSyntaxHint: 'When enabled, ==text== renders as a yellow highlight (TizuMark extended syntax). When disabled, ==text== shows as plain text, which is useful for AI-generated Markdown that does not follow this syntax and would otherwise be misinterpreted as a highlight.',
     showTrayIcon: 'Show tray icon',
     showTrayIconHint: 'When disabled, the system tray icon is hidden; closing the window then quits the app directly (otherwise the window could not be restored via the tray).',
     tabSizeHint: 'How many spaces a Tab press indents. Indenting a list one level (to make a sub-list) also uses this width; 4 is recommended for the safest nesting.',
@@ -1328,6 +1332,7 @@ class MarkdownEditor {
     setRowLabel('set-default-view', t('defaultView'));
     setRowLabel('set-scroll-sync', t('scrollSync'));
     setRowLabel('set-soft-breaks', t('softBreaks'));
+    setRowLabel('set-extended-syntax', t('extendedSyntax'));
     setRowLabel('set-code-line-numbers', t('codeLineNumbers'));
     setRowLabel('set-code-wrap', t('codeBlockWrap'));
     setRowLabel('set-code-scroll', t('codeScroll'));
@@ -1341,6 +1346,8 @@ class MarkdownEditor {
     setRowLabel('set-code-font', t('codeFont'));
     const softBreaksHint = document.querySelector('#setting-soft-breaks-hint .hint-text');
     if (softBreaksHint) softBreaksHint.textContent = t('softBreaksHint');
+    const extendedSyntaxHint = document.querySelector('#setting-extended-syntax-hint .hint-text');
+    if (extendedSyntaxHint) extendedSyntaxHint.textContent = t('extendedSyntaxHint');
     const tabSizeHint = document.querySelector('#setting-tab-size-hint .hint-text');
     if (tabSizeHint) tabSizeHint.textContent = t('tabSizeHint');
     const codeScrollHint = document.querySelector('#setting-code-scroll-hint .hint-text');
@@ -1743,6 +1750,7 @@ class MarkdownEditor {
       codeWrap: false,
       codeScroll: true,
       softBreaks: true,
+      extendedSyntax: true,
       showTrayIcon: true,
       closeAction: 'ask',
       toolbarCollapsed: false,
@@ -1854,6 +1862,7 @@ class MarkdownEditor {
     const modeRadio = document.querySelector(`#settings-image-store-mode input[value="${s.imageInsertMode || 'assets'}"]`);
     if (modeRadio) modeRadio.checked = true;
     document.getElementById('set-soft-breaks').checked = s.softBreaks !== false;
+    document.getElementById('set-extended-syntax').checked = s.extendedSyntax !== false;
     document.getElementById('set-show-tray-icon').checked = s.showTrayIcon !== false;
     if (this._selects && this._selects.closeAction) this._selects.closeAction.setValue(s.closeAction || 'ask', true);
     document.getElementById('settings-image-asset-path').value = s.imageAssetPath || 'assets';
@@ -1972,6 +1981,9 @@ class MarkdownEditor {
     });
     document.getElementById('set-soft-breaks').addEventListener('change', (e) => {
       this.settings.softBreaks = e.target.checked;
+    });
+    document.getElementById('set-extended-syntax').addEventListener('change', (e) => {
+      this.settings.extendedSyntax = e.target.checked;
     });
     document.getElementById('set-show-tray-icon').addEventListener('change', (e) => {
       this.settings.showTrayIcon = e.target.checked;

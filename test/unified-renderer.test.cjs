@@ -126,6 +126,17 @@ test('成对 ==x== 仍高亮', async () => {
   assert.ok(html.includes('<mark>重点</mark>'), '成对 == 应高亮');
 });
 
+test('关闭扩展语法后 ==x== 不渲染高亮', async () => {
+  const html = renderMarkdown('这是 ==重点== 内容', { softBreaks: false, extendedSyntax: false });
+  assert.ok(!html.includes('<mark>'), 'extendedSyntax=false 时不应生成 <mark>');
+  assert.ok(html.includes('==重点=='), 'extendedSyntax=false 时 ==重点== 应原样显示');
+});
+
+test('默认（未传 extendedSyntax）==x== 仍高亮', async () => {
+  const html = renderMarkdown('这是 ==重点== 内容', { softBreaks: false });
+  assert.ok(html.includes('<mark>重点</mark>'), '未传 extendedSyntax 时默认高亮，保持向后兼容');
+});
+
 test('代码块内 == 不被高亮', async () => {
   const md = [
     '```js',
