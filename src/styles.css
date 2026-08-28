@@ -2615,6 +2615,11 @@ body.is-resizing .side-btn {
 .editor-container.preview-collapsed .preview-pane { flex: 0; min-width: 0; width: 0; overflow: hidden; }
 .editor-container.preview-collapsed .editor-pane { flex: 1; }
 
+/* 非 Markdown 明文：编辑器占满整行，无预览栏、无侧边收缩/展开按钮，只支持编辑 */
+.editor-container.text-only .resizer { display: none; }
+.editor-container.text-only .preview-pane { display: none; }
+.editor-container.text-only .editor-pane { flex: 1; width: 100%; }
+
 .side-btn {
   position: absolute;
   top: 50%;

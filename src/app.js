@@ -7381,6 +7381,11 @@ class MarkdownEditor {
     for (const st of tabs) {
       if (!st.filePath) continue;
       const tab = new Tab(st.name || st.filePath.split(/[/\\]/).pop(), '', st.filePath);
+      // 恢复时必须按后缀正确分类 kind：否则图片会被当成 markdown，
+      // 后续 ensureTabLoaded 仍按文本读取二进制 → 显示成代码
+      if (window.FileTypes && window.FileTypes.classifyFile) {
+        tab.kind = window.FileTypes.classifyFile(st.filePath);
+      }
       tab.cursorPos = st.cursorPos || { line: 0, ch: 0 };
       tab.scrollPos = st.scrollPos || { top: 0, left: 0 };
       tab.previewScrollTop = st.previewScrollTop || 0;
@@ -7402,19 +7407,30 @@ class MarkdownEditor {
 
     const active = this.activeTab;
     if (active && active.filePath) {
-      try {
-        const content = await this.readFileNormalized(active.filePath);
-        active.content = content;
-        active.savedContent = content;
-      } catch (e) {
-        // 读盘失败（文件被删除/移动/无权限）：保留标签页但标记为加载失败，
-        // 不再静默置空 content/savedContent（避免后续保存用空内容覆盖原文件）
+      // 图片不按文本读取（否则二进制被当代码显示），与 ensureTabLoaded / switchTab 保持一致
+      let _activeKind = active.kind;
+      if (active.filePath && window.FileTypes && window.FileTypes.classifyFile) {
+        _activeKind = window.FileTypes.classifyFile(active.filePath);
+      }
+      if (_activeKind === 'image') {
         active.content = '';
         active.savedContent = '';
-        active._loadError = true;
-        this.reportError('E_NOT_FOUND', { context: { path: active.filePath }, params: { name: active.name }, error: e });
+        active._loaded = true;
+      } else {
+        try {
+          const content = await this.readFileNormalized(active.filePath);
+          active.content = content;
+          active.savedContent = content;
+        } catch (e) {
+          // 读盘失败（文件被删除/移动/无权限）：保留标签页但标记为加载失败，
+          // 不再静默置空 content/savedContent（避免后续保存用空内容覆盖原文件）
+          active.content = '';
+          active.savedContent = '';
+          active._loadError = true;
+          this.reportError('E_NOT_FOUND', { context: { path: active.filePath }, params: { name: active.name }, error: e });
+        }
+        active._loaded = true;
       }
-      active._loaded = true;
     } else if (active) {
       active._loaded = true;
     }
@@ -7431,6 +7447,7 @@ class MarkdownEditor {
     this.cm.clearHistory();
     this.updateTabBar();
     this.updateTabDisplay();
+    this.syncViewModeToTab();
     await this.updatePreview();
     // 统一恢复该 tab 记忆的编辑器/预览滚动位置（临时关闭滚动同步避免互相重定位）
     this._restoreSwitchScroll(restoreScroll, restorePreviewTop);
@@ -10569,7 +10586,7 @@ input[type="checkbox"]:checked::after { display: none !important; }
     previewPane.style.flex = '';
     previewPane.style.width = '';
 
-    container.classList.remove('preview-mode', 'editor-collapsed', 'preview-collapsed');
+    container.classList.remove('preview-mode', 'editor-collapsed', 'preview-collapsed', 'text-only');
     if (this.viewMode === 'preview') {
       container.classList.add('preview-mode');
     }
@@ -10587,20 +10604,23 @@ input[type="checkbox"]:checked::after { display: none !important; }
     btnPreview.style.display = '';
     btnEdit.style.display = '';
 
-    // 非 Markdown 明文：编辑模式下默认折叠右侧预览栏（只显示编辑器，符合「非 md 只支持编辑」）
-    if (activeTabKind === 'text' && this.viewMode === 'edit') {
-      container.classList.add('preview-collapsed');
-    }
+    // 侧边收缩/展开按钮（#btn-side-left / #btn-side-right）默认隐藏，仅 Markdown 显示。
+    sideLeft.classList.add('side-hidden', 'side-active');
+    sideRight.classList.add('side-hidden', 'side-active');
 
-    const previewOnly = this.viewMode === 'preview' && activeTabKind !== 'text';
-    if (activeTabKind === 'image' || previewOnly) {
+    if (activeTabKind === 'text') {
+      // 非 Markdown 明文：编辑器占满整行，无预览栏、无收缩/展开按钮，只支持编辑
+      container.classList.add('text-only');
+    } else if (activeTabKind === 'markdown' && this.viewMode === 'edit') {
+      // 仅 Markdown 在编辑模式下保留侧边收缩/展开按钮（折叠编辑器或预览）；预览模式一律不显示
       sideLeft.classList.remove('side-hidden', 'side-active');
+      sideRight.classList.remove('side-hidden', 'side-active');
       sideLeft.innerHTML = '&#9664;';
       sideLeft.title = this.t('collapseEditor');
-      sideRight.classList.remove('side-hidden', 'side-active');
       sideRight.innerHTML = '&#9654;';
       sideRight.title = this.t('collapsePreview');
     }
+    // 图片：预览显示图片，但同样不需要侧边收缩/展开按钮（图片不可编辑），保持隐藏
 
     // 存句柄：大纲跳转等用户操作可在本定时器到期前 clearTimeout 取消，
     // 避免「视图模式恢复滚动」在跳转之后晚到、把编辑器/预览又拉回旧位置。
