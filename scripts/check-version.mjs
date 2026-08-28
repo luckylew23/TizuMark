@@ -35,10 +35,17 @@ function checkVersion(file, pattern, { count = 1 } = {}) {
 checkVersion('src-tauri/Cargo.toml', /^version\s*=\s*"([^"]+)"/m, { label: 'Cargo.toml' });
 checkVersion('src-tauri/tauri.conf.json', /"version"\s*:\s*"([^"]+)"/, { label: 'tauri.conf.json' });
 checkVersion('src/app.js', /versionInfo:\s*'TizuMark v([^']+)'/, { count: 2, label: 'app.js versionInfo(zh/en)' });
-checkVersion('src/index.html', /id="about-version">TizuMark v([^<]+)</, { label: 'index.html about-version' });
+checkVersion('src/index.html', /id="about-version"[^>]*>TizuMark v([^<]+)</, { label: 'index.html about-version' });
 checkVersion('README.md', /Version-([0-9.]+)-blue/, { label: 'README.md badge' });
 checkVersion('README.en.md', /Version-([0-9.]+)-blue/, { label: 'README.en.md badge' });
-checkVersion('scripts/release-notes.js', /const VERSION\s*=\s*'([^']+)'/, { label: 'release-notes.js' });
+// release-notes.js 运行时从 package.json 读取版本（const VERSION = readPkg().version），恒与基准一致，仅校验存在性
+{
+  const rnPath = path.join(ROOT, 'scripts/release-notes.js');
+  const rnContent = fs.readFileSync(rnPath, 'utf8');
+  if (!/const VERSION\s*=\s*readPkg\(\)\.version/.test(rnContent)) {
+    fail.push('scripts/release-notes.js: 未从 package.json 读取 VERSION（应 const VERSION = readPkg().version）');
+  }
+}
 checkVersion('update-windows-x86_64.json', /"version"\s*:\s*"([^"]+)"/, { label: 'update json' });
 
 if (fail.length > 0) {

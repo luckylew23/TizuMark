@@ -34,10 +34,13 @@ const TREE = {
   ],
 };
 
-// 模拟 Rust 端 search_files：递归整棵树（不跳过任何目录），按扩展名过滤。
+// 模拟 Rust 端 search_files：递归整棵树（不跳过任何目录）。
+// 扩展名过滤：仅当显式传入非空 extensions 时才过滤；否则（前端不再传扩展名）返回所有文件。
 function searchFilesImpl(args) {
   const root = args.path;
-  const exts = (args.extensions || ['md', 'markdown', 'txt']).map((e) => e.toLowerCase());
+  const exts = (args.extensions && args.extensions.length)
+    ? args.extensions.map((e) => e.toLowerCase())
+    : null;
   const out = [];
   const seen = new Set();
   const stack = [root];
@@ -50,7 +53,7 @@ function searchFilesImpl(args) {
       const lower = e.name.toLowerCase();
       const dot = lower.lastIndexOf('.');
       const ext = dot >= 0 ? lower.slice(dot + 1) : '';
-      if (exts.includes(ext)) {
+      if (!exts || exts.includes(ext)) {
         const rel = e.path.startsWith(root)
           ? e.path.slice(root.length).replace(/^[/\\]/, '')
           : e.name;
@@ -74,13 +77,13 @@ test('扫描工作区：递归所有子目录 + 扩展名过滤，node_modules �
   w.openFileSearchDialog();
   await tick();
   const items = w.document.querySelectorAll('#file-search-list .file-search-item');
-  // a.md / notes.md / readme.txt / sub/deep.md / node_modules/somepkg/readme.md = 5；ignore.js 与 .git/HEAD 被扩展名过滤
-  assert.strictEqual(items.length, 5, '应列出 5 个文本文件（含 node_modules 内 readme.md）');
+  // 新契约：前端不再传扩展名 → 搜索返回所有文件（含 ignore.js、node_modules 内 readme.md、.git/HEAD）
+  assert.strictEqual(items.length, 7, '应列出全部 7 个文件（含 node_modules 内 readme.md 与 ignore.js）');
   const names = [...items].map((i) => i.querySelector('span').textContent);
   assert.ok(names.includes('a.md'), '应包含 a.md');
   assert.ok(names.includes('deep.md'), '应递归包含 sub/deep.md');
   assert.ok(names.includes('readme.md'), '应包含 node_modules/somepkg/readme.md（不再跳过）');
-  assert.ok(!names.includes('ignore.js'), '应排除非文本后缀 ignore.js');
+  assert.ok(names.includes('ignore.js'), '新契约下非文本后缀 ignore.js 也应被搜到');
 }));
 
 test('文件名模糊筛选：输入 "note" 仅保留匹配项', async () => withEditor({ captureInitErr: true, invokeImpl }, async (w, ed) => {
@@ -114,7 +117,7 @@ test('无工作区时降级：以当前活动标签所在目录扫描', async ()
   w.openFileSearchDialog();
   await tick();
   const items = w.document.querySelectorAll('#file-search-list .file-search-item');
-  assert.strictEqual(items.length, 5, '应回退到活动标签目录扫描出 5 个文本文件');
+  assert.strictEqual(items.length, 7, '应回退到活动标签目录扫描出全部 7 个文件');
 }));
 
 test('不跳过任何文件夹：node_modules 内 readme.md 必须出现在结果中', async () => withEditor({ captureInitErr: true, invokeImpl }, async (w, ed) => {
@@ -147,7 +150,7 @@ test('命令缺失时回退前端 list_dir 递归扫描（保证不整体失效�
       w.openFileSearchDialog();
       await tick();
       const items = w.document.querySelectorAll('#file-search-list .file-search-item');
-      assert.strictEqual(items.length, 5, '回退路径也应搜到 5 个文本文件');
+      assert.strictEqual(items.length, 7, '回退路径也应搜到全部 7 个文件');
     } finally {
       w.TauriApi.searchFiles = saved;
     }

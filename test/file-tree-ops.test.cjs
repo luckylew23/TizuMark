@@ -34,6 +34,7 @@ test('file-ops: fileTreeCut / fileTreeCopy 设置文件剪贴板状态', async (
     assert.strictEqual(ed._fileClipboard.op, 'cut');
     assert.strictEqual(ed._fileClipboard.path, '/root/a.md');
     assert.strictEqual(ed._fileClipboard.isDir, false);
+    ed._fileTreeCtx = { path: '/root/a.md', isDir: false };
     ed.fileTreeCopy();
     assert.strictEqual(ed._fileClipboard.op, 'copy');
   } finally { cleanup(w); }

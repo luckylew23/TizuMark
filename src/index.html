@@ -49,6 +49,11 @@
       function escapeHtml(s) {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       }
+      // 外部模型/服务返回的、与应用逻辑无关、用户无法操作的噪声错误（例如把图片透传给
+      // 不支持视觉输入的模型时第三方返回的报错），不应以红色错误条打扰用户，直接忽略。
+      function isExternalModelNoise(m) {
+        return /this model does not support image input/i.test(String(m));
+      }
       window.addEventListener('error', function (ev) {
         // 资源加载失败
         if (ev && ev.target && ev.target !== ev.currentTarget && ev.target.tagName) {
@@ -78,12 +83,14 @@
         }
         if (ev && ev.filename) msg += '  (' + ev.filename + ':' + (ev.lineno || '?') + ':' + (ev.colno || '?') + ')';
         console.error('[P0-1] 运行时错误：' + msg, ev.error || '');
+        if (isExternalModelNoise(msg)) { console.warn('[P0-1] 已忽略外部模型噪声错误：' + msg); return; }
         showErrorBar(msg, 'error');
       }, true);
       window.addEventListener('unhandledrejection', function (ev) {
         var r = ev && ev.reason;
         var msg = (r && r.stack) ? r.stack : (r ? String(r) : '(空 reason)');
         console.error('[P0-1] 未处理的 Promise 拒绝：' + msg, r);
+        if (isExternalModelNoise(msg)) { console.warn('[P0-1] 已忽略外部模型噪声错误：' + msg); return; }
         showErrorBar('未处理的 Promise 拒绝：' + msg, 'error');
       });
     })();
@@ -534,7 +541,7 @@
           <div class="dependency-body about-version-body">
             <div class="about-app-line">
               <span class="about-app-name">TizuMark</span>
-              <span id="about-version" class="about-version-chip">v1.2.1</span>
+              <span id="about-version" class="about-version-chip">TizuMark v1.2.1</span>
             </div>
             <p id="about-version-desc" class="about-version-desc">轻量级跨平台 Markdown 编辑器</p>
             <p id="about-build" class="about-build">基于 Tauri v2.5 + Rust 构建</p>
@@ -892,7 +899,9 @@
         <button class="dialog-close" id="shortcuts-close" aria-label="关闭">&times;</button>
       </div>
       <div class="dialog-content shortcuts-content">
+        <div id="shortcuts-scheme-label" class="settings-group-title"></div>
         <div id="shortcuts-list" class="shortcuts-list"></div>
+        <div id="shortcuts-list-title" class="settings-group-title"></div>
       </div>
       <div class="dialog-footer">
         <button id="shortcuts-reset" class="dialog-btn">恢复默认</button>
@@ -1346,6 +1355,7 @@
 <script src="modules/find-replace.js"></script>
 <script src="modules/preview-window.js"></script>
 <script src="modules/tauri-api.js"></script>
+<script src="modules/file-types.js"></script>
 <script src="modules/file-search.js"></script>
 <script src="modules/dialog-drag-resize.js"></script>
 <script src="modules/image-processor.js"></script>

@@ -109,6 +109,18 @@
     return ns.resourceDir();
   };
 
+  // tauri.convertFileSrc：把本地绝对路径转换为前端可安全用于 <img src> 的 asset URL。
+  // 命名空间缺失（浏览器环境）时原样返回路径，供调用方降级。
+  api.convertFileSrc = function (filePath) {
+    const ns = getNs('tauri');
+    if (!ns || typeof ns.convertFileSrc !== 'function') return filePath;
+    try {
+      return ns.convertFileSrc(filePath);
+    } catch (e) {
+      return filePath;
+    }
+  };
+
   // 运行环境判定：是否处于 Tauri 运行时。供 app.js 区分「Tauri 原生能力分支」与
   // 「浏览器降级分支」（如原生拖拽 vs DOM 拖拽），避免在浏览器环境误触 __TAURI__。
   api.isAvailable = function () {

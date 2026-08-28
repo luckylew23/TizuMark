@@ -179,7 +179,6 @@ async function fsScanWorkspace(dir) {
   try {
     const entries = await TauriApi.searchFiles({
       path: dir,
-      extensions: FS_EXTENSIONS,
       maxResults: FS_MAX_RESULTS,
     });
     if (token !== __fs_scanToken) return; // 已被更新的扫描取代，丢弃本次结果
@@ -199,17 +198,17 @@ async function fsScanWorkspace(dir) {
 async function fsScanDirLegacy(dirPath, result, rootDir, depth, token) {
   if (depth > 25 || result.length >= FS_MAX_RESULTS) return;
   try {
-    const entries = await TauriApi.listDir({ path: dirPath });
+    const listing = await TauriApi.listDir({ path: dirPath });
     if (token !== __fs_scanToken) return;
+    const entries = Array.isArray(listing)
+      ? listing
+      : (listing && Array.isArray(listing.entries) ? listing.entries : []);
     for (const entry of entries) {
       if (entry.is_dir) continue;
-      const ext = entry.name.split('.').pop().toLowerCase();
-      if (FS_EXTENSIONS.includes(ext)) {
-        const relativePath = entry.path.startsWith(rootDir)
-          ? entry.path.slice(rootDir.length).replace(/^[/\\]/, '')
-          : entry.name;
-        result.push({ name: entry.name, path: entry.path, relativePath });
-      }
+      const relativePath = entry.path.startsWith(rootDir)
+        ? entry.path.slice(rootDir.length).replace(/^[/\\]/, '')
+        : entry.name;
+      result.push({ name: entry.name, path: entry.path, relativePath });
     }
     for (const entry of entries) {
       if (entry.is_dir) {

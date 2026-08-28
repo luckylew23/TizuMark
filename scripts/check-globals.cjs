@@ -32,6 +32,7 @@ const KNOWN_GLOBALS = new Set([
   'ImageProcessor', // P1-1 新增：processImages 抽离为纯模块
   'Select', // 统一自绘下拉框组件（2026-08 引入）
   'FontPicker', // 字体选择器组件（2026-08 引入）
+  'FileTypes', // 文件类型分类白名单（文件夹树 / 打开文件路由使用）
 ]);
 
 // 不锚行首：\bwindow\.[A-Z][A-Za-z]*\s*=

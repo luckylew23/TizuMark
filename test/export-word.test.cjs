@@ -252,8 +252,9 @@ test('exportWord: 导出成功后弹出成功提示 toast', async () => {
     // 写入成功后应弹出绿色成功提示，文案为「导出成功」
     const toast = w.document.querySelector('#toast-container .toast.success');
     assert.ok(toast, '导出成功应弹出 success 类型 toast');
+    const toastText = (toast.querySelector('.toast-body') || toast).textContent;
     assert.ok(
-      toast.textContent === '导出成功' || toast.textContent === 'Export successful',
+      toastText === '导出成功' || toastText === 'Export successful',
       '成功 toast 文案应为「导出成功」'
     );
   });

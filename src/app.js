@@ -86,11 +86,13 @@ async function dialogSave(options = {}) {
 }
 
 class Tab {
-  constructor(name = '', content = '', filePath = null) {
+  constructor(name = '', content = '', filePath = null, kind = 'markdown') {
     this.name = name;
     this.content = content;
     this.savedContent = content;
     this.filePath = filePath;
+    // 类型：'markdown' | 'image' | 'text' | 'unsupported'（unsupported 不进 Tab，仅用于判断）
+    this.kind = kind;
     this.cursorPos = { line: 0, ch: 0 };
     this.scrollPos = { top: 0, left: 0 };
     this.fileMeta = null;
@@ -128,6 +130,12 @@ const ERROR_MESSAGES = {
 
 const I18N = {
   zh: {
+    quickInsert: '快捷插入',
+    manageQuickInsert: '管理快捷插入…',
+    quickInsertHint: '在编辑器输入「/」时弹出快捷插入列表，可自定义顺序与显隐。',
+    quickInsertOrder: '快捷插入顺序',
+    quickInsertOrderHint: '拖动手柄调整顺序，取消勾选可隐藏该项（隐藏后输入「/」不再出现）。',
+    quickInsertOrderDone: '完成',
     file: '文件',
     new: '新建',
     open: '打开',
@@ -180,6 +188,7 @@ const I18N = {
     help: '帮助',
     userGuide: '使用说明',
     about: '关于',
+    versionInfo: 'TizuMark v1.2.1',
     preview: '预览',
     edit: '编辑',
     themeLight: '明亮',
@@ -271,6 +280,11 @@ const I18N = {
     softBreaksHint: '开启后，段落内单个回车直接换行（与「空格+空格+回车」一致），更符合日常写作习惯，也便于从其他笔记软件迁移。关闭则恢复 CommonMark 标准（回车视为空格）。',
     extendedSyntax: '扩展语法高亮（==文字==）',
     extendedSyntaxHint: '开启后，==文字== 会渲染为黄色高亮（TizuMark 扩展语法）。关闭则 ==文字== 原样显示为普通文本，适合粘贴 AI 生成、未遵循该语法的 Markdown，避免被误当成高亮。',
+    formatUnsupported: '格式不支持',
+    editUnsupported: '编辑模式不支持此类型文件',
+    previewUnsupported: '预览模式不支持此类型文件',
+    moreFilesHidden: '更多文件未显示',
+    operationCancelled: '已取消',
     showTrayIcon: '显示托盘图标',
     showTrayIconHint: '关闭后隐藏系统托盘图标；此时关闭窗口会直接退出应用（否则无法通过托盘恢复窗口）。',
     tabSizeHint: '每按一次 Tab 键缩进几个空格。列表要往里缩一级（做子列表）也靠这个宽度，建议用 4，最稳。',
@@ -587,6 +601,12 @@ const I18N = {
     fileCopyPath: '复制路径',
   },
   en: {
+    quickInsert: 'Quick Insert',
+    manageQuickInsert: 'Manage Quick Insert…',
+    quickInsertHint: 'Typing "/" in the editor opens the quick-insert menu. You can reorder and show/hide items.',
+    quickInsertOrder: 'Quick Insert Order',
+    quickInsertOrderHint: 'Drag the handle to reorder. Uncheck to hide an item (hidden items no longer appear when typing "/").',
+    quickInsertOrderDone: 'Done',
     file: 'File',
     new: 'New',
     open: 'Open',
@@ -650,6 +670,7 @@ const I18N = {
     help: 'Help',
     userGuide: 'User Guide',
     about: 'About',
+    versionInfo: 'TizuMark v1.2.1',
     preview: 'Preview',
     edit: 'Edit',
     themeLight: 'Light',
@@ -730,6 +751,11 @@ const I18N = {
     softBreaksHint: 'When enabled, a single Enter inside a paragraph creates a line break (same as "two spaces + Enter"), matching everyday writing and easing migration from other note apps. When disabled, CommonMark standard applies (Enter is treated as a space).',
     extendedSyntax: 'Extended syntax highlight (==text==)',
     extendedSyntaxHint: 'When enabled, ==text== renders as a yellow highlight (TizuMark extended syntax). When disabled, ==text== shows as plain text, which is useful for AI-generated Markdown that does not follow this syntax and would otherwise be misinterpreted as a highlight.',
+    formatUnsupported: 'Format not supported',
+    editUnsupported: 'Edit mode does not support this file type',
+    previewUnsupported: 'Preview mode does not support this file type',
+    moreFilesHidden: 'More files not shown',
+    operationCancelled: 'Cancelled',
     showTrayIcon: 'Show tray icon',
     showTrayIconHint: 'When disabled, the system tray icon is hidden; closing the window then quits the app directly (otherwise the window could not be restored via the tray).',
     tabSizeHint: 'How many spaces a Tab press indents. Indenting a list one level (to make a sub-list) also uses this width; 4 is recommended for the safest nesting.',
@@ -1341,6 +1367,15 @@ class MarkdownEditor {
     setRowLabel('settings-image-store-mode', t('imageSettingLabel'));
     setRowLabel('settings-image-asset-path-mode', t('imageAssetPathLabel'));
     setSectionTitle('btn-add-font', t('customFonts'));
+    setSectionTitle('btn-manage-slash', t('quickInsert'));
+    setText('btn-manage-slash', t('manageQuickInsert'));
+    const qiSection = document.getElementById('btn-manage-slash');
+    if (qiSection) { const qiHint = qiSection.closest('.settings-section').querySelector('.form-hint .hint-text'); if (qiHint) qiHint.textContent = t('quickInsertHint'); }
+    setText('slash-order-title', t('quickInsertOrder'));
+    const soHint = document.querySelector('#slash-order-dialog .form-hint .hint-text');
+    if (soHint) soHint.textContent = t('quickInsertOrderHint');
+    setText('slash-order-reset', t('resetDefault'));
+    setText('slash-order-done', t('quickInsertOrderDone'));
     setRowLabel('set-editor-font', t('editorFont'));
     setRowLabel('set-preview-font', t('previewFont'));
     setRowLabel('set-code-font', t('codeFont'));
@@ -2478,7 +2513,7 @@ class MarkdownEditor {
     this._folderToggleToken = token;
 
     // 显示 loading 覆盖层（防重复点击 + 视觉反馈），并设超时兜底强制清除，避免卡死在 loading。
-    const TIMEOUT_MS = 8000;
+    const TIMEOUT_MS = 20000;
     const overlay = this._showFolderLoading(expand ? '正在展开全部目录…' : '正在折叠全部目录…');
     if (btn) btn.disabled = true;
     let timeoutId = null;
@@ -2529,7 +2564,7 @@ class MarkdownEditor {
       if (err && err.message === 'folder-toggle-timeout') {
         // 超时：目录可能过多/IO 慢，强制结束并提示，不让用户卡在 loading
         token.cancelled = true;
-        this.toast && this.toast(expand ? '展开全部目录超时' : '折叠全部目录超时');
+        this.showToast(expand ? '展开全部目录超时' : '折叠全部目录超时');
       }
       // 其它异常也继续走 finally 清理
     } finally {
@@ -2559,8 +2594,17 @@ class MarkdownEditor {
       spinner.className = 'folder-loading-spinner';
       const label = document.createElement('span');
       label.className = 'folder-loading-text';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'folder-loading-cancel';
+      cancelBtn.textContent = this.t('cancel') || '取消';
+      cancelBtn.addEventListener('click', () => {
+        // 取消：中止展开/折叠的剩余递归（已展开/折叠的目录保持现状），并收起遮罩
+        if (this._folderToggleToken) this._folderToggleToken.cancelled = true;
+        this._hideFolderLoading(overlay);
+      });
       overlay.appendChild(spinner);
       overlay.appendChild(label);
+      overlay.appendChild(cancelBtn);
       folderContent.appendChild(overlay);
     }
     overlay.querySelector('.folder-loading-text').textContent = text || '';
@@ -4787,6 +4831,8 @@ class MarkdownEditor {
   async ensureTabLoaded(tab) {
     if (!tab) return;
     if (tab._loaded || !tab.filePath) { tab._loaded = true; return; }
+    // 图片不读文本：内容由预览面板经 fetchImageAsBase64 从路径渲染，按文本读会污染 tab.content（乱码）
+      if (tab.kind === 'image') { tab.content = ''; tab._loaded = true; return; }
     try {
       const content = await this.readFileNormalized(tab.filePath);
       tab.content = content;
@@ -4844,7 +4890,15 @@ class MarkdownEditor {
       const restoreScroll = newTab.scrollPos || { top: 0, left: 0 };
       const restorePreviewTop = newTab.previewScrollTop || 0;
 
-      this.cm.setValue(newTab.content || '');
+      if (newTab.kind === 'image') {
+        this.cm.setValue('');
+      } else {
+        this.cm.setValue(newTab.content || '');
+        const newExt = (newTab.filePath && window.FileTypes && window.FileTypes.extOf)
+          ? window.FileTypes.extOf(newTab.filePath)
+          : (newTab.kind === 'markdown' ? 'md' : '');
+        this._applyCodeMode(newExt);
+      }
       clearTimeout(this.debounceTimer);
       this.cm.setCursor(restoreCursor);
       this.cm.clearHistory();
@@ -4859,18 +4913,19 @@ class MarkdownEditor {
       this.updateOutline();
       this.updateExternalChangeBanner();
       this.highlightTreeActiveFile();
+      this.syncViewModeToTab();
     } finally {
       this._endPaneLoad();
     }
   }
 
-  async addTab(name = '', content = '', filePath = null) {
+  async addTab(name = '', content = '', filePath = null, kind = 'markdown') {
     const defaultName = this.t('untitled');
     if (!name || name === defaultName) {
       name = `${defaultName}${this.untitledCounter++}`;
     }
     content = content.replace(/\r\n/g, '\n');
-    const tab = new Tab(name, content, filePath);
+    const tab = new Tab(name, content, filePath, kind);
     this.tabs.push(tab);
     this.refreshFileMeta(tab);
     await this.switchTab(this.tabs.length - 1);
@@ -7268,7 +7323,7 @@ class MarkdownEditor {
           console.error('Failed to open file:', filePath, e);
         }
       }
-      this.viewMode = 'preview';
+      this.syncViewModeToTab();
       this.applyViewMode();
       this.updateWordCount();
       this.setStatus(openedCount > 0 ? this.t('openedFiles', { n: openedCount }) : this.t('alreadyOpen'));
@@ -7398,6 +7453,15 @@ class MarkdownEditor {
     this._largeFileNoticeDismissed = false;
     this._previewFocusLine = 0;
     this.previewWindow = null;
+    // 类型判断：unsupported 直接提示，不打开
+    const kind = (window.FileTypes && window.FileTypes.classifyFile)
+      ? window.FileTypes.classifyFile(filePath)
+      : 'markdown';
+    if (kind === 'unsupported') {
+      this.showToast(this.t('formatUnsupported'), 'warning');
+      this.setStatus(this.t('formatUnsupported'));
+      return;
+    }
     this._beginPaneLoad();
     try {
       const existingIndex = this.tabs.findIndex(t => t.filePath === filePath);
@@ -7406,10 +7470,29 @@ class MarkdownEditor {
         this.saveSession();
         return;
       }
+      // 图片：不读文本内容，预览面板内显示图片
+      if (kind === 'image') {
+        const name = filePath.split(/[/\\]/).pop();
+        await this.addTab(name, '', filePath, 'image');
+        this.viewMode = 'preview';
+        this.applyViewMode();
+        this.updateWordCount();
+        this.setStatus(this.t('fileOpened', { name }));
+        this.saveSession();
+        return;
+      }
       const content = await this.readFileNormalized(filePath);
       const name = filePath.split(/[/\\]/).pop();
-      await this.addTab(name, content, filePath);
-      this.viewMode = 'preview';
+      // text：按原始文本显示（不按 Markdown 渲染）；markdown：现有渲染管线
+      await this.addTab(name, content, filePath, kind);
+      // 按扩展名设置编辑器语法高亮（image 不进入编辑器）
+      if (kind === 'text') {
+        const ext = (window.FileTypes && window.FileTypes.extOf) ? window.FileTypes.extOf(filePath) : '';
+        this._applyCodeMode(ext);
+      } else {
+        this._applyCodeMode('md');
+      }
+      this.viewMode = (kind === 'text') ? 'edit' : (this.settings.defaultView || 'preview');
       this.applyViewMode();
       this.updateWordCount();
       this.setStatus(this.t('fileOpened', { name }));
@@ -7420,6 +7503,26 @@ class MarkdownEditor {
     } finally {
       this._endPaneLoad();
     }
+  }
+
+  // 非 Markdown 明文文件：按扩展名选择 CodeMirror 语法高亮模式（仅高亮，不改变编辑行为）
+  _applyCodeMode(ext) {
+    if (!this.cm || typeof this.cm.setOption !== 'function') return;
+    const map = {
+      js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
+      ts: 'javascript', tsx: 'javascript',
+      py: 'python', pyw: 'python',
+      rs: 'rust',
+      html: 'htmlmixed', htm: 'htmlmixed',
+      xml: 'xml', svg: 'xml',
+      css: 'css',
+      json: 'javascript',
+      yml: 'yaml', yaml: 'yaml',
+      sh: 'shell', bash: 'shell', zsh: 'shell',
+      md: 'gfm', markdown: 'gfm',
+    };
+    const mode = map[(ext || '').toLowerCase()] || 'gfm';
+    try { this.cm.setOption('mode', mode); } catch (e) { try { this.cm.setOption('mode', 'gfm'); } catch (_) {} }
   }
 
   async openFolder() {
@@ -7932,14 +8035,19 @@ class MarkdownEditor {
     const FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>';
     const FOLDER_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>';
     const FILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /></svg>';
+    const IMAGE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
 
-    let entries;
+    let listing;
     try {
-      entries = await TauriApi.listDir({ path: dirPath });
+      listing = await TauriApi.listDir({ path: dirPath });
     } catch (e) {
       return;
     }
-    entries = this.sortFolderEntries(entries, this.settings.fileSortKey, this.settings.fileSortOrder);
+    const rawEntries = Array.isArray(listing)
+      ? listing
+      : (listing && Array.isArray(listing.entries) ? listing.entries : []);
+    const entries = this.sortFolderEntries(rawEntries, this.settings.fileSortKey, this.settings.fileSortOrder);
+    const truncated = !!(listing && listing.truncated);
     for (const entry of entries) {
       const node = document.createElement('div');
       node.className = 'tree-node ' + (entry.is_dir ? 'tree-folder' : 'tree-file');
@@ -8004,8 +8112,11 @@ class MarkdownEditor {
         });
       } else {
         arrow.innerHTML = '';
+        const cat = (window.FileTypes && window.FileTypes.classifyFile)
+          ? window.FileTypes.classifyFile(entry.name)
+          : 'markdown';
         icon.className = 'tree-icon file';
-        icon.innerHTML = FILE;
+        icon.innerHTML = cat === 'image' ? IMAGE_ICON : FILE;
         node.appendChild(row);
         row.addEventListener('click', () => {
           // 左键点击也更新文件树选中目标，让 F2/Delete/Ctrl+C 等快捷键作用于当前点击项
@@ -8050,6 +8161,18 @@ class MarkdownEditor {
       row.appendChild(meta);
 
       containerEl.appendChild(node);
+    }
+    if (truncated) {
+      const ph = document.createElement('div');
+      ph.className = 'tree-node tree-file tree-truncated';
+      const phRow = document.createElement('div');
+      phRow.className = 'tree-row';
+      const phLabel = document.createElement('span');
+      phLabel.className = 'tree-label tree-label--muted';
+      phLabel.textContent = this.t('moreFilesHidden');
+      phRow.appendChild(phLabel);
+      ph.appendChild(phRow);
+      containerEl.appendChild(ph);
     }
     this.highlightTreeActiveFile();
   }
@@ -10360,7 +10483,41 @@ input[type="checkbox"]:checked::after { display: none !important; }
     });
   }
 
+  // 视图模式跟随当前标签页类型，与「打开文件」逻辑完全一致：
+  // 图片 → 预览（单栏），非 Markdown 明文 → 编辑（折叠预览栏），Markdown → 预览（单栏）。
+  // 类型以文件后缀为准（window.FileTypes.classifyFile），避免 tab.kind 因会话恢复等残留旧值。
+  // 覆盖「打开文件 / 切换标签 / 当前标签」所有情况。
+  syncViewModeToTab() {
+    const tab = this.activeTab;
+    let kind = tab ? tab.kind : 'markdown';
+    if (tab && tab.filePath && window.FileTypes && window.FileTypes.classifyFile) {
+      kind = window.FileTypes.classifyFile(tab.filePath);
+    }
+    let target = 'preview';
+    if (kind === 'image') target = 'preview';
+    else if (kind === 'text') target = 'edit';
+    else target = this.settings.defaultView || 'preview'; // markdown 跟随设置中的默认视图
+    // 视图布局由「模式 + 类型」共同决定：即使模式没变（如 md 编辑 → 文本编辑），
+    // 类型变了也需重新 applyViewMode（重新决定 preview-collapsed 等），否则预览栏不会收起。
+    if (target !== this.viewMode || this._lastViewKind !== kind) {
+      this.viewMode = target;
+      this._lastViewKind = kind;
+      this.applyViewMode();
+    } else {
+      this._lastViewKind = kind;
+    }
+  }
+
   setViewMode(mode) {
+    // 图片只支持预览模式、非 Markdown 明文只支持编辑模式：拦截切换到不支持的视图
+    // 类型以文件后缀为准（window.FileTypes.classifyFile），避免 tab.kind 因会话恢复等残留旧值
+    const _tab = this.activeTab;
+    let _kind = _tab ? _tab.kind : 'markdown';
+    if (_tab && _tab.filePath && window.FileTypes && window.FileTypes.classifyFile) {
+      _kind = window.FileTypes.classifyFile(_tab.filePath);
+    }
+    if (_kind === 'image' && mode !== 'preview') { this.showToast(this.t('editUnsupported'), 'warning'); return; }
+    if (_kind === 'text' && mode !== 'edit') { this.showToast(this.t('previewUnsupported'), 'warning'); return; }
     if (this.viewMode === mode) return;
     
     if (mode === 'preview') {
@@ -10413,15 +10570,30 @@ input[type="checkbox"]:checked::after { display: none !important; }
     previewPane.style.width = '';
 
     container.classList.remove('preview-mode', 'editor-collapsed', 'preview-collapsed');
+    if (this.viewMode === 'preview') {
+      container.classList.add('preview-mode');
+    }
 
     btnPreview.classList.toggle('active', this.viewMode === 'preview');
     btnEdit.classList.toggle('active', this.viewMode === 'edit');
 
-    if (this.viewMode === 'preview') {
-      container.classList.add('preview-mode');
-      sideLeft.classList.add('side-hidden');
-      sideRight.classList.add('side-hidden');
-    } else {
+    let activeTabKind = this.activeTab ? this.activeTab.kind : 'markdown';
+    if (this.activeTab && this.activeTab.filePath && window.FileTypes && window.FileTypes.classifyFile) {
+      activeTabKind = window.FileTypes.classifyFile(this.activeTab.filePath);
+    }
+
+    // 图片只支持预览、非 md 明文只支持编辑：两个模式按钮都保留可见；
+    // 切到不支持的模式时由 setViewMode 的 _kind 守卫弹提示拦截，不隐藏按钮。
+    btnPreview.style.display = '';
+    btnEdit.style.display = '';
+
+    // 非 Markdown 明文：编辑模式下默认折叠右侧预览栏（只显示编辑器，符合「非 md 只支持编辑」）
+    if (activeTabKind === 'text' && this.viewMode === 'edit') {
+      container.classList.add('preview-collapsed');
+    }
+
+    const previewOnly = this.viewMode === 'preview' && activeTabKind !== 'text';
+    if (activeTabKind === 'image' || previewOnly) {
       sideLeft.classList.remove('side-hidden', 'side-active');
       sideLeft.innerHTML = '&#9664;';
       sideLeft.title = this.t('collapseEditor');

@@ -48,10 +48,57 @@
         this.app.updateOutline();
         return;
       }
-      const gen = ++this.app._renderGeneration;
-      let needLoad = false;
+    const gen = ++this.app._renderGeneration;
+    let needLoad = false;
+    const _tab = this.app.activeTab;
+    const _tabKind = _tab ? _tab.kind : 'markdown';
+    // 图片：应用内预览面板显示。
+    // 注意：Tauri v2 的 convertFileSrc 返回 asset://localhost/... ，但本应用 CSP 的 img-src
+    // 未放行 asset: 协议，直接用会被 WebView 拦截导致「图片打不开」。因此统一走
+    // fetchImageAsBase64 拿 base64 data URI（与 markdown 内嵌图片一致，data: 已被 CSP 放行）。
+    if (_tabKind === 'image') {
+      this.app.preview.style.position = '';
+      this.app.preview.style.padding = '';
+      const imgPath = _tab.filePath || '';
+      const alt = this.app.escapeAttr(_tab.name || '');
+      if (!imgPath) {
+        this.app.preview.innerHTML = '<div class="image-error">' + this.app.escapeHtml(this.app.t('formatUnsupported')) + '</div>';
+        if (this.app._resumeScroll) this.app._resumeScroll();
+        return;
+      }
+      const lower = imgPath.toLowerCase();
+      const mime = lower.endsWith('.gif') ? 'image/gif'
+        : lower.endsWith('.svg') ? 'image/svg+xml'
+        : lower.endsWith('.webp') ? 'image/webp'
+        : (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) ? 'image/jpeg'
+        : 'image/png';
+      const fallbackSrc = (typeof TauriApi !== 'undefined' && TauriApi.convertFileSrc) ? TauriApi.convertFileSrc(imgPath) : imgPath;
       try {
-        const content = this.app.cm.getValue();
+        if (typeof TauriApi !== 'undefined' && typeof TauriApi.fetchImageAsBase64 === 'function') {
+          const base64 = await TauriApi.fetchImageAsBase64({ url: imgPath });
+          const dataUri = 'data:' + mime + ';base64,' + base64;
+          this.app.preview.innerHTML = '<img class="image-viewer" src="' + this.app.escapeAttr(dataUri) + '" alt="' + alt + '">';
+        } else {
+          this.app.preview.innerHTML = '<img class="image-viewer" src="' + this.app.escapeAttr(fallbackSrc) + '" alt="' + alt + '">';
+        }
+      } catch (e) {
+        console.warn('[preview] 图片加载失败：', imgPath, e);
+        this.app.preview.innerHTML = '<img class="image-viewer" src="' + this.app.escapeAttr(fallbackSrc) + '" alt="' + alt + '">';
+      }
+      if (this.app._resumeScroll) this.app._resumeScroll();
+      return;
+    }
+    // 明文：按原始文本显示（不做 Markdown 渲染）
+    if (_tabKind === 'text') {
+      const content = this.app.cm.getValue();
+      this.app.preview.style.position = '';
+      this.app.preview.style.padding = '';
+      this.app.preview.innerHTML = '<pre class="plaintext-view">' + this.app.escapeHtml(content) + '</pre>';
+      if (this.app._resumeScroll) this.app._resumeScroll();
+      return;
+    }
+    try {
+      const content = this.app.cm.getValue();
         const totalLines = content.split('\n').length;
         const isLarge = content.length > MAX_PREVIEW_CHARS || totalLines > MAX_PREVIEW_LINES;
 

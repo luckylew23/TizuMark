@@ -306,6 +306,15 @@ fn is_directory(path: String) -> bool {
     std::path::Path::new(&path).is_dir()
 }
 
+// 重型/非笔记目录：不进树、不参与 Ctrl+P 搜索，避免 node_modules 等把树/搜索撑爆。
+const IGNORE_DIRS: &[&str] = &[
+    ".git", ".idea", ".vscode", "dist", "src-tauri", "target",
+    "build", "out", "bin", "obj",
+];
+
+// 单目录条目上限：超过则截断并置 truncated，防止单文件夹上万文件把 DOM/渲染卡死。
+const MAX_DIR_ENTRIES: usize = 3000;
+
 #[derive(serde::Serialize, Clone)]
 struct DirEntryInfo {
     name: String,
@@ -316,8 +325,14 @@ struct DirEntryInfo {
     size: u64,
 }
 
+#[derive(serde::Serialize)]
+struct DirListing {
+    entries: Vec<DirEntryInfo>,
+    truncated: bool,
+}
+
 #[tauri::command]
-fn list_dir(path: String) -> Result<Vec<DirEntryInfo>, String> {
+fn list_dir(path: String) -> Result<DirListing, String> {
     let p = std::path::Path::new(&path);
     let _ = safe_write_target(&path).map_err(|e| e)?; // 复用规范化以拒绝越界/关键目录
     let mut entries: Vec<DirEntryInfo> = Vec::new();
@@ -336,18 +351,11 @@ fn list_dir(path: String) -> Result<Vec<DirEntryInfo>, String> {
         if name.starts_with('.') {
             continue;
         }
-        let ext = if is_dir {
-            String::new()
-        } else {
-            std::path::Path::new(&name)
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("")
-                .to_lowercase()
-        };
-        if !is_dir && !["md", "markdown", "txt"].contains(&ext.as_str()) {
+        // 跳过重型/非笔记目录（不进树，避免撑爆）
+        if is_dir && IGNORE_DIRS.contains(&name.as_str()) {
             continue;
         }
+        // 注：不再按扩展名过滤——所有非隐藏文件都进树；类型判定交给前端 classifyFile。
         let mtime = meta
             .modified()
             .ok()
@@ -369,7 +377,11 @@ fn list_dir(path: String) -> Result<Vec<DirEntryInfo>, String> {
             mtime,
             size,
         });
+        if entries.len() >= MAX_DIR_ENTRIES {
+            break;
+        }
     }
+    let truncated = entries.len() >= MAX_DIR_ENTRIES;
     entries.sort_by(|a, b| {
         if a.is_dir != b.is_dir {
             return if a.is_dir {
@@ -380,7 +392,7 @@ fn list_dir(path: String) -> Result<Vec<DirEntryInfo>, String> {
         }
         a.name.to_lowercase().cmp(&b.name.to_lowercase())
     });
-    Ok(entries)
+    Ok(DirListing { entries, truncated })
 }
 
 // 在文件管理器中「打开所在目录」并选中目标。
@@ -852,9 +864,9 @@ fn reg_value_string(v: &winreg::RegValue) -> Option<String> {
     }
 }
 
-// 递归遍历目录，收集指定扩展名的文件清单，供前端 Ctrl+P 快速打开。
-// 不跳过任何子目录（含 node_modules/.git/dist/src-tauri 等），保证"文件多也能搜"；
-// 仅按扩展名过滤（默认 .md/.markdown/.txt）并按 max_results 截断，避免病态目录树失控。
+// 递归遍历目录，收集文件清单，供前端 Ctrl+P 快速打开。
+// extensions 为 None 或空 → 不过滤（搜全部文件，含图片/代码等）；否则按扩展名过滤。
+// 跳过重型/非笔记目录（IGNORE_DIRS），并按 max_results 截断，避免病态目录树失控。
 #[derive(serde::Serialize)]
 struct SearchFileEntry {
     name: String,
@@ -868,17 +880,19 @@ fn search_files(
     extensions: Option<Vec<String>>,
     max_results: Option<usize>,
 ) -> Vec<SearchFileEntry> {
-    let exts: Vec<String> = extensions
-        .unwrap_or_else(|| vec!["md".to_string(), "markdown".to_string(), "txt".to_string()])
-        .into_iter()
-        .map(|e| e.to_lowercase())
-        .collect();
+    // None 或空列表 → 不过滤；否则按给定扩展名过滤（已小写化）
+    let exts: Option<Vec<String>> = extensions.map(|v| {
+        v.into_iter()
+            .map(|e| e.to_lowercase())
+            .filter(|e| !e.is_empty())
+            .collect()
+    });
     let max = max_results.unwrap_or(50000).max(1);
     let root = std::path::Path::new(&path);
     let mut results: Vec<SearchFileEntry> = Vec::new();
     let mut dir_count: usize = 0;
     if root.is_dir() {
-        search_files_walk(root, root, &exts, &mut results, &mut dir_count, 0, 40, 60000, max);
+        search_files_walk(root, root, exts.as_deref(), &mut results, &mut dir_count, 0, 40, 60000, max);
     }
     results
 }
@@ -887,7 +901,7 @@ fn search_files(
 fn search_files_walk(
     dir: &std::path::Path,
     root: &std::path::Path,
-    exts: &[String],
+    exts: Option<&[String]>,
     results: &mut Vec<SearchFileEntry>,
     dir_count: &mut usize,
     depth: usize,
@@ -913,15 +927,22 @@ fn search_files_walk(
             Err(_) => continue,
         };
         if file_type.is_dir() {
-            sub_dirs.push(p);
+            // 跳过重型/非笔记目录
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !IGNORE_DIRS.contains(&name.as_str()) {
+                sub_dirs.push(p);
+            }
             continue;
         }
         let name = entry.file_name().to_string_lossy().to_string();
         let lower = name.to_lowercase();
-        let matched = lower
-            .rfind('.')
-            .map(|i| exts.iter().any(|e| &lower[i + 1..] == e.as_str()))
-            .unwrap_or(false);
+        let matched = match exts {
+            Some(e) => lower
+                .rfind('.')
+                .map(|i| e.iter().any(|x| &lower[i + 1..] == x.as_str()))
+                .unwrap_or(false),
+            None => true,
+        };
         if matched {
             let full = p.to_string_lossy().to_string();
             let relative = p

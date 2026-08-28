@@ -38,13 +38,22 @@ test('打包模式：当前干净状态返回 true', () => {
   assert.strictEqual(run([]), true);
 });
 
-test('发布模式：缺签名密码环境变量时返回 false（致命门禁生效）', () => {
+test('发布模式：存在致命问题（版本不一致）时返回 false（致命门禁生效）', () => {
   const had = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
   delete process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
+  const orig = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  const origVer = orig.version;
   try {
-    // 当前既无 env 也无 .env（项目根无 .env）→ 发布模式应致命阻断
+    // 发布模式为致命门禁：版本不一致即阻断（与打包模式仅警告不同）。
+    // 注意：开发机上存在私钥密码文件，仅靠「缺 env」不足以触发致命门禁，
+    // 故此处显式制造版本不一致来稳定触发 release 致命门禁。
+    orig.version = '9.9.9';
+    fs.writeFileSync(pkgPath, JSON.stringify(orig, null, 2));
     assert.strictEqual(run(['--release']), false);
   } finally {
+    orig.version = origVer;
+    fs.writeFileSync(pkgPath, JSON.stringify(orig, null, 2));
+    assert.strictEqual(JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version, origVer);
     if (had) process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD = had;
   }
 });

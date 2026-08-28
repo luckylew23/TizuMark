@@ -895,7 +895,7 @@ test('settings: 切换英文后设置对话框无残留中文（除字体预览�
     // 标题与 section 标题（折叠块标题条内名称元素）
     assert.strictEqual(w.document.getElementById('settings-title').textContent, 'Settings');
     const sections = [...dlg.querySelectorAll('.settings-section .settings-section-name')].map(h => h.textContent);
-    assert.deepStrictEqual(sections, ['Basic', 'Editor', 'Preview', 'Behavior', 'Custom Fonts']);
+    assert.deepStrictEqual(sections, ['Basic', 'Editor', 'Preview', 'Behavior', 'Custom Fonts', 'Quick Insert']);
     // 语言 / 主题 / 关闭行为 / 视图 / Tab / 最大宽度 options（自绘 Select 组件，随语言刷新）
     const lang = ed._selects && ed._selects.language;
     assert.ok(lang, '语言 Select 组件实例应已创建');
@@ -1033,7 +1033,7 @@ test('设置折叠块：5 个分类为折叠结构，默认展开，点击标题
     ed.showSettings();
     const dlg = w.document.getElementById('settings-dialog');
     const sections = [...dlg.querySelectorAll('.settings-section')];
-    assert.strictEqual(sections.length, 5, '应有 5 个设置分类');
+    assert.strictEqual(sections.length, 6, '应有 6 个设置分类');
     for (const sec of sections) {
       assert.strictEqual(sec.getAttribute('data-collapsed'), 'false', '设置分类默认展开');
       assert.ok(sec.querySelector('.settings-section-title'), '分类应含标题条');
