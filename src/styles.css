@@ -46,10 +46,10 @@
   --color-warning: #e8a020;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-hover-strong: rgba(0, 0, 0, 0.09);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.04);
   --heading-color: var(--text-primary);
   --heading-h2-color: #26262a;
   --heading-h1-color: var(--text-primary);
@@ -84,10 +84,10 @@
   --color-warning: #d4a017;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-hover-strong: rgba(0, 0, 0, 0.09);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.04);
   --heading-color: var(--text-primary);
   --heading-h2-color: #242a22;
   --heading-h1-color: var(--text-primary);
@@ -122,10 +122,10 @@
   --color-warning: #c89030;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-hover-strong: rgba(0, 0, 0, 0.09);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.04);
   --heading-color: var(--text-primary);
   --heading-h2-color: #282e3a;
   --heading-h1-color: var(--text-primary);
@@ -160,10 +160,10 @@
   --color-warning: #b88a40;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-hover-strong: rgba(0, 0, 0, 0.09);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.04);
   --heading-color: var(--text-primary);
   --heading-h2-color: #28263a;
   --heading-h1-color: var(--text-primary);
@@ -198,10 +198,10 @@
   --color-warning: #c89030;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-hover-strong: rgba(0, 0, 0, 0.09);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.04);
   --heading-color: var(--text-primary);
   --heading-h2-color: #302a22;
   --heading-h1-color: var(--text-primary);
@@ -237,10 +237,10 @@
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-hover-strong: rgba(255, 255, 255, 0.10);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.30);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.18);
   --heading-color: var(--text-primary);
   --heading-h2-color: #b8b9c0;
   --heading-h1-color: var(--text-primary);
@@ -275,10 +275,10 @@
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-hover-strong: rgba(255, 255, 255, 0.10);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.30);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.18);
   --heading-color: var(--text-primary);
   --heading-h2-color: #b0c0ac;
   --heading-h1-color: var(--text-primary);
@@ -313,10 +313,10 @@
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-hover-strong: rgba(255, 255, 255, 0.10);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.30);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.18);
   --heading-color: var(--text-primary);
   --heading-h2-color: #b8c0ce;
   --heading-h1-color: var(--text-primary);
@@ -351,10 +351,10 @@
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-hover-strong: rgba(255, 255, 255, 0.10);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.30);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.18);
   --heading-color: var(--text-primary);
   --heading-h2-color: #b4b0c8;
   --heading-h1-color: var(--text-primary);
@@ -389,10 +389,10 @@
   --color-warning: #f0b840;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-hover-strong: rgba(255, 255, 255, 0.10);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
-  --shadow-up-sm: 0 -1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.30);
+  --shadow-up-sm: 0 -1px 2px rgba(0, 0, 0, 0.18);
   --heading-color: var(--text-primary);
   --heading-h2-color: #beb2a6;
   --heading-h1-color: var(--text-primary);
@@ -418,6 +418,7 @@ body {
   overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
+  transition: background-color .3s ease, color .3s ease;
 }
 
 :focus-visible {
@@ -433,6 +434,7 @@ body {
   background-color: var(--bg-toolbar);
   border-bottom: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
+  transition: background-color .3s ease, border-color .3s ease;
 }
 
 .toolbar {
@@ -445,6 +447,7 @@ body {
   border-bottom: 1px solid var(--border-color);
   -webkit-app-region: drag;
   position: relative;
+  transition: background-color .3s ease, border-color .3s ease;
 }
 
 .toolbar-left, .toolbar-right {
@@ -1326,6 +1329,8 @@ body {
   overflow: hidden;
   transition: background-color, color, border-color, opacity, transform, box-shadow 0.2s ease;
   -webkit-app-region: no-drag;
+  position: relative;
+  border-bottom: 2px solid transparent;
 }
 
 .tab-name {

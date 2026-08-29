@@ -49,6 +49,7 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 
 - ⚡ **Blazing fast & lightweight**: Built on **Rust + Tauri v2** (native WebView), ~**7MB** installer, **<50MB** RAM, launches in under a second — 4/5 less memory than Electron apps.
 - 👁️ **Live WYSIWYG preview**: Write on the left, see it render on the right. Editor and preview scroll auto-synced — no window switching.
+- 🧠 **Smart view per file type**: Markdown auto splits preview/edit; plain text & code open in a pure editor (no preview pane); images open read-only — each file gets the right view.
 - 🧭 **Smart outline navigation**: Auto-parses heading hierarchy, one click to any chapter. Never get lost in long docs.
 - 📐 **Built-in KaTeX math**: Inline formulas, display blocks, matrices, equation systems — papers, notes, formulas all handled.
 - 📊 **Built-in Mermaid diagrams**: Flowcharts, sequence diagrams, Gantt charts, class diagrams, state diagrams… **draw with code, auto-adapts to light/dark theme**.
@@ -57,7 +58,7 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 - ⌨️ **Fully customizable shortcuts**: Every single shortcut can be rebound in `File → Keyboard Shortcuts` to match your muscle memory.
 - 📂 **Multi-tab + workspace**: Edit multiple files at once, drag-drop batch open, folder workspace with sidebar file tree, `.md` file association.
 - 🚀 **Huge-doc smooth preview**: Sliding-window + virtual rendering for documents with tens of thousands of lines — never lags. External file changes auto-detected with reload prompt.
-- 🎨 **Deep personalization**: Light / Dark / Follow System; 5 color schemes (Default / Sunset / Forest / Nord / Dusk), 2 font schemes (Sans / Serif), plus custom font import (`.ttf` / `.otf` / `.woff`) with separate editor & preview fonts.
+- 🎨 **Deep personalization**: Light / Dark / Follow System; 5 color schemes (Default / Sunset / Forest / Nord / Dusk); editor / preview / code-block fonts can use any system-installed font (fully enumerated, searchable), or import local `.ttf` / `.otf` / `.woff` fonts.
 - 🌐 **Bilingual UI**: Chinese / English interface toggle at any time.
 - 💾 **Session restore**: Reopens tabs, folder workspace, and expanded directories from last session.
 
@@ -69,18 +70,18 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 |---|---|---|
 | Full GFM syntax highlighting | Live scroll-synced preview | Standalone HTML (with full styling) |
 | 100+ language code highlighting | KaTeX math rendering | High-res long screenshot PNG |
-| Find & replace with regex | Mermaid flowcharts, sequences, Gantt, state | Export PDF (`Ctrl+P` print dialog) |
+| Find & replace with regex | Mermaid flowcharts, sequences, Gantt, state | Export PDF (system print dialog) |
 | Cross-file search (`Ctrl+Shift+F`) | Emoji shortcodes (`:rocket:` → 🚀) | Dark / light theme preserved |
 | Collapsible format toolbar | Image viewer (drag-pan + scroll-zoom) | 100% offline |
 | Auto bracket & quote pairing | Adaptive image sizing | CJK Emoji support |
 | Image paste, auto-dedup (MD5) | Clickable task-list checkboxes | Custom image asset path |
-| Insert menu (tables, callouts, TOC) | Auto width/height on image insert | |
+| Insert menu + "/" quick-insert (tables, callouts, TOC) | Auto width/height on image insert | |
 
 | ⚡ Productivity | 🎨 Style | 🔧 Power |
 |---|---|---|
 | Outline sidebar — jump anywhere | Light / Dark / Follow System | CLI file opening |
 | Folder workspace (sidebar file tree) | Font size, line height, max width | File association: .md, .markdown |
-| Cross-file search (regex + directory) | Tab width, word wrap toggle | Recently opened files list |
+| Cross-file search (Ctrl+Shift+F) / file search (Ctrl+P) | Tab width, word wrap toggle | Recently opened files list |
 | Tab drag-to-reorder | Code block line numbers / auto-wrap | Unsaved-state markers + close prompt |
 | Drag & drop, batch file open | Fully rebindable shortcuts | System tray (hideable) + close behavior |
 | Free-drag split pane ratio | Import custom fonts (editor & preview separately) | Status bar word & char count |
