@@ -5457,11 +5457,16 @@ select option {
 }
 
 /* ====== Update dialog ====== */
-.update-dialog { max-width: 480px; }
+.update-dialog { max-width: 680px; width: min(680px, 92vw); }
 .update-version-highlight { font-weight: bold; color: var(--accent-color); }
 .update-current { font-size: 12px; color: var(--text-secondary); margin: 4px 0 12px; }
-.update-notes { max-height: 200px; overflow-y: auto; background: var(--bg-secondary); padding: 12px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
+.update-notes { max-height: 340px; overflow-y: auto; background: var(--bg-secondary); padding: 12px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
 .update-notes h4 { margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); }
+/* 复用预览区 markdown 排版（标题/表格/列表/引用/分隔线），但中和外层容器的内边距与背景，避免双重缩进 */
+.update-notes .preview-content { padding: 0; margin: 0; background: transparent; overflow: visible; min-height: 0; flex: none; }
+/* 说明区底色为 bg-secondary，表格隔行/表头改用 bg-primary 以拉开对比 */
+.update-notes .preview-content th,
+.update-notes .preview-content tbody tr:nth-child(even) { background-color: var(--bg-primary); }
 .update-progress { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .progress-bar { flex: 1; height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; background: var(--accent-color); transition: width 0.3s; }
