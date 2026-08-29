@@ -98,6 +98,8 @@ const path = require('path');
 const TOKEN = process.env.GITEE_TOKEN;
 const VERSION = '{version}'; // ← 替换为实际版本号
 
+// body 须为双语：中文全文（下方模板）+ "\n\n---\n\n" + 英文全文（即原 GitHub 英文说明）。
+// 推荐直接复用 scripts/release-notes.js 导出的 notesLines.join('\n')，保证中英双语且两端一致。
 const releaseBody = {
   tag_name: `v${VERSION}`,
   name: `v${VERSION}`,

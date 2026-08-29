@@ -74,7 +74,7 @@ Skills 位于 `.claude/skills/` 目录，每个 skill 有独立的 `SKILL.md` �
 
 ### 发布格式
 
-release body 用以下格式，不得更改：
+release body 用以下**中文**格式作为前半部分，其后紧跟**英文全文**（即原 GitHub 英文说明），形成「先中文全文、后英文全文」的双语结构。Gitee 与 GitHub 两端 body 及应用内 `update-windows-x86_64.json` 的 `notes` 均为同一份双语内容。**英文全文来源**：由 AI 根据中文发布说明生成并写入根目录 `RELEASE_NOTES_en.md`（即原 GitHub 英文说明；非人工撰写），下载链接用 Gitee 域名以便 `github-release.js` 统一改写，`scripts/release-notes.js` 会自动拼接「中文（脚本生成）+ `---` + 英文」。骨架（下方中文部分）不得更改：
 
 ```
 ## ⬇️ 下载
@@ -366,7 +366,7 @@ Token：从环境变量 `GITEE_TOKEN` 读取
 
 Token：从环境变量 `GITHUB_TOKEN` 读取
 
-GitHub Release 需上传与 Gitee Release 相同的 4 个文件（NSIS + MSI + 绿色版 + update JSON），release body 用英文。
+GitHub Release 需上传与 Gitee Release 相同的 4 个文件（NSIS + MSI + 绿色版 + update JSON），release body 与 Gitee 同一份「先中文全文、后英文全文」双语内容（仅下载链接由 `github-release.js` 改写为 GitHub 域名）。
 
 ### 已知 Release ID
 

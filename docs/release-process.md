@@ -376,7 +376,7 @@ git push
 
 ## 4. Release Note 模板
 
-### 4.1 Gitee Release Body（中文）
+### 4.1 Gitee / GitHub Release Body（中英文双语）
 
 ```markdown
 ## ⬇️ 下载
@@ -410,6 +410,8 @@ git push
 
 > 使用中遇到问题欢迎加 QQ 群：1035294939
 ```
+
+> **双语规则**：上方为中文全文（脚本自动生成，骨架不变）。其后紧跟 `---` 分隔线，再附**英文全文**（即原 GitHub 英文说明，来源根目录 `RELEASE_NOTES_en.md`，由 AI 根据中文发布说明生成、非人工撰写）。Gitee 与 GitHub 两端 body、以及 `update-windows-x86_64.json` 的 `notes` 均为同一份双语内容；`github-release.js` 仅把下载链接改写为 GitHub 域名。
 
 ### 4.2 格式规则
 

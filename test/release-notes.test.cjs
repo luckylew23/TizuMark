@@ -16,6 +16,7 @@ const path = require('path');
 const fs = require('fs');
 
 const REPO = path.resolve(__dirname, '..');
+const EN_PATH = path.join(REPO, 'RELEASE_NOTES_en.md');
 function gitOk() {
   try { execSync('git rev-parse --git-dir', { cwd: REPO, stdio: 'ignore' }); return true; }
   catch { return false; }
@@ -30,10 +31,11 @@ test('VERSION 与 package.json 一致', () => {
   assert.strictEqual(VERSION, pkg.version);
 });
 
-test('【格式红线】下载块：## 下载 + 三行链接', () => {
+test('【格式红线】下载块：## 下载 + 三行链接（中文段）', () => {
   assert.ok(BODY.includes('## ⬇️ 下载'), '缺少下载标题');
-  const links = BODY.match(/\[⬇ TizuMark_/g) || [];
-  assert.strictEqual(links.length, 3, '应有 3 个下载链接');
+  const zhPart = BODY.split('\n---\n')[0];
+  const links = zhPart.match(/\[⬇ TizuMark_/g) || [];
+  assert.strictEqual(links.length, 3, '中文下载块应有 3 个下载链接');
   for (const name of [`TizuMark_${VERSION}_x64-setup.exe`, `TizuMark_${VERSION}_x64_en-US.msi`, `TizuMark_${VERSION}_x64.exe`]) {
     assert.ok(BODY.includes(name), `下载块应包含 ${name}`);
     assert.ok(BODY.includes(`/v${VERSION}/`), `下载 URL 应使用 /v${VERSION}/`);
@@ -63,7 +65,20 @@ test('【格式红线】更新内容标题 + 三分类小节，顺序为 新增�
 });
 
 test('【格式红线】尾部以 QQ 群尾注结束', () => {
-  assert.ok(BODY.trimEnd().endsWith('> 使用中遇到问题欢迎加 QQ 群：1035294939'), '尾部应为 QQ 群尾注');
+  const hasZhQQ = BODY.includes('> 使用中遇到问题欢迎加 QQ 群：1035294939');
+  const hasEnQQ = BODY.includes('> Questions? Join QQ group: 1035294939');
+  assert.ok(hasZhQQ, '应包含中文 QQ 群尾注');
+  const tail = BODY.trimEnd();
+  if (hasEnQQ) assert.ok(tail.endsWith('> Questions? Join QQ group: 1035294939'), '双语时应以英文 QQ 群尾注结束');
+  else assert.ok(tail.endsWith('> 使用中遇到问题欢迎加 QQ 群：1035294939'), '仅中文时应以中文 QQ 群尾注结束');
+});
+
+test('【格式】双语：含英文下载块与 Changelog 分类（提供英文文件时）', () => {
+  const enPath = EN_PATH;
+  if (!fs.existsSync(enPath)) return; // 未提供英文文件时跳过
+  assert.ok(BODY.includes('## ⬇️ Download'), '双语应包含英文下载标题');
+  assert.ok(BODY.includes('## ✨ v' + VERSION + ' Changelog'), '双语应包含英文更新内容标题');
+  assert.ok(BODY.includes('### Added') && BODY.includes('### Improved') && BODY.includes('### Fixed'), '双语英文分类应含 Added/Improved/Fixed');
 });
 
 test('【内容】不含面向内部的备注（人工复核/自xx起/仅警告等）', () => {

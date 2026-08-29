@@ -20,6 +20,11 @@
  *         - release.js / github-release.js 直接 require 本文件取 VERSION 与 notesLines，
  *           保证 Gitee / GitHub 两个平台的发布说明完全一致。
  *
+ * 双语：中文全文由本脚本自动生成（下方骨架，红线不可改）；其后紧跟 `---` 分隔线，
+ *       再追加英文全文。英文全文来自 release/RELEASE_NOTES_en.md（由 AI 根据中文发布说明生成，
+ *       非人工撰写；即原发往 GitHub 的英文说明），下载链接用 Gitee 域名以便 github-release.js 改写。
+ *       最终 body = 中文全文 + `\n\n---\n\n` + 英文全文，Gitee / GitHub 两端一致。
+ *
  * 版本号来源：package.json（发布前由人工 bump）。
  * 上次发布标签：严格取「小于当前 VERSION」的最大发布 tag（见 lastTag，勿改回 git describe）。
  *
@@ -59,8 +64,9 @@ function cmpVer(a, b) {
 }
 
 // 上次发布标签：取「小于当前 VERSION」的最大发布 tag。
-// 注意：绝不能用 `git describe --tags --abbrev=0`——它会返回当前 tag（v1.2.1），
-// 导致 0 提交 + "自 v1.2.1 起" 这种空内容。必须显式按版本号筛选。
+// 注意：绝不能用 `git describe --tags --abbrev=0`——它会返回「当前 VERSION 对应的 tag 自身」，
+// 导致 0 提交 + "自 X 起" 这种空内容（例如发布 v1.2.2 时它返回 v1.2.2 自身）。
+// 必须显式按版本号筛选「小于当前 VERSION 的最大 tag」作为基准，即动态的上一个发布版本。
 function lastTag() {
   const all = git('tag --list')
     .split(/\r?\n/)
@@ -155,6 +161,17 @@ function categorize(raw) {
   return 'improve'; // refactor / perf / test / chore / docs / 优化 / 调整 等
 }
 
+// 英文全文：由 AI 根据中文发布说明生成并写入 release/RELEASE_NOTES_en.md（即原 GitHub 英文说明）。
+// 下载链接用 Gitee 域名，github-release.js 会按需改写为 GitHub 域名。
+function englishSection() {
+  const enPath = path.join(ROOT, 'RELEASE_NOTES_en.md');
+  if (!fs.existsSync(enPath)) return [];
+  const lines = fs.readFileSync(enPath, 'utf8').replace(/\r\n/g, '\n').split('\n');
+  while (lines.length && !lines[0].trim()) lines.shift();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  return lines;
+}
+
 function buildNotes() {
   const tag = lastTag();
   const commits = collectCommits(tag);
@@ -178,10 +195,15 @@ function buildNotes() {
     '',
   ];
 
-  return downloadSection()
+  const zh = downloadSection()
     .concat(head, section('新增', grouped.new), section('改进', grouped.improve), section('修复', grouped.fix), [
       '> 使用中遇到问题欢迎加 QQ 群：1035294939',
     ]);
+  const en = englishSection();
+  if (en.length) {
+    return zh.concat(['', '---', ''], en);
+  }
+  return zh;
 }
 
 const notesLines = buildNotes();
