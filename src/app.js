@@ -10501,19 +10501,20 @@ input[type="checkbox"]:checked::after { display: none !important; }
   }
 
   // 视图模式跟随当前标签页类型，与「打开文件」逻辑完全一致：
-  // 图片 → 预览（单栏），非 Markdown 明文 → 编辑（折叠预览栏），Markdown → 预览（单栏）。
+  // 图片 → 预览（单栏）；非 Markdown 明文 → 编辑（无预览栏）；
+  // 有路径的 Markdown → 跟随设置中的默认视图；未命名（无路径）Markdown → 编辑（当新建文档）。
   // 类型以文件后缀为准（window.FileTypes.classifyFile），避免 tab.kind 因会话恢复等残留旧值。
   // 覆盖「打开文件 / 切换标签 / 当前标签」所有情况。
   syncViewModeToTab() {
     const tab = this.activeTab;
-    let kind = tab ? tab.kind : 'markdown';
-    if (tab && tab.filePath && window.FileTypes && window.FileTypes.classifyFile) {
-      kind = window.FileTypes.classifyFile(tab.filePath);
-    }
+    // 未命名（无路径）不按类型切换，保留当前视图：newFile 已显式 setViewMode('edit')，
+    // 初始化则继承 settings.defaultView。与改动前行为一致。
+    if (!tab || !tab.filePath) return;
+    let kind = window.FileTypes.classifyFile(tab.filePath);
     let target = 'preview';
     if (kind === 'image') target = 'preview';
     else if (kind === 'text') target = 'edit';
-    else target = this.settings.defaultView || 'preview'; // markdown 跟随设置中的默认视图
+    else target = this.settings.defaultView || 'preview'; // 有路径的 markdown 跟随设置默认视图
     // 视图布局由「模式 + 类型」共同决定：即使模式没变（如 md 编辑 → 文本编辑），
     // 类型变了也需重新 applyViewMode（重新决定 preview-collapsed 等），否则预览栏不会收起。
     if (target !== this.viewMode || this._lastViewKind !== kind) {
