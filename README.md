@@ -56,11 +56,11 @@
 - 📐 **内置 KaTeX 数学公式**：行内公式、独立公式块、矩阵、方程组全支持——写论文、做笔记、记公式直接搞定。
 - 📊 **内置 Mermaid 图表**：流程图、时序图、甘特图、类图、状态图……**用代码画图，自动跟随明暗主题切换配色**。
 - 🖼️ **图片粘贴即插入**：截图/拖拽直接粘贴，支持 assets 目录存储或 Base64 内联，自动去重；导出时相对路径解析与预览完全一致。
-- 📤 **多种导出**：HTML 单文件（完整样式、完全离线）、高清长图 PNG、PDF（系统打印对话框），均保留暗黑/亮色主题样式。
+- 📤 **多种导出**：HTML 单文件（完整样式、完全离线）、高清长图 PNG、PDF（系统打印对话框）、**Word DOCX**（公式与图表转图片、图片自动等比缩放不撑破页面），均保留暗黑/亮色主题样式。
 - ⌨️ **快捷键全自定义**：每一条快捷键都能在 `文件 → 快捷键设置` 中改键，贴合你的肌肉记忆。
 - 📂 **多标签页 + 工作区**：同时编辑多个文件、拖拽批量打开、文件夹工作区、`.md` 文件关联。
 - 🚀 **海量文档流畅预览**：数万行超大文档采用滑动窗口 + 虚拟渲染，只渲染当前阅读区域，编辑器永不卡顿；外部磁盘变更自动检测并提示重新加载，多工具协作不丢稿。
-- 🎨 **深度个性化**：亮色 / 暗黑 / 跟随系统一键切换；内置 5 套配色方案（基准 / 暖橙 / 翠林 / 极夜 / 暮紫）；编辑器 / 预览 / 代码块字体可选择系统已安装字体（全量枚举、可搜索），或导入本地 `.ttf` / `.otf` / `.woff` 字体。
+- 🎨 **深度个性化**：亮色 / 暗黑 / 跟随系统一键切换；内置 5 套配色方案（基准 / 暖橙 / 翠林 / 极夜 / 暮紫）；编辑器 / 预览 / 代码块字体可选择系统已安装字体（全量枚举、可搜索），或导入本地 `.ttf` / `.otf` / `.woff` / `.woff2` 字体。
 - 🌐 **中 / 英 界面语言一键切换**：内置完整双语界面，随时在设置中切换，新手与外文写作都友好。
 - 💾 **会话记忆**：重启自动恢复上次打开的标签页、文件夹工作区与展开目录，打开即回到上次状态。
 
@@ -73,17 +73,17 @@
 | GFM 完整语法高亮 | 实时同步滚动 | 导出 HTML 单文件（完整样式） |
 | 代码块 100+ 语言着色 | KaTeX 数学公式渲染 | 导出高清长图 PNG |
 | 查找替换（支持正则） | Mermaid 流程图/时序图/甘特图/状态图 | 导出 PDF（系统打印对话框） |
-| 跨文件搜索（`Ctrl+Shift+F`） | Emoji 短代码 (`:rocket:` → 🚀) | 保留暗黑/亮色主题样式 |
+| 跨文件搜索（`Ctrl+H`） | Emoji 短代码 (`:rocket:` → 🚀) | 保留暗黑/亮色主题样式 |
 | 可折叠格式工具栏 | 图片查看器（拖拽平移 + 滚轮缩放） | 完全离线，无需联网 |
 | 自动补全括号、引号 | 自适应图片尺寸 | 中英文 Emoji 完美适配 |
 | 图片粘贴插入、自动去重（MD5） | 任务列表预览可点击勾选 | 自定义图片存储路径 |
-| 插入菜单 + 「/」快捷插入（表格/提示块/目录等） | 图片自动带宽高属性 | |
+| 插入菜单 + 「/」快捷插入（表格/提示块/目录等） | 图片自动带宽高属性 | 导出 Word DOCX（公式/图表转图片、图片自动缩放） |
 
 | ⚡ 效率 | 🎨 个性化 | 🔧 专业 |
 |---|---|---|
 | 大纲导航一键跳转 | 亮色 / 暗黑 / 跟随系统 | CLI 命令行打开文件 |
 | 文件夹工作区（侧边栏文件树） | 字体大小/行高/内容宽度可调 | 文件关联 .md / .markdown |
-| 跨文件搜索（Ctrl+Shift+F）/ 文件搜索（Ctrl+P 文件名跳转） | Tab 宽度 / 自动换行开关 | 最近打开文件列表 |
+| 跨文件搜索（Ctrl+H）/ 文件搜索（Ctrl+P 按文件名或路径跳转） | Tab 宽度 / 自动换行开关 | 最近打开文件列表 |
 | 标签页拖拽排序 | 代码块行号 / 代码自动换行开关 | 未保存状态标记 + 关闭提醒 |
 | 拖拽、批量打开文件 | 全套快捷键可自定义 | 系统托盘（可隐藏）+ 关闭行为可选 |
 | 编辑/预览分屏比例自由拖拽 | 导入自定义字体（编辑器/预览分别指定） | 状态栏实时字数统计 |
@@ -98,25 +98,28 @@
 
 <p align="center">
   <img src="screenshots/01-main.png" alt="主界面全貌" width="45%">
-  <img src="screenshots/02-tabs.png" alt="多标签与标签栏滚动" width="45%">
+  <img src="screenshots/02-find.png" alt="查找替换" width="45%">
   <br>
-  <img src="screenshots/03-math.png" alt="KaTeX 数学公式渲染" width="45%">
-  <img src="screenshots/04-mermaid.png" alt="Mermaid 图表渲染" width="45%">
+  <img src="screenshots/03-findcrossfile.png" alt="跨文件搜索" width="45%">
+  <img src="screenshots/04-findfile.png" alt="文件速达" width="45%">
   <br>
-  <img src="screenshots/05-code.png" alt="代码语法高亮" width="45%">
-  <img src="screenshots/06-theme.png" alt="暗色主题" width="45%">
+  <img src="screenshots/05-tabs.png" alt="多标签与标签栏滚动" width="45%">
+  <img src="screenshots/06-math.png" alt="KaTeX 数学公式渲染" width="45%">
   <br>
-  <img src="screenshots/07-font.png" alt="字体设置" width="45%">
-  <img src="screenshots/08-shortcuts.png" alt="快捷键自定义设置" width="45%">
+  <img src="screenshots/07-mermaid.png" alt="Mermaid 图表渲染" width="45%">
+  <img src="screenshots/08-code.png" alt="代码语法高亮" width="45%">
   <br>
-  <img src="screenshots/09-image.png" alt="图片插入与设置" width="45%">
-  <img src="screenshots/10-large.png" alt="超大文档流畅预览" width="45%">
+  <img src="screenshots/09-callout.png" alt="提示框渲染" width="45%">
+  <img src="screenshots/10-theme.png" alt="暗色主题" width="45%">
   <br>
-  <img src="screenshots/11-export.png" alt="导出菜单" width="45%">
-  <img src="screenshots/12-find.png" alt="查找替换" width="45%">
+  <img src="screenshots/11-font.png" alt="字体设置" width="45%">
+  <img src="screenshots/12-export.png" alt="导出菜单" width="45%">
   <br>
-  <img src="screenshots/13-workspace.png" alt="文件夹工作区" width="45%">
-  <img src="screenshots/14-callout.png" alt="提示框渲染" width="45%">
+  <img src="screenshots/13-shortcuts.png" alt="快捷键自定义设置" width="45%">
+  <img src="screenshots/14-image.png" alt="图片插入与设置" width="45%">
+  <br>
+  <img src="screenshots/15-workspace.png" alt="文件夹工作区" width="45%">
+  <img src="screenshots/16-large.png" alt="超大文档流畅预览" width="45%">
 </p>
 
 ---
@@ -149,7 +152,7 @@
 |---|---|---|---|
 | `Ctrl+N` | 新建文件 | `Ctrl+W` | 关闭标签 |
 | `Ctrl+O` | 打开文件 | `Ctrl+F` | 查找 |
-| `Ctrl+S` | 保存文件 | `Ctrl+H` | 查找替换 |
+| `Ctrl+S` | 保存文件 | `Ctrl+H` | 跨文件搜索 |
 | `Ctrl+B` | 加粗 | `Ctrl+I` | 斜体 |
 
 > 所有快捷键可在 `文件 → 快捷键设置` 中自定义

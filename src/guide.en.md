@@ -16,7 +16,7 @@ TizuMark's interface has four main areas:
 |------|----------|---------|
 | **Top Toolbar** | Top | File operations, quick insert, view modes, theme, help |
 | **Sidebar** | Left | Outline navigation & file tree (when a folder is open) |
-| **Editor** | Center | CodeMirror with syntax highlighting & auto-completion |
+| **Editor** | Center | CodeMirror with Markdown syntax highlighting and auto-closing brackets / quotes |
 | **Preview** | Right | Live-rendered Markdown with scroll sync |
 
 ### Basic Operations
@@ -79,7 +79,7 @@ Unsaved tabs show a `*` indicator.
 
 Two independent search systems:
 
-**Editor Find** (<kbd>Ctrl</kbd> + <kbd>F</kbd> / <kbd>Ctrl</kbd> + <kbd>H</kbd>):
+**Editor Find & Replace** (<kbd>Ctrl</kbd> + <kbd>F</kbd>):
 
 | Feature | Description |
 |---------|-------------|
@@ -87,10 +87,11 @@ Two independent search systems:
 | Replace | Enter replacement, click Replace or Replace All |
 | Case Sensitive | Match exact letter casing |
 | Regex | JavaScript-compatible regular expressions |
+| Wrap Around | Continue from the top after reaching the end of the document |
 
 **Preview Find** (<kbd>Ctrl</kbd> + <kbd>F</kbd> in preview mode): Search directly within rendered content with highlights.
 
-**Cross-file Search** (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd>): Search across all open tabs or a specified directory, with regex support. Results are highlighted in both the editor and preview simultaneously, with one-click navigation. Ideal for quickly locating content in large project docs.
+**Cross-file Search** (<kbd>Ctrl</kbd> + <kbd>H</kbd>): Search across all open tabs or a specified directory, with regex and case-sensitive options. Results are grouped by file, showing line/column numbers and a context snippet; click any hit to jump there, highlighted in both the editor and preview. Ideal for quickly locating content in large project docs.
 
 ### Context Menus
 
@@ -106,28 +107,71 @@ When an open file is modified by another program outside TizuMark, a banner appe
 
 ### Large Document Protection
 
-When a document exceeds ~5000 lines or 4MB, the preview automatically switches to sliding-window mode, rendering only the current reading region (a ~1200-line window) instead of the whole document — so files of tens of thousands of lines still open smoothly. A notice is shown at the top of the editor.
+When a document exceeds ~5000 lines or ~4 million characters, the preview automatically switches to sliding-window mode, rendering only the region around where you are reading (a ~1200-line window) instead of the whole document — so files of tens of thousands of lines still open smoothly. A notice is shown at the top of the editor.
 
 ---
 
 ## Keyboard Shortcuts
 
+> The table below shows the **default key bindings**. Every entry is customizable in **`File → Keyboard Shortcuts`** (modify, clear, or restore). Built-in **Default / VSCode / Typora / Sublime Text** presets can be switched instantly, taking effect immediately without a restart.
+
+### Files & View
+
 | Shortcut | Action | Shortcut | Action |
 |----------|--------|----------|--------|
-| <kbd>Ctrl</kbd> + <kbd>N</kbd> | New File | <kbd>Ctrl</kbd> + <kbd>B</kbd> | Bold |
-| <kbd>Ctrl</kbd> + <kbd>O</kbd> | Open File | <kbd>Ctrl</kbd> + <kbd>I</kbd> | Italic |
-| <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save File | <kbd>Ctrl</kbd> + <kbd>K</kbd> | Insert Link |
-| <kbd>Ctrl</kbd> + <kbd>W</kbd> | Close Tab | <kbd>Ctrl</kbd> + <kbd>F</kbd> | Find |
-| <kbd>Ctrl</kbd> + <kbd>H</kbd> | Replace | <kbd>Ctrl</kbd> + <kbd>P</kbd> | Export PDF |
-| <kbd>Esc</kbd> | Close Panel | <kbd>Ctrl</kbd> + <kbd>Tab</kbd> | Next Tab |
-| <kbd>Ctrl</kbd> + <kbd>\`</kbd> | Inline Code | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Tab</kbd> | Previous Tab |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Strikethrough | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> | Code Block |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Q</kbd> | Blockquote | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd> | Toggle Theme |
-| Customizable (none by default) | Hide to tray |  |  |
+| <kbd>Ctrl</kbd> + <kbd>N</kbd> | New File | <kbd>Ctrl</kbd> + <kbd>W</kbd> | Close Tab |
+| <kbd>Ctrl</kbd> + <kbd>O</kbd> | Open File | <kbd>Ctrl</kbd> + <kbd>\\</kbd> | Toggle View (Edit / Preview) |
+| <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save File | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd> | Toggle Theme (Light / Dark) |
+| <kbd>Ctrl</kbd> + <kbd>P</kbd> | File Search (by name / path) | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Export PDF |
 
-> All shortcuts are customizable in **`File → Keyboard Shortcuts`**. Click "Modify" and press your new key combination. Click "Clear" to remove, "Restore Default" to reset.
-> 
-> **Shortcut Presets**: Built-in **Default / VSCode / Typora / Sublime Text** presets can be switched instantly in `File → Keyboard Shortcuts`. All shortcuts take effect immediately after switching, no restart needed.
+### Find & Tabs
+
+| Shortcut | Action | Shortcut | Action |
+|----------|--------|----------|--------|
+| <kbd>Ctrl</kbd> + <kbd>F</kbd> | Find & Replace | <kbd>Ctrl</kbd> + <kbd>H</kbd> | Cross-file Search |
+| <kbd>Ctrl</kbd> + <kbd>Tab</kbd> | Next Tab | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Tab</kbd> | Previous Tab |
+
+### Editing & Formatting (applies to the selection)
+
+| Shortcut | Action | Shortcut | Action |
+|----------|--------|----------|--------|
+| <kbd>Ctrl</kbd> + <kbd>B</kbd> | Bold | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>\`</kbd> | Inline Code |
+| <kbd>Ctrl</kbd> + <kbd>I</kbd> | Italic | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> | Code Block |
+| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Insert Link | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Q</kbd> | Blockquote |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>5</kbd> | Strikethrough | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | Insert Image |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | Math Block | <kbd>Alt</kbd> + <kbd>↑</kbd> | Move Line / Selection Up |
+| <kbd>Ctrl</kbd> + <kbd>Enter</kbd> | Insert Line Below | <kbd>Alt</kbd> + <kbd>↓</kbd> | Move Line / Selection Down |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd> | Insert Line Above | | |
+
+### Headings
+
+| Shortcut | Action |
+|----------|--------|
+| <kbd>Ctrl</kbd> + <kbd>1</kbd> ~ <kbd>Ctrl</kbd> + <kbd>6</kbd> | Insert H1 ~ H6 |
+
+### Undo & Redo
+
+| Shortcut | Action |
+|----------|--------|
+| <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo |
+| <kbd>Ctrl</kbd> + <kbd>Y</kbd> (or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>) | Redo |
+
+### In-document Navigation & Selection
+
+| Shortcut | Action | Shortcut | Action |
+|----------|--------|----------|--------|
+| <kbd>Ctrl</kbd> + <kbd>Home</kbd> | Go to document start | <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>Home</kbd> | Select from cursor to start |
+| <kbd>Ctrl</kbd> + <kbd>End</kbd> | Go to document end | <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>End</kbd> | Select from cursor to end |
+| <kbd>Ctrl</kbd> + <kbd>←</kbd> | Move cursor by word left | <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>←</kbd> | Extend selection by word left |
+| <kbd>Ctrl</kbd> + <kbd>→</kbd> | Move cursor by word right | <kbd>Shift</kbd> + <kbd>Ctrl</kbd> + <kbd>→</kbd> | Extend selection by word right |
+
+### Font Size Zoom
+
+| Shortcut | Action |
+|----------|--------|
+| <kbd>Ctrl</kbd> + Mouse Wheel (editor or preview) | Temporarily zoom font size; auto-saved after ~3s idle |
+
+> **Actions with no default binding** (assign your own in `File → Keyboard Shortcuts`): Save As, Toggle Sidebar, Insert Table, Insert Table Row / Column, Bullet List, Ordered List, Task List, Horizontal Rule, Highlight, Superscript, Subscript, Mermaid Diagram, Table of Contents, the five callout types, and Hide to Tray. They all have UI entry points — they simply ship without a key combination so they never clash with your habits.
 
 ---
 
@@ -173,8 +217,8 @@ The toolbar below the top bar provides quick formatting buttons (collapsible via
 | Strikethrough | `~~text~~` | ~~strikethrough~~ |
 | Inline Code | `` `code` `` | `code snippet` |
 | Highlight | `==text==` | ==highlighted text== |
-| Superscript | `<sup>text</sup>` | ^superscript^ |
-| Subscript | `<sub>text</sub>` | ~subscript~ |
+| Superscript | `<sup>2</sup>` | x² |
+| Subscript | `<sub>2</sub>` | x₂ |
 
 ### Lists
 
@@ -224,9 +268,11 @@ TizuMark offers comprehensive image support with multiple insertion methods and 
 
 | Method | Action | Description |
 |--------|--------|-------------|
-| Paste | <kbd>Ctrl</kbd> + <kbd>V</kbd> | Paste an image from clipboard (screenshot, copied image, etc.) |
-| Insert Dialog | `Insert → Image` | Choose a local file or enter a network image URL |
-| Drag & Drop | Drag image file | Drop an image file from file explorer into the editor |
+| Paste | <kbd>Ctrl</kbd> + <kbd>V</kbd> | Paste an image from the clipboard (screenshot, copied image, etc.) into the editor; it is saved and inserted per the storage setting below |
+| Insert Dialog | Image button on the format toolbar, or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> | Choose a local file, or enter a network image URL |
+| Context Menu | Right-click in the editor → Insert Image | Same as above |
+
+> **Dropping** an image file into the window **opens** it as a read-only preview tab — it does **not** insert it into the document you are editing. To insert, use paste or the insert dialog above.
 
 ### Auto Deduplication
 
@@ -267,7 +313,7 @@ You can edit or remove `width`/`height` directly in the source:
 
 ### Image Viewer
 
-Click any image in the preview to open a dedicated viewer with **drag-to-pan** and **scroll-to-zoom** support. No need to leave TizuMark to inspect an image closely.
+Click any image in the preview to open a dedicated viewer: **drag** to pan, **scroll to zoom anchored at the cursor** (move the pointer over the detail you want, then scroll), and **double-click** to reset to fit. No need to leave TizuMark to inspect an image closely.
 
 ---
 
@@ -312,7 +358,7 @@ Update dialog:
 
 ### Export PDF
 
-`File → Export PDF` (shortcut <kbd>Ctrl</kbd> + <kbd>P</kbd>) uses the system print dialog:
+`File → Export PDF` (shortcut <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd>) uses the system print dialog:
 
 - After a confirmation prompt, the browser's native print function is used
 - In the print dialog you can choose "Save as PDF" and adjust page orientation/margins
@@ -350,7 +396,7 @@ All options are available in `File → Settings`:
 | Setting | Options | Default | Description |
 |---------|---------|---------|-------------|
 | Font Size | 8–36px | 14px | Editor code font size |
-| Tab Size | 2 / 4 / 8 | 2 | Spaces per Tab |
+| Tab Size | 2 / 4 / 8 | 4 | Spaces per Tab |
 | Line Wrap | On / Off | On | Wrap long lines |
 | Line Numbers | On / Off | On | Gutter line numbers |
 
@@ -359,28 +405,29 @@ All options are available in `File → Settings`:
 | Setting | Options | Default | Description |
 |---------|---------|---------|-------------|
 | Font Size | 8–36px | 16px | Preview body text size |
-| Line Height | 1.4–2.0 | 1.7 | Preview line spacing |
-| Max Width | Unlimited / 800–1200px | Unlimited | Max content width |
+| Line Height | 1.4 / 1.6 / 1.7 / 1.8 / 2.0 | 1.7 | Preview line spacing |
+| Max Width | Unlimited / 800 / 1000 / 1200px | Unlimited | Max content width |
 | Code Line Numbers | On / Off | Off | Show line numbers in code blocks |
 | Code Wrap | On / Off | Off | Wrap long lines in code blocks |
 
 ### Behavior
 
-| Setting | Options | Description |
-|---------|---------|-------------|
-| Default View | Preview / Edit | Startup view mode |
-| Scroll Sync | On / Off | Sync preview scroll with editor |
-| Soft Line Break (Enter = newline) | On / Off | When on, a single Enter creates a line break; when off, CommonMark standard applies (Enter = space) |
-| Image Storage Mode | Copy to assets / Base64 Embed | See Image Management |
-| Image Asset Path | Relative / Absolute | See Image Management |
-| Close Behavior | Ask / Quit / Minimize to Tray | What happens when closing the last window. Minimize to tray lets you bring the window back via the tray icon |
+| Setting | Options | Default | Description |
+|---------|---------|---------|-------------|
+| Default View | Preview / Edit | Preview | Startup view mode (Markdown only; plain text is always editor view, images always preview view) |
+| Scroll Sync | On / Off | On | Sync preview scroll with editor |
+| Soft Line Break (Enter = newline) | On / Off | On | When on, a single Enter creates a line break; when off, CommonMark standard applies (Enter = space) |
+| Image Storage Mode | Copy to assets / Base64 Embed | Copy to assets | See Image Management |
+| Image Asset Path | Relative / Absolute | Relative | See Image Management |
+| Close Behavior | Ask / Quit / Minimize to Tray | Ask | What happens when closing the last window. Minimize to tray lets you bring the window back via the tray icon |
+| Show Tray Icon | On / Off | On | Show an icon in the system tray to bring the window back at any time |
 | Show Tray Icon | On / Off | Show or hide the system tray icon |
 
 ### Custom Fonts
 
 In `File → Settings → Custom Fonts`:
 
-- Click "Add Font…" to import a local font file (`.ttf` / `.otf` / `.woff`) for repeated use
+- Click "Add Font…" to import a local font file (`.ttf` / `.otf` / `.woff` / `.woff2`) for repeated use
 - Imported fonts appear in the "Editor Font" and "Preview Font" dropdowns, assignable separately
 - A font preview sample below helps you compare results
 
@@ -394,7 +441,15 @@ Click "Restore Default" in `File → Settings` or `File → Keyboard Shortcuts`.
 
 ### Supported file formats?
 
-`.md`, `.markdown`, `.txt`. More formats planned.
+Three categories, each opened differently:
+
+| Category | How it opens | Formats |
+|----------|--------------|---------|
+| **Markdown** | Rendered preview, switchable between Edit / Preview | `.md` `.markdown` `.mdown` `.mkd` `.mkdn` `.mdwn` `.markdn` |
+| **Images** | Read-only preview, not editable | `.png` `.jpg` `.jpeg` `.gif` `.webp` `.bmp` `.svg` `.tif` `.tiff` `.ico` `.avif` `.heic` and more (20 total) |
+| **Plain text / code** | Plain editor (no preview pane), no Markdown rendering | `.txt` `.log` `.json` `.yaml` `.toml` `.csv` `.html` `.css` `.js` `.ts` `.jsx` `.py` `.rs` `.go` `.java` `.c` `.cpp` `.sh` `.sql` `.xml` `.tex` `.ipynb` and 145 in total |
+
+Extensions outside this allowlist show an "Unsupported format" message and are not opened.
 
 ### How to customize shortcuts?
 

@@ -1,5 +1,7 @@
 # TizuMark
 
+**TizuMark** is a lightweight, open-source **Markdown editor** for Windows with WYSIWYG live preview, outline navigation, KaTeX & Mermaid support — a free **Typora alternative** built with Tauri + Rust.
+
 🌐 [简体中文](README.md) | **English**
 
 <div align="center">
@@ -54,11 +56,11 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 - 📐 **Built-in KaTeX math**: Inline formulas, display blocks, matrices, equation systems — papers, notes, formulas all handled.
 - 📊 **Built-in Mermaid diagrams**: Flowcharts, sequence diagrams, Gantt charts, class diagrams, state diagrams… **draw with code, auto-adapts to light/dark theme**.
 - 🖼️ **Paste-to-insert images**: Screenshots or drag-drop, auto-dedup via MD5. Store in `assets/` or inline as Base64. Relative paths resolve identically in preview and export.
-- 📤 **Multi-format export**: Standalone HTML (full styling, fully offline), high-res PNG long screenshot, PDF (system print dialog) — all preserve dark/light theme.
+- 📤 **Multi-format export**: Standalone HTML (full styling, fully offline), high-res PNG long screenshot, PDF (system print dialog), and **Word DOCX** (math & diagrams rasterized, images auto-scaled to fit the page) — all preserve dark/light theme.
 - ⌨️ **Fully customizable shortcuts**: Every single shortcut can be rebound in `File → Keyboard Shortcuts` to match your muscle memory.
 - 📂 **Multi-tab + workspace**: Edit multiple files at once, drag-drop batch open, folder workspace with sidebar file tree, `.md` file association.
 - 🚀 **Huge-doc smooth preview**: Sliding-window + virtual rendering for documents with tens of thousands of lines — never lags. External file changes auto-detected with reload prompt.
-- 🎨 **Deep personalization**: Light / Dark / Follow System; 5 color schemes (Default / Sunset / Forest / Nord / Dusk); editor / preview / code-block fonts can use any system-installed font (fully enumerated, searchable), or import local `.ttf` / `.otf` / `.woff` fonts.
+- 🎨 **Deep personalization**: Light / Dark / Follow System; 5 color schemes (Default / Sunset / Forest / Nord / Dusk); editor / preview / code-block fonts can use any system-installed font (fully enumerated, searchable), or import local `.ttf` / `.otf` / `.woff` / `.woff2` fonts.
 - 🌐 **Bilingual UI**: Chinese / English interface toggle at any time.
 - 💾 **Session restore**: Reopens tabs, folder workspace, and expanded directories from last session.
 
@@ -71,22 +73,22 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 | Full GFM syntax highlighting | Live scroll-synced preview | Standalone HTML (with full styling) |
 | 100+ language code highlighting | KaTeX math rendering | High-res long screenshot PNG |
 | Find & replace with regex | Mermaid flowcharts, sequences, Gantt, state | Export PDF (system print dialog) |
-| Cross-file search (`Ctrl+Shift+F`) | Emoji shortcodes (`:rocket:` → 🚀) | Dark / light theme preserved |
+| Cross-file search (`Ctrl+H`) | Emoji shortcodes (`:rocket:` → 🚀) | Dark / light theme preserved |
 | Collapsible format toolbar | Image viewer (drag-pan + scroll-zoom) | 100% offline |
 | Auto bracket & quote pairing | Adaptive image sizing | CJK Emoji support |
 | Image paste, auto-dedup (MD5) | Clickable task-list checkboxes | Custom image asset path |
-| Insert menu + "/" quick-insert (tables, callouts, TOC) | Auto width/height on image insert | |
+| Insert menu + "/" quick-insert (tables, callouts, TOC) | Auto width/height on image insert | Export Word DOCX (math & diagrams rasterized, images auto-scaled) |
 
 | ⚡ Productivity | 🎨 Style | 🔧 Power |
 |---|---|---|
 | Outline sidebar — jump anywhere | Light / Dark / Follow System | CLI file opening |
 | Folder workspace (sidebar file tree) | Font size, line height, max width | File association: .md, .markdown |
-| Cross-file search (Ctrl+Shift+F) / file search (Ctrl+P) | Tab width, word wrap toggle | Recently opened files list |
+| Cross-file search (Ctrl+H) / file search (Ctrl+P by name or path) | Tab width, word wrap toggle | Recently opened files list |
 | Tab drag-to-reorder | Code block line numbers / auto-wrap | Unsaved-state markers + close prompt |
 | Drag & drop, batch file open | Fully rebindable shortcuts | System tray (hideable) + close behavior |
 | Free-drag split pane ratio | Import custom fonts (editor & preview separately) | Status bar word & char count |
-| Find in preview (regex) + copy as HTML | 5 color schemes + 2 font schemes | External-change detection & reload prompt |
-| Soft line break toggle | 中文 / English UI toggle | |
+| Find in preview (regex) + copy as HTML | 5 color schemes + font picker (all system fonts, searchable / import local) | External-change detection & reload prompt |
+| Soft line break toggle | Chinese / English UI toggle | |
 | Session restore (tabs & workspace) | Frameless custom window controls | |
 | | Silent update check on startup | |
 
@@ -96,25 +98,28 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 
 <p align="center">
   <img src="screenshots/01-main.png" alt="Main Interface" width="45%">
-  <img src="screenshots/02-tabs.png" alt="Tabs & Scrollable Tab Bar" width="45%">
+  <img src="screenshots/02-find.png" alt="Find & Replace" width="45%">
   <br>
-  <img src="screenshots/03-math.png" alt="KaTeX Math Rendering" width="45%">
-  <img src="screenshots/04-mermaid.png" alt="Mermaid Diagram Rendering" width="45%">
+  <img src="screenshots/03-findcrossfile.png" alt="Cross-file Search" width="45%">
+  <img src="screenshots/04-findfile.png" alt="File Quick Open" width="45%">
   <br>
-  <img src="screenshots/05-code.png" alt="Code Syntax Highlighting" width="45%">
-  <img src="screenshots/06-theme.png" alt="Dark Theme" width="45%">
+  <img src="screenshots/05-tabs.png" alt="Tabs & Scrollable Tab Bar" width="45%">
+  <img src="screenshots/06-math.png" alt="KaTeX Math Rendering" width="45%">
   <br>
-  <img src="screenshots/07-font.png" alt="Font Scheme" width="45%">
-  <img src="screenshots/08-shortcuts.png" alt="Customizable Shortcuts" width="45%">
+  <img src="screenshots/07-mermaid.png" alt="Mermaid Diagram Rendering" width="45%">
+  <img src="screenshots/08-code.png" alt="Code Syntax Highlighting" width="45%">
   <br>
-  <img src="screenshots/09-image.png" alt="Image Insert & Settings" width="45%">
-  <img src="screenshots/10-large.png" alt="Smooth Large-Document Preview" width="45%">
+  <img src="screenshots/09-callout.png" alt="Callout Rendering" width="45%">
+  <img src="screenshots/10-theme.png" alt="Dark Theme" width="45%">
   <br>
-  <img src="screenshots/11-export.png" alt="Export Menu" width="45%">
-  <img src="screenshots/12-find.png" alt="Find & Replace" width="45%">
+  <img src="screenshots/11-font.png" alt="Font Settings" width="45%">
+  <img src="screenshots/12-export.png" alt="Export Menu" width="45%">
   <br>
-  <img src="screenshots/13-workspace.png" alt="Folder Workspace" width="45%">
-  <img src="screenshots/14-callout.png" alt="Callout Rendering" width="45%">
+  <img src="screenshots/13-shortcuts.png" alt="Customizable Shortcuts" width="45%">
+  <img src="screenshots/14-image.png" alt="Image Insert & Settings" width="45%">
+  <br>
+  <img src="screenshots/15-workspace.png" alt="Folder Workspace" width="45%">
+  <img src="screenshots/16-large.png" alt="Smooth Large-Document Preview" width="45%">
 </p>
 
 ---
