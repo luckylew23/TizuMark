@@ -214,7 +214,7 @@ npm run build    # 构建发布版本
 <details open>
 <summary><b>支持哪些文件格式？</b></summary>
 
-支持 `.md`、`.markdown`、`.txt` 文件。更多格式支持计划中。
+支持 **Markdown**（`.md` / `.markdown` / `.mdown` / `.mkd` 等共 7 种扩展名，自动分屏预览）、**图片**（20 种格式，自动只读预览）以及**纯文本 / 代码文件**（`.txt` / `.json` / `.js` 等，纯编辑模式）。Markdown 语法高亮与导出功能面向 Markdown 文件。
 </details>
 
 <details open>

@@ -214,7 +214,7 @@ Click "Restore Default" in `File → Settings` or `File → Keyboard Shortcuts`.
 <details open>
 <summary><b>What file formats are supported?</b></summary>
 
-`.md`, `.markdown`, `.txt`. More coming.
+Markdown (`.md`, `.markdown`, `.mdown`, `.mkd`, … — 7 extensions, auto split-preview), images (20 formats, read-only preview), and plain-text / code files (`.txt`, `.json`, `.js`, …) all open. Markdown syntax highlighting & export apply to Markdown files.
 </details>
 
 <details open>
