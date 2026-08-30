@@ -252,7 +252,7 @@ test('表格：单元格内支持加粗/行内代码/链接', async () => {
   const { off } = renderBoth(md);
   assert.ok(/<strong[^>]*>重要<\/strong>/.test(off), '单元格加粗');
   assert.ok(/<code[^>]*>const x = 1<\/code>/.test(off), '单元格行内代码');
-  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/tizu-mark"[^>]*>TizuMark<\/a>/.test(off), '单元格链接');
+  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/TizuMark-Markdown-Editor"[^>]*>TizuMark<\/a>/.test(off), '单元格链接');
 });
 
 test('表格：引用块内懒续表格（历史 bug 回归）', async () => {
@@ -360,13 +360,13 @@ test('数学：行内 $$ 不被当作独立公式（行首之外）', async () =
 
 test('链接：标准外链 -> <a href>', async () => {
   const { off } = renderBoth('[TizuMark 项目仓库](https://gitee.com/tizu/TizuMark-Markdown-Editor)');
-  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/tizu-mark"[^>]*>TizuMark 项目仓库<\/a>/.test(off), '应生成外链 a 标签');
+  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/TizuMark-Markdown-Editor"[^>]*>TizuMark 项目仓库<\/a>/.test(off), '应生成外链 a 标签');
 });
 
 test('链接：参考式 [text][ref] + 定义', async () => {
   const md = '参考 [TizuMark][ref-example] 项目。\n\n[ref-example]: https://gitee.com/tizu/TizuMark-Markdown-Editor';
   const { off } = renderBoth(md);
-  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/tizu-mark"[^>]*>TizuMark<\/a>/.test(off), '参考式链接应解析');
+  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/TizuMark-Markdown-Editor"[^>]*>TizuMark<\/a>/.test(off), '参考式链接应解析');
 });
 
 test('链接：裸 URL 自动识别为链接', async () => {
@@ -391,12 +391,12 @@ test('链接：内部中文锚点 href 解码后与标题 id 一致', async () =
 test('链接：外链 .md 文件按外部链接处理（不走 app 内打开）', async () => {
   const md = '打开 [demo.md](https://gitee.com/tizu/TizuMark-Markdown-Editor/blob/master/demo.md) 查看';
   const { off } = renderBoth(md);
-  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/tizu-mark\/blob\/master\/demo\.md"[^>]*>demo\.md<\/a>/.test(off), '外链 .md 应生成 http(s) a 标签');
+  assert.ok(/<a href="https:\/\/gitee.com\/tizu\/TizuMark-Markdown-Editor\/blob\/master\/demo\.md"[^>]*>demo\.md<\/a>/.test(off), '外链 .md 应生成 http(s) a 标签');
 });
 
 test('链接：原生 HTML <a> 透传', async () => {
   const { off } = renderBoth('前往 <a href="https://gitee.com/tizu/TizuMark-Markdown-Editor/issues">Issues</a> 反馈');
-  assert.ok(/<a href="https:\/\/gitee\.com\/tizu\/tizu-mark\/issues">Issues<\/a>/.test(off), '原生 a 标签应透传');
+  assert.ok(/<a href="https:\/\/gitee\.com\/tizu\/TizuMark-Markdown-Editor\/issues">Issues<\/a>/.test(off), '原生 a 标签应透传');
 });
 
 test('链接：带标题的链接保留 title', async () => {
