@@ -60,3 +60,8 @@ ccstart.bat
 
 # Ad-hoc debug scripts (临时调试产物，勿入库)
 dbg-*.cjs
+
+# Stray build artifacts from version testing (勿入库)
+dist.old-*/
+*.log
+*.txt
