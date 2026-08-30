@@ -1411,9 +1411,11 @@ mod tests {
         fs::write(base.join("c.png"), "p").unwrap();       // 非文档扩展不过滤
         fs::write(base.join(".hidden.md"), "h").unwrap();  // 点文件应被过滤
         let res = list_dir(base.to_str().unwrap().to_string()).expect("list_dir 应成功");
-        let names: Vec<&str> = res.iter().map(|e| e.name.as_str()).collect();
+        // DirListing 是结构体（Deref 到 Vec<DirEntryInfo>），按 Rust 方法解析规则
+        // .iter() / [index] 须显式走 .entries 字段（不能依赖 Deref coercion）。
+        let names: Vec<&str> = res.entries.iter().map(|e| e.name.as_str()).collect();
         assert_eq!(names, vec!["zdir", "a.md", "b.txt", "c.png"], "目录排最前，文件按名排序，点文件被过滤");
-        assert!(res[0].is_dir && !res[1].is_dir);
+        assert!(res.entries[0].is_dir && !res.entries[1].is_dir);
         let _ = fs::remove_dir_all(&base);
     }
 

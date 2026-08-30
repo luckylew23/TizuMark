@@ -356,7 +356,6 @@ const I18N = {
     shortcutBuiltinOccupied: '「{key}」是系统内置快捷键（{name}），不可占用',
     shortcutScheme: '快捷键方案',
     schemeHint: '切换预设键位方案，或自行修改下方各项',
-    shortcutList: '快捷键',
     crossSearch: '跨文件搜索',
     crossSearchTitle: '跨文件搜索',
     dialogResizeHint: '已调整窗口，双击标题栏可还原默认大小',
@@ -826,7 +825,6 @@ const I18N = {
     shortcutBuiltinOccupied: '"{key}" is a built-in shortcut ({name}) and cannot be reassigned',
     shortcutScheme: 'Shortcut Scheme',
     schemeHint: 'Switch a preset scheme, or customize the items below',
-    shortcutList: 'Shortcuts',
     crossSearch: 'Cross-file Search',
     crossSearchTitle: 'Cross-file Search',
     dialogResizeHint: 'Window adjusted. Double-click the title bar to restore the default size',
@@ -1419,11 +1417,6 @@ class MarkdownEditor {
     // 系统字体加载失败重试按钮文案
     const retryBtn = document.getElementById('btn-retry-system-fonts');
     if (retryBtn) retryBtn.textContent = t('systemFontsRetry');
-    // Refresh shortcut scheme dropdown text
-    const schemeLabel = document.getElementById('shortcuts-scheme-label');
-    if (schemeLabel) schemeLabel.textContent = t('shortcutScheme');
-    const listTitle = document.getElementById('shortcuts-list-title');
-    if (listTitle) listTitle.textContent = t('shortcutList');
     this.populateSchemeSelect();
 
     // 跨文件搜索弹框文案
@@ -3491,7 +3484,7 @@ class MarkdownEditor {
       strikethrough: { key: 'Ctrl+Shift+5', label: '删除线' },
       codeBlock: { key: 'Ctrl+Shift+K', label: '代码块' },
       blockquote: { key: 'Ctrl+Shift+Q', label: '引用块' },
-      toggleView: { key: '', label: '切换视图' },
+      toggleView: { key: 'Ctrl+\\', label: '切换视图' },
       toggleSidebar: { key: '', label: '切换侧边栏' },
       toggleTheme: { key: 'Ctrl+Shift+T', label: '切换主题' },
       saveAs: { key: '', label: '另存为' },

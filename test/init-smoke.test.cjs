@@ -40,34 +40,16 @@ test('smoke: 初始化过程未触发致命错误条', async () => {
   });
 });
 
-test('ui: 快捷键对话框方案区与列表区以分组标题区分', async () => {
+test('ui: 快捷键对话框无旧版残留分组标题', async () => {
   const { w } = await buildEnv({ captureInitErr: true });
   return new Promise((resolve) => {
     setTimeout(() => {
-      const schemeTitle = w.document.getElementById('shortcuts-scheme-label');
-      assert.ok(schemeTitle, '#shortcuts-scheme-label 应存在');
-      assert.ok(schemeTitle.classList.contains('settings-group-title'), '方案区标题应带 settings-group-title 类（与下方具体项作视觉区分）');
-      const listTitle = w.document.getElementById('shortcuts-list-title');
-      assert.ok(listTitle, '#shortcuts-list-title 应存在（列表分组标题）');
-      assert.ok(listTitle.classList.contains('settings-group-title'), '列表区标题应带 settings-group-title 类');
-      cleanup(w);
-      resolve();
-    }, 300);
-  });
-});
-
-test('ui: 快捷键对话框分组标题支持中英文 i18n', async () => {
-  const { w } = await buildEnv({ captureInitErr: true });
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const listTitle = w.document.getElementById('shortcuts-list-title');
-      assert.ok(listTitle, '#shortcuts-list-title 应存在');
-      // 切英文：t() 读 this.settings.language，applyLanguage() 无参重渲染
-      try { w.editor.settings.language = 'en'; w.editor.applyLanguage(); } catch (_) {}
-      assert.strictEqual(listTitle.textContent, 'Shortcuts', '切英文后列表标题应为 "Shortcuts"');
-      // 切回中文
-      try { w.editor.settings.language = 'zh'; w.editor.applyLanguage(); } catch (_) {}
-      assert.strictEqual(listTitle.textContent, '快捷键', '切中文后列表标题应为 "快捷键"');
+      // 旧版在 #shortcuts-list 外用两个 settings-group-title div 做分组标题，
+      // 弹框重构为可折叠两区块（内置/方案与自定义）后属残留，已删除。
+      assert.strictEqual(w.document.getElementById('shortcuts-scheme-label'), null, '#shortcuts-scheme-label 应为空（旧版残留标题已删除）');
+      assert.strictEqual(w.document.getElementById('shortcuts-list-title'), null, '#shortcuts-list-title 应为空（旧版残留标题已删除）');
+      // 弹框正文仍由 renderShortcutsList 渲染进 #shortcuts-list 容器
+      assert.ok(w.document.getElementById('shortcuts-list'), '#shortcuts-list 容器应存在');
       cleanup(w);
       resolve();
     }, 300);
