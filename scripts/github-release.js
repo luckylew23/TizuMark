@@ -2,7 +2,7 @@
 const { run: runUpdaterCheck } = require('./check-updater.cjs');
 if (!runUpdaterCheck(['--release'])) process.exit(1);
 
-// 创建 GitHub Release（tizuio/TizuMark）并上传安装包附件。
+// 创建 GitHub Release（tizuio/TizuMark-Markdown-Editor）并上传安装包附件。
 // 复用 scripts/release-notes.js 作为唯一 Release Note 来源，仅把下载链接改写为 GitHub。
 const https = require('https');
 const fs = require('fs');
@@ -13,7 +13,7 @@ writeNotes();
 
 const TOKEN = process.env.GITHUB_TOKEN;
 const OWNER = 'tizuio';
-const REPO = 'TizuMark';
+const REPO = 'TizuMark-Markdown-Editor';
 
 if (!TOKEN) { console.error('GITHUB_TOKEN 未设置'); process.exit(1); }
 

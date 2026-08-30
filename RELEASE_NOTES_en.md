@@ -1,10 +1,10 @@
 ## ⬇️ Download
 
-> **🏆 Recommended for most users:** [⬇ TizuMark_1.2.2_x64-setup.exe](https://gitee.com/tizu/tizu-mark/releases/download/v1.2.2/TizuMark_1.2.2_x64-setup.exe)
+> **🏆 Recommended for most users:** [⬇ TizuMark_1.2.2_x64-setup.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v1.2.2/TizuMark_1.2.2_x64-setup.exe)
 >
-> **🛠 Enterprise / bulk deploy:** [⬇ TizuMark_1.2.2_x64_en-US.msi](https://gitee.com/tizu/tizu-mark/releases/download/v1.2.2/TizuMark_1.2.2_x64_en-US.msi)
+> **🛠 Enterprise / bulk deploy:** [⬇ TizuMark_1.2.2_x64_en-US.msi](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v1.2.2/TizuMark_1.2.2_x64_en-US.msi)
 >
-> **📦 Portable (no install):** [⬇ TizuMark_1.2.2_x64.exe](https://gitee.com/tizu/tizu-mark/releases/download/v1.2.2/TizuMark_1.2.2_x64.exe)
+> **📦 Portable (no install):** [⬇ TizuMark_1.2.2_x64.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v1.2.2/TizuMark_1.2.2_x64.exe)
 
 ### Package types
 

@@ -78,7 +78,7 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD="tizu2024"; npx tauri signer sign -f C:\
 - `notes` → 更新的 release notes（JSON 转义 `\n`）
 - `pub_date` → 当天日期 `YYYY-MM-DDT00:00:00Z`
 - `platforms.windows-x86_64.signature` → 步骤 4 的 NSIS 签名
-- `platforms.windows-x86_64.url` → `https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64-setup.exe`
+- `platforms.windows-x86_64.url` → `https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64-setup.exe`
 
 同时复制到归档：
 ```powershell
@@ -104,7 +104,7 @@ const releaseBody = {
   tag_name: `v${VERSION}`,
   name: `v${VERSION}`,
   target_commitish: 'master',
-  body: `## ⬇️ 下载\n\n> **🏆 推荐大多数用户选择：** [⬇ TizuMark_${VERSION}_x64-setup.exe](https://gitee.com/tizu/tizu-mark/releases/download/v${VERSION}/TizuMark_${VERSION}_x64-setup.exe)\n>\n> **🛠 企业/批量部署：** [⬇ TizuMark_${VERSION}_x64_en-US.msi](https://gitee.com/tizu/tizu-mark/releases/download/v${VERSION}/TizuMark_${VERSION}_x64_en-US.msi)\n>\n> **📦 绿色版（免安装）：** [⬇ TizuMark_${VERSION}_x64.exe](https://gitee.com/tizu/tizu-mark/releases/download/v${VERSION}/TizuMark_${VERSION}_x64.exe)\n\n### 三种安装包说明\n\n| 安装包 | 适用人群 | 特点 |\n|--------|---------|------|\n| ⭐ **NSIS 安装包 (.exe)** — **推荐** | 绝大多数 Windows 用户 | 传统的 setup 向导安装，支持自定义安装路径、创建桌面快捷方式、自动注册文件关联。双击即装，即装即用。 |\n| **MSI 安装包 (.msi)** | 企业 IT 管理员、需要批量部署的用户 | 标准的 Windows Installer 格式，支持组策略推送、静默安装（msiexec /i TizuMark_${VERSION}_x64_en-US.msi /qn）、适合企业环境集中管理。 |\n| **绿色版 (.exe)** | 追求便携的用户 | 单文件免安装，解压即用，适合 U 盘携带、临时使用，不写注册表。 |\n\n---\n\n## ✨ v${VERSION} 更新内容\n\n### 新增\n- ...\n\n### 改进\n- ...\n\n### 修复\n- ...\n\n> 使用中遇到问题欢迎加 QQ 群：1035294939`,
+  body: `## ⬇️ 下载\n\n> **🏆 推荐大多数用户选择：** [⬇ TizuMark_${VERSION}_x64-setup.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v${VERSION}/TizuMark_${VERSION}_x64-setup.exe)\n>\n> **🛠 企业/批量部署：** [⬇ TizuMark_${VERSION}_x64_en-US.msi](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v${VERSION}/TizuMark_${VERSION}_x64_en-US.msi)\n>\n> **📦 绿色版（免安装）：** [⬇ TizuMark_${VERSION}_x64.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v${VERSION}/TizuMark_${VERSION}_x64.exe)\n\n### 三种安装包说明\n\n| 安装包 | 适用人群 | 特点 |\n|--------|---------|------|\n| ⭐ **NSIS 安装包 (.exe)** — **推荐** | 绝大多数 Windows 用户 | 传统的 setup 向导安装，支持自定义安装路径、创建桌面快捷方式、自动注册文件关联。双击即装，即装即用。 |\n| **MSI 安装包 (.msi)** | 企业 IT 管理员、需要批量部署的用户 | 标准的 Windows Installer 格式，支持组策略推送、静默安装（msiexec /i TizuMark_${VERSION}_x64_en-US.msi /qn）、适合企业环境集中管理。 |\n| **绿色版 (.exe)** | 追求便携的用户 | 单文件免安装，解压即用，适合 U 盘携带、临时使用，不写注册表。 |\n\n---\n\n## ✨ v${VERSION} 更新内容\n\n### 新增\n- ...\n\n### 改进\n- ...\n\n### 修复\n- ...\n\n> 使用中遇到问题欢迎加 QQ 群：1035294939`,
   prerelease: false,
 };
 
@@ -113,7 +113,7 @@ function apiRequest(method, path, body) {
     const payload = body ? JSON.stringify(body) : null;
     const options = {
       hostname: 'gitee.com',
-      path: `/api/v5/repos/tizu/tizu-mark/releases${path}`,
+      path: `/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases${path}`,
       method,
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json; charset=utf-8' },
     };
@@ -143,7 +143,7 @@ function uploadFile(releaseId, filePath) {
     const body = Buffer.concat([Buffer.from(header, 'utf-8'), fileContent, Buffer.from(footer, 'utf-8')]);
     const options = {
       hostname: 'gitee.com',
-      path: `/api/v5/repos/tizu/tizu-mark/releases/${releaseId}/attach_files`,
+      path: `/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases/${releaseId}/attach_files`,
       method: 'POST',
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length },
     };
@@ -192,7 +192,7 @@ function githubRequest(method, path, body, contentType = 'application/json') {
     const payload = body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null;
     const options = {
       hostname: 'api.github.com',
-      path: `/repos/tizuio/TizuMark${path}`,
+      path: `/repos/tizuio/TizuMark-Markdown-Editor${path}`,
       method,
       headers: {
         'Authorization': `Bearer ${GITHUB_TOKEN}`,
@@ -223,7 +223,7 @@ function githubUpload(releaseId, filePath) {
     const fileContent = fs.readFileSync(filePath);
     const options = {
       hostname: 'uploads.github.com',
-      path: `/repos/tizuio/TizuMark/releases/${releaseId}/assets?name=${encodeURIComponent(fileName)}`,
+      path: `/repos/tizuio/TizuMark-Markdown-Editor/releases/${releaseId}/assets?name=${encodeURIComponent(fileName)}`,
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${GITHUB_TOKEN}`,
@@ -249,7 +249,7 @@ GitHub Release body 用英文，内容与 Gitee 对应。
 ## 步骤 8：验证
 
 ```powershell
-node -e "const https=require('https');https.get('https://gitee.com/api/v5/repos/tizu/tizu-mark/releases/{Release_ID}',{headers:{'Authorization':'Bearer ' + process.env.GITEE_TOKEN}},r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{const j=JSON.parse(d);console.log('name:',j.name);console.log('body contains 下载:',j.body.includes('下载'))})})"
+node -e "const https=require('https');https.get('https://gitee.com/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases/{Release_ID}',{headers:{'Authorization':'Bearer ' + process.env.GITEE_TOKEN}},r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{const j=JSON.parse(d);console.log('name:',j.name);console.log('body contains 下载:',j.body.includes('下载'))})})"
 ```
 
 确认 Gitee Release body 中文显示正常。

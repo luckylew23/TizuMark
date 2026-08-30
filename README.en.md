@@ -131,9 +131,9 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 
 <b>Visit the release page to download:</b>
 
-<a href="https://github.com/tizuio/TizuMark/releases"><img src="https://img.shields.io/badge/⬇_Download_from_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Download from GitHub"></a>
+<a href="https://github.com/tizuio/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_Download_from_GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Download from GitHub"></a>
 &nbsp;&nbsp;
-<a href="https://gitee.com/tizu/tizu-mark/releases"><img src="https://img.shields.io/badge/⬇_Download_from_Gitee-C71D23?style=for-the-badge&logo=gitee&logoColor=white" alt="Download from Gitee"></a>
+<a href="https://gitee.com/tizu/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_Download_from_Gitee-C71D23?style=for-the-badge&logo=gitee&logoColor=white" alt="Download from Gitee"></a>
 
 > On first launch, the user guide opens automatically. You can also find it in `Help → User Guide` anytime.
 
@@ -155,9 +155,9 @@ The world isn't short of Markdown editors. But most fall into one of two camps: 
 ### Build from Source
 
 ```bash
-git clone https://github.com/tizuio/TizuMark.git
+git clone https://github.com/tizuio/TizuMark-Markdown-Editor.git
 # Or via Gitee (China mirror):
-git clone https://gitee.com/tizu/tizu-mark.git
+git clone https://gitee.com/tizu/TizuMark-Markdown-Editor.git
 cd tizu-mark
 npm install
 npm run dev      # dev mode
@@ -216,8 +216,8 @@ Click "Restore Default" in `File → Settings` or `File → Keyboard Shortcuts`.
 <summary><b>How do I report a bug or request a feature?</b></summary>
 
 - QQ Group: **1035294939** (Chinese community)
-- [GitHub Issues](https://github.com/tizuio/TizuMark/issues)
-- [Gitee Issues](https://gitee.com/tizu/tizu-mark/issues)
+- [GitHub Issues](https://github.com/tizuio/TizuMark-Markdown-Editor/issues)
+- [Gitee Issues](https://gitee.com/tizu/TizuMark-Markdown-Editor/issues)
 </details>
 
 ---
@@ -284,13 +284,13 @@ Bundled open-source components are licensed under their respective terms. See `H
 
 <p align="center">
   <b>✨ TizuMark — Stupidly light. Exactly fast enough.</b><br><br>
-  <a href="https://github.com/tizuio/TizuMark/releases"><img src="https://img.shields.io/badge/⬇_GitHub_Download-black?style=for-the-badge&logo=github" alt="GitHub Download"></a>
+  <a href="https://github.com/tizuio/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_GitHub_Download-black?style=for-the-badge&logo=github" alt="GitHub Download"></a>
   &nbsp;
-  <a href="https://gitee.com/tizu/tizu-mark/releases"><img src="https://img.shields.io/badge/⬇_Gitee_Download-C71D23?style=for-the-badge&logo=gitee" alt="Gitee Download"></a>
+  <a href="https://gitee.com/tizu/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_Gitee_Download-C71D23?style=for-the-badge&logo=gitee" alt="Gitee Download"></a>
   <br><br>
-  <a href="https://github.com/tizuio/TizuMark">⭐ GitHub Star</a>
+  <a href="https://github.com/tizuio/TizuMark-Markdown-Editor">⭐ GitHub Star</a>
   &nbsp;·&nbsp;
-  <a href="https://gitee.com/tizu/tizu-mark">⭐ Gitee Star</a>
+  <a href="https://gitee.com/tizu/TizuMark-Markdown-Editor">⭐ Gitee Star</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/tizuio/TizuMark/issues">🐛 Report Bug</a>
+  <a href="https://github.com/tizuio/TizuMark-Markdown-Editor/issues">🐛 Report Bug</a>
 </p>

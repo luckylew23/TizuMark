@@ -133,9 +133,9 @@
 
 <b>请打开产品发布页面下载：</b>
 
-<a href="https://github.com/tizuio/TizuMark/releases"><img src="https://img.shields.io/badge/⬇_从_GitHub_下载-181717?style=for-the-badge&logo=github&logoColor=white" alt="从 GitHub 下载"></a>
+<a href="https://github.com/tizuio/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_从_GitHub_下载-181717?style=for-the-badge&logo=github&logoColor=white" alt="从 GitHub 下载"></a>
 &nbsp;&nbsp;
-<a href="https://gitee.com/tizu/tizu-mark/releases"><img src="https://img.shields.io/badge/⬇_从_Gitee_下载-C71D23?style=for-the-badge&logo=gitee&logoColor=white" alt="从 Gitee 下载"></a>
+<a href="https://gitee.com/tizu/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_从_Gitee_下载-C71D23?style=for-the-badge&logo=gitee&logoColor=white" alt="从 Gitee 下载"></a>
 
 > 首次打开会自动展示使用说明，也可在 `帮助 → 使用说明` 中随时查看。
 
@@ -157,9 +157,9 @@
 ### 从源码构建
 
 ```bash
-git clone https://github.com/tizuio/TizuMark.git
+git clone https://github.com/tizuio/TizuMark-Markdown-Editor.git
 # 或国内镜像：
-git clone https://gitee.com/tizu/tizu-mark.git
+git clone https://gitee.com/tizu/TizuMark-Markdown-Editor.git
 cd tizu-mark
 npm install
 npm run dev      # 开发模式
@@ -218,8 +218,8 @@ npm run build    # 构建发布版本
 <summary><b>如何反馈问题或建议？</b></summary>
 
 - QQ交流群：**1035294939**
-- [Gitee Issues](https://gitee.com/tizu/tizu-mark/issues)
-- [GitHub Issues](https://github.com/tizuio/TizuMark/issues)
+- [Gitee Issues](https://gitee.com/tizu/TizuMark-Markdown-Editor/issues)
+- [GitHub Issues](https://github.com/tizuio/TizuMark-Markdown-Editor/issues)
 </details>
 
 ---
@@ -286,13 +286,13 @@ Copyright (c) 2024-2026 TizuMark
 
 <p align="center">
   <b>✨ TizuMark — 轻得不像话，快得刚刚好</b><br><br>
-  <a href="https://github.com/tizuio/TizuMark/releases"><img src="https://img.shields.io/badge/⬇_GitHub_下载-black?style=for-the-badge&logo=github" alt="GitHub Download"></a>
+  <a href="https://github.com/tizuio/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_GitHub_下载-black?style=for-the-badge&logo=github" alt="GitHub Download"></a>
   &nbsp;
-  <a href="https://gitee.com/tizu/tizu-mark/releases"><img src="https://img.shields.io/badge/⬇_Gitee_下载-C71D23?style=for-the-badge&logo=gitee" alt="Gitee Download"></a>
+  <a href="https://gitee.com/tizu/TizuMark-Markdown-Editor/releases"><img src="https://img.shields.io/badge/⬇_Gitee_下载-C71D23?style=for-the-badge&logo=gitee" alt="Gitee Download"></a>
   <br><br>
-  <a href="https://github.com/tizuio/TizuMark">⭐ GitHub Star</a>
+  <a href="https://github.com/tizuio/TizuMark-Markdown-Editor">⭐ GitHub Star</a>
   &nbsp;·&nbsp;
-  <a href="https://gitee.com/tizu/tizu-mark">⭐ Gitee Star</a>
+  <a href="https://gitee.com/tizu/TizuMark-Markdown-Editor">⭐ Gitee Star</a>
   &nbsp;·&nbsp;
   <b>QQ群 1035294939</b>
 </p>

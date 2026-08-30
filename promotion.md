@@ -196,8 +196,8 @@ Ctrl+B 加粗、Ctrl+I 斜体、Ctrl+S 保存……如果不符合习惯，打�
 
 目前支持 **Windows**，macOS 和 Linux 即将推出。
 
-- Gitee（国内快）：https://gitee.com/tizu/tizu-mark/releases
-- GitHub：https://github.com/tizuio/TizuMark/releases
+- Gitee（国内快）：https://gitee.com/tizu/TizuMark-Markdown-Editor/releases
+- GitHub：https://github.com/tizuio/TizuMark-Markdown-Editor/releases
 
 下载安装包 → 双击 → 一秒打开 → 开写。
 

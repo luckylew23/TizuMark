@@ -1,10 +1,10 @@
 ## ⬇️ 下载
 
-> **🏆 推荐大多数用户选择：** [⬇ TizuMark_1.2.0_x64-setup.exe](https://gitee.com/tizu/tizu-mark/releases/download/v1.2.0/TizuMark_1.2.0_x64-setup.exe)
+> **🏆 推荐大多数用户选择：** [⬇ TizuMark_1.2.0_x64-setup.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v1.2.0/TizuMark_1.2.0_x64-setup.exe)
 >
-> **🛠 企业/批量部署：** [⬇ TizuMark_1.2.0_x64_en-US.msi](https://gitee.com/tizu/tizu-mark/releases/download/v1.2.0/TizuMark_1.2.0_x64_en-US.msi)
+> **🛠 企业/批量部署：** [⬇ TizuMark_1.2.0_x64_en-US.msi](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v1.2.0/TizuMark_1.2.0_x64_en-US.msi)
 >
-> **📦 绿色版（免安装）：** [⬇ TizuMark_1.2.0_x64.exe](https://gitee.com/tizu/tizu-mark/releases/download/v1.2.0/TizuMark_1.2.0_x64.exe)
+> **📦 绿色版（免安装）：** [⬇ TizuMark_1.2.0_x64.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v1.2.0/TizuMark_1.2.0_x64.exe)
 
 ### 三种安装包说明
 

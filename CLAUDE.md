@@ -79,11 +79,11 @@ release body 用以下**中文**格式作为前半部分，其后紧跟**英文�
 ```
 ## ⬇️ 下载
 
-> **🏆 推荐大多数用户选择：** [⬇ TizuMark_{version}_x64-setup.exe](https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64-setup.exe)
+> **🏆 推荐大多数用户选择：** [⬇ TizuMark_{version}_x64-setup.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64-setup.exe)
 >
-> **🛠 企业/批量部署：** [⬇ TizuMark_{version}_x64_en-US.msi](https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64_en-US.msi)
+> **🛠 企业/批量部署：** [⬇ TizuMark_{version}_x64_en-US.msi](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64_en-US.msi)
 >
-> **📦 绿色版（免安装）：** [⬇ TizuMark_{version}_x64.exe](https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64.exe)
+> **📦 绿色版（免安装）：** [⬇ TizuMark_{version}_x64.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64.exe)
 
 ### 三种安装包说明
 
@@ -186,7 +186,7 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD="tizu2024"; npx tauri signer sign -f C:\
   
 - `platforms.windows-x86_64.signature` → 上一步的 NSIS 签名
   
-- `platforms.windows-x86_64.url` → `https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64-setup.exe`
+- `platforms.windows-x86_64.url` → `https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64-setup.exe`
   
 同时复制到归档：
 
@@ -199,7 +199,7 @@ Copy-Item -Path "update-windows-x86_64.json" -Destination "release/" -Force
 **不要删除旧 Release**，直接新建：
 
 ```bash
-$token = $env:GITEE_TOKEN; Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/tizu/tizu-mark/releases" -Method Get -Headers @{"Authorization"="Bearer $token"} | Select-Object id, tag_name
+$token = $env:GITEE_TOKEN; Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases" -Method Get -Headers @{"Authorization"="Bearer $token"} | Select-Object id, tag_name
 ```
 
 #### 7. 创建 Release + 上传附件
@@ -217,7 +217,7 @@ const releaseBody = {
   tag_name: 'v{version}',
   name: 'v{version}',
   target_commitish: 'master',
-  body: `## ⬇️ 下载\n\n> **🏆 推荐大多数用户选择：** [⬇ TizuMark_{version}_x64-setup.exe](https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64-setup.exe)\n>\n> **🛠 企业/批量部署：** [⬇ TizuMark_{version}_x64_en-US.msi](https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64_en-US.msi)\n>\n> **📦 绿色版（免安装）：** [⬇ TizuMark_{version}_x64.exe](https://gitee.com/tizu/tizu-mark/releases/download/v{version}/TizuMark_{version}_x64.exe)\n\n### 三种安装包说明\n\n| 安装包 | 适用人群 | 特点 |\n|--------|---------|------|\n| ⭐ **NSIS 安装包 (.exe)** — **推荐** | 绝大多数 Windows 用户 | 传统的 setup 向导安装，支持自定义安装路径、创建桌面快捷方式、自动注册文件关联。双击即装，即装即用。 |\n| **MSI 安装包 (.msi)** | 企业 IT 管理员、需要批量部署的用户 | 标准的 Windows Installer 格式，支持组策略推送、静默安装（msiexec /i TizuMark_{version}_x64_en-US.msi /qn）、适合企业环境集中管理。 |\n| **绿色版 (.exe)** | 追求便携的用户 | 单文件免安装，解压即用，适合 U 盘携带、临时使用，不写注册表。 |\n\n---\n\n## ✨ v{version} 更新内容\n\n### 新增\n- ...\n\n### 改进\n- ...\n\n### 修复\n- ...\n\n> 使用中遇到问题欢迎加 QQ 群：1035294939`,
+  body: `## ⬇️ 下载\n\n> **🏆 推荐大多数用户选择：** [⬇ TizuMark_{version}_x64-setup.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64-setup.exe)\n>\n> **🛠 企业/批量部署：** [⬇ TizuMark_{version}_x64_en-US.msi](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64_en-US.msi)\n>\n> **📦 绿色版（免安装）：** [⬇ TizuMark_{version}_x64.exe](https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/TizuMark_{version}_x64.exe)\n\n### 三种安装包说明\n\n| 安装包 | 适用人群 | 特点 |\n|--------|---------|------|\n| ⭐ **NSIS 安装包 (.exe)** — **推荐** | 绝大多数 Windows 用户 | 传统的 setup 向导安装，支持自定义安装路径、创建桌面快捷方式、自动注册文件关联。双击即装，即装即用。 |\n| **MSI 安装包 (.msi)** | 企业 IT 管理员、需要批量部署的用户 | 标准的 Windows Installer 格式，支持组策略推送、静默安装（msiexec /i TizuMark_{version}_x64_en-US.msi /qn）、适合企业环境集中管理。 |\n| **绿色版 (.exe)** | 追求便携的用户 | 单文件免安装，解压即用，适合 U 盘携带、临时使用，不写注册表。 |\n\n---\n\n## ✨ v{version} 更新内容\n\n### 新增\n- ...\n\n### 改进\n- ...\n\n### 修复\n- ...\n\n> 使用中遇到问题欢迎加 QQ 群：1035294939`,
   prerelease: false,
 };
 
@@ -227,7 +227,7 @@ function apiRequest(method, path, body) {
     const payload = body ? JSON.stringify(body) : null;
     const options = {
       hostname: 'gitee.com',
-      path: `/api/v5/repos/tizu/tizu-mark/releases${path}`,
+      path: `/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases${path}`,
       method,
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json; charset=utf-8' },
     };
@@ -258,7 +258,7 @@ function uploadFile(releaseId, filePath) {
     const body = Buffer.concat([Buffer.from(header, 'utf-8'), fileContent, Buffer.from(footer, 'utf-8')]);
     const options = {
       hostname: 'gitee.com',
-      path: \`/api/v5/repos/tizu/tizu-mark/releases/\${releaseId}/attach_files\`,
+      path: \`/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases/\${releaseId}/attach_files\`,
       method: 'POST',
       headers: { 'Authorization': \`Bearer \${TOKEN}\`, 'Content-Type': \`multipart/form-data; boundary=\${boundary}\`, 'Content-Length': body.length },
     };
@@ -304,7 +304,7 @@ node scripts/release.js
 确认 Gitee Release body 中文显示正常：
 
 ```bash
-node -e "const https=require('https');https.get('https://gitee.com/api/v5/repos/tizu/tizu-mark/releases/{Release_ID}',{headers:{'Authorization':'Bearer ' + process.env.GITEE_TOKEN}},r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{const j=JSON.parse(d);console.log('name:',j.name);console.log('body contains 下载:',j.body.includes('下载'))})})"
+node -e "const https=require('https');https.get('https://gitee.com/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases/{Release_ID}',{headers:{'Authorization':'Bearer ' + process.env.GITEE_TOKEN}},r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{const j=JSON.parse(d);console.log('name:',j.name);console.log('body contains 下载:',j.body.includes('下载'))})})"
 ```
 
 #### 9. 提交推送
@@ -341,7 +341,7 @@ git push
 
 ### Gitee API（v5）
 
-基础路径：`https://gitee.com/api/v5/repos/tizu/tizu-mark`
+基础路径：`https://gitee.com/api/v5/repos/tizu/TizuMark-Markdown-Editor`
 
 | 操作          | 方法     | 路径                                              | 备注                                        |
 | ----------- | ------ | ----------------------------------------------- | ----------------------------------------- |
@@ -357,7 +357,7 @@ Token：从环境变量 `GITEE_TOKEN` 读取
 
 ### GitHub API
 
-基础路径：`https://api.github.com/repos/tizuio/TizuMark`
+基础路径：`https://api.github.com/repos/tizuio/TizuMark-Markdown-Editor`
 
 | 操作         | 方法   | 路径                                              | 备注                                                         |
 | ---------- | ---- | ----------------------------------------------- | ---------------------------------------------------------- |
@@ -384,17 +384,17 @@ GitHub Release 需上传与 Gitee Release 相同的 4 个文件（NSIS + MSI + �
 
 | 用途                | URL 格式                                                                     |
 | ----------------- | -------------------------------------------------------------------------- |
-| Release 附件下载      | `https://gitee.com/tizu/tizu-mark/releases/download/v{version}/{filename}` |
-| Raw 文件（master 分支） | `https://gitee.com/tizu/tizu-mark/raw/master/{path}`                       |
-| GitHub 最新 Release | `https://github.com/tizuio/TizuMark/releases/latest/download/{filename}`   |
+| Release 附件下载      | `https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{version}/{filename}` |
+| Raw 文件（master 分支） | `https://gitee.com/tizu/TizuMark-Markdown-Editor/raw/master/{path}`                       |
+| GitHub 最新 Release | `https://github.com/tizuio/TizuMark-Markdown-Editor/releases/latest/download/{filename}`   |
 
 ### 更新系统端点
 
-- **Gitee raw（新版，无版本依赖）：** `https://gitee.com/tizu/tizu-mark/raw/master/update-windows-x86_64.json`
+- **Gitee raw（新版，无版本依赖）：** `https://gitee.com/tizu/TizuMark-Markdown-Editor/raw/master/update-windows-x86_64.json`
   
-- **GitHub latest：** `https://github.com/tizuio/TizuMark/releases/latest/download/update-windows-x86_64.json`
+- **GitHub latest：** `https://github.com/tizuio/TizuMark-Markdown-Editor/releases/latest/download/update-windows-x86_64.json`
   
-- **旧版 {{current_version}} 格式（已废弃）：** `https://gitee.com/tizu/tizu-mark/releases/download/v{{current_version}}/update-windows-x86_64.json`
+- **旧版 {{current_version}} 格式（已废弃）：** `https://gitee.com/tizu/TizuMark-Markdown-Editor/releases/download/v{{current_version}}/update-windows-x86_64.json`
   
 ### 签名相关
 

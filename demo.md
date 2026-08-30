@@ -76,7 +76,7 @@ TizuMark 的大纲面板会自动解析标题，点击即可快速跳转。当�
 
 ### 超链接
 
-- 标准链接：[TizuMark 项目仓库](https://gitee.com/tizu/tizu-mark)
+- 标准链接：[TizuMark 项目仓库](https://gitee.com/tizu/TizuMark-Markdown-Editor)
   
 - 参考式链接：[TizuMark][ref-example] — 正文中使用引用标记，文档底部统一定义 URL
   
@@ -84,7 +84,7 @@ TizuMark 的大纲面板会自动解析标题，点击即可快速跳转。当�
   
 - 邮箱链接：contact@tizumark.app 同样自动链接
   
-[ref-example]: https://gitee.com/tizu/tizu-mark
+[ref-example]: https://gitee.com/tizu/TizuMark-Markdown-Editor
 
 ### 图片
 
@@ -395,7 +395,7 @@ TizuMark 内置 KaTeX 渲染引擎，支持行内公式和独立公式。这是 
 
 > [!NOTE]
 > 
-> 以下数学公式在 Gitee / GitHub 等网页端可能显示为源码（如 `$$` 和 LaTeX 代码），这是平台不支持 KaTeX 渲染所致。**在 TizuMark 软件中可完美渲染。** 打开 [demo.md](https://gitee.com/tizu/tizu-mark/blob/master/demo.md) 查看效果。
+> 以下数学公式在 Gitee / GitHub 等网页端可能显示为源码（如 `$$` 和 LaTeX 代码），这是平台不支持 KaTeX 渲染所致。**在 TizuMark 软件中可完美渲染。** 打开 [demo.md](https://gitee.com/tizu/TizuMark-Markdown-Editor/blob/master/demo.md) 查看效果。
 > 
 ### 行内公式
 
@@ -459,7 +459,7 @@ TizuMark 内置 Mermaid 图表引擎，用代码即可绘制多种专业图表�
 
 > [!NOTE]
 > 
-> 以下 Mermaid 图表在 Gitee / GitHub 等网页端可能显示为源码，这是平台不支持 Mermaid 渲染所致。**在 TizuMark 软件中可完美渲染。** 打开 [demo.md](https://gitee.com/tizu/tizu-mark/blob/master/demo.md) 查看效果。
+> 以下 Mermaid 图表在 Gitee / GitHub 等网页端可能显示为源码，这是平台不支持 Mermaid 渲染所致。**在 TizuMark 软件中可完美渲染。** 打开 [demo.md](https://gitee.com/tizu/TizuMark-Markdown-Editor/blob/master/demo.md) 查看效果。
 > 
 ### 流程图
 
@@ -1028,7 +1028,7 @@ const content = '# Hello\n\nWorld!';
 | --- | ------------------- | -------------------------------------------- |
 | 加粗  | `**重要**`            | **重要**                                       |
 | 代码  | `` `const x = 1` `` | `const x = 1`                                |
-| 链接  | `[链接](url)`         | [TizuMark](https://gitee.com/tizu/tizu-mark) |
+| 链接  | `[链接](url)`         | [TizuMark](https://gitee.com/tizu/TizuMark-Markdown-Editor) |
 | 图片  | `![icon](url)`      | 表格中不推荐放图片                                    |
 
 ---
@@ -1079,7 +1079,7 @@ $$
 
   如果觉得好用，欢迎给项目点一个 ⭐ Star！<br>
 
-  有使用问题？加 QQ群 <b>1035294939</b> 或前往 <a href="https://gitee.com/tizu/tizu-mark/issues">Issues</a> 反馈
+  有使用问题？加 QQ群 <b>1035294939</b> 或前往 <a href="https://gitee.com/tizu/TizuMark-Markdown-Editor/issues">Issues</a> 反馈
 
 </p>
 

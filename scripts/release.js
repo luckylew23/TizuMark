@@ -29,7 +29,7 @@ function apiRequest(method, p, body) {
     const payload = body ? JSON.stringify(body) : null;
     const options = {
       hostname: 'gitee.com',
-      path: `/api/v5/repos/tizu/tizu-mark/releases${p}`,
+      path: `/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases${p}`,
       method,
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json; charset=utf-8' },
     };
@@ -60,7 +60,7 @@ function uploadFile(releaseId, filePath) {
     const body = Buffer.concat([Buffer.from(header, 'utf-8'), fileContent, Buffer.from(footer, 'utf-8')]);
     const options = {
       hostname: 'gitee.com',
-      path: `/api/v5/repos/tizu/tizu-mark/releases/${releaseId}/attach_files`,
+      path: `/api/v5/repos/tizu/TizuMark-Markdown-Editor/releases/${releaseId}/attach_files`,
       method: 'POST',
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length },
     };
