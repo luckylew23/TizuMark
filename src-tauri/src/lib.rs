@@ -1,4 +1,5 @@
 use std::fs;
+use std::ops::Deref;
 use encoding_rs::GB18030;
 use std::sync::Mutex;
 use notify::{Watcher, RecursiveMode, RecommendedWatcher, Config as NotifyConfig, Event as NotifyEvent};
@@ -329,6 +330,13 @@ struct DirEntryInfo {
 struct DirListing {
     entries: Vec<DirEntryInfo>,
     truncated: bool,
+}
+
+impl Deref for DirListing {
+    type Target = Vec<DirEntryInfo>;
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
 }
 
 #[tauri::command]
@@ -1400,11 +1408,11 @@ mod tests {
         fs::create_dir_all(base.join("zdir")).unwrap();
         fs::write(base.join("b.txt"), "t").unwrap();
         fs::write(base.join("a.md"), "m").unwrap();
-        fs::write(base.join("c.png"), "p").unwrap();       // 非文档扩展应被过滤
+        fs::write(base.join("c.png"), "p").unwrap();       // 非文档扩展不过滤
         fs::write(base.join(".hidden.md"), "h").unwrap();  // 点文件应被过滤
         let res = list_dir(base.to_str().unwrap().to_string()).expect("list_dir 应成功");
         let names: Vec<&str> = res.iter().map(|e| e.name.as_str()).collect();
-        assert_eq!(names, vec!["zdir", "a.md", "b.txt"], "目录排最前，文件按名排序，png/点文件被过滤");
+        assert_eq!(names, vec!["zdir", "a.md", "b.txt", "c.png"], "目录排最前，文件按名排序，点文件被过滤");
         assert!(res[0].is_dir && !res[1].is_dir);
         let _ = fs::remove_dir_all(&base);
     }
