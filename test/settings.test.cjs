@@ -820,13 +820,12 @@ test('settings: 图片路径模式切换后点 × 关闭，提示文案恢复', 
   try {
     ed.showSettings();
     const hint = w.document.getElementById('setting-image-asset-path-hint-text');
-    const radio = w.document.querySelector('#settings-image-asset-path-mode input[value="absolute"]');
-    assert.ok(radio, 'absolute 单选应存在');
+    const sel = ed._selects && ed._selects.imageAssetPathMode;
+    assert.ok(sel, '图片存储路径 Select 组件实例应已创建');
     const initialText = hint.textContent;
     assert.ok(initialText.length > 0, '初始提示文案非空');
 
-    radio.checked = true;
-    radio.dispatchEvent(new w.Event('change'));
+    sel.setValue('absolute');
     assert.strictEqual(ed.settings.imageAssetPathMode, 'absolute', '面板内改为 absolute');
     assert.notStrictEqual(hint.textContent, initialText, '提示文案已切换');
 

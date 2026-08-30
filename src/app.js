@@ -287,6 +287,8 @@ const I18N = {
     operationCancelled: '已取消',
     showTrayIcon: '显示托盘图标',
     showTrayIconHint: '关闭后隐藏系统托盘图标；此时关闭窗口会直接退出应用（否则无法通过托盘恢复窗口）。',
+    showAllFiles: '显示所有文件',
+    showAllFilesHint: '关闭时文件树只列出软件能识别的格式（Markdown 7 种 / 图片 20 种 / 明文代码 145 种）；打开后显示目录内全部文件，包括不可打开的格式。文件夹始终会显示。',
     tabSizeHint: '每按一次 Tab 键缩进几个空格。列表要往里缩一级（做子列表）也靠这个宽度，建议用 4，最稳。',
     closeAction: '关闭窗口时',
     closeActionAsk: '每次询问',
@@ -757,6 +759,8 @@ const I18N = {
     operationCancelled: 'Cancelled',
     showTrayIcon: 'Show tray icon',
     showTrayIconHint: 'When disabled, the system tray icon is hidden; closing the window then quits the app directly (otherwise the window could not be restored via the tray).',
+    showAllFiles: 'Show all files',
+    showAllFilesHint: 'When off, the file tree only lists formats the app can open (7 Markdown / 20 image / 145 text/code). Turn on to show every file in the folder, including ones that cannot be opened. Folders are always shown.',
     tabSizeHint: 'How many spaces a Tab press indents. Indenting a list one level (to make a sub-list) also uses this width; 4 is recommended for the safest nesting.',
     closeAction: 'On window close',
     closeActionAsk: 'Ask every time',
@@ -1362,8 +1366,9 @@ class MarkdownEditor {
     setRowLabel('set-code-scroll', t('codeScroll'));
     setRowLabel('set-close-action', t('closeAction'));
     setRowLabel('set-show-tray-icon', t('showTrayIcon'));
-    setRowLabel('settings-image-store-mode', t('imageSettingLabel'));
-    setRowLabel('settings-image-asset-path-mode', t('imageAssetPathLabel'));
+    setRowLabel('set-show-all-files-label', t('showAllFiles'));
+    setRowLabel('set-image-store-mode-label', t('imageSettingLabel'));
+    setRowLabel('set-image-asset-path-mode-label', t('imageAssetPathLabel'));
     setSectionTitle('btn-add-font', t('customFonts'));
     setSectionTitle('btn-manage-slash', t('quickInsert'));
     setText('btn-manage-slash', t('manageQuickInsert'));
@@ -1387,11 +1392,9 @@ class MarkdownEditor {
     if (codeScrollHint) codeScrollHint.textContent = t('codeScrollHint');
     const trayHint = document.querySelector('#setting-show-tray-icon-hint .hint-text');
     if (trayHint) trayHint.textContent = t('showTrayIconHint');
-    setText('setting-image-store-assets', t('imageSettingAssets'));
-    setText('setting-image-store-base64', t('imageSettingBase64'));
+    const allFilesHint = document.querySelector('#setting-show-all-files-hint .hint-text');
+    if (allFilesHint) allFilesHint.textContent = t('showAllFilesHint');
     document.querySelector('#setting-image-store-hint .hint-text').textContent = t('imageSettingHint');
-    setText('setting-image-asset-path-relative', t('imageAssetPathModeRelative'));
-    setText('setting-image-asset-path-absolute', t('imageAssetPathModeAbsolute'));
     const assetPathHint = document.querySelector('#setting-image-asset-path-hint-text');
     if (assetPathHint) assetPathHint.innerHTML = t('imageAssetPathRelativeHint');
     document.getElementById('settings-reset').textContent = t('resetDefault');
@@ -1747,6 +1750,8 @@ class MarkdownEditor {
     if (this._selects && this._selects.maxWidth) this._selects.maxWidth.applyI18n(t);
     if (this._selects && this._selects.defaultView) this._selects.defaultView.applyI18n(t);
     if (this._selects && this._selects.closeAction) this._selects.closeAction.applyI18n(t);
+    if (this._selects && this._selects.imageInsertMode) this._selects.imageInsertMode.applyI18n(t);
+    if (this._selects && this._selects.imageAssetPathMode) this._selects.imageAssetPathMode.applyI18n(t);
     // 快捷键/插入图片/文件夹排序下拉（各自独立实例）随语言刷新
     if (this._schemeSelect) this._schemeSelect.applyI18n(t);
     if (this._imageSourceSelect) this._imageSourceSelect.applyI18n(t);
@@ -1781,6 +1786,7 @@ class MarkdownEditor {
       extendedSyntax: true,
       showTrayIcon: true,
       closeAction: 'ask',
+      showAllFiles: false, // 文件树过滤：默认只列受支持格式（markdown/image/text），true 时显示目录内全部文件
       toolbarCollapsed: false,
       sidebarHidden: false,
       // 文件面板高度占比（0~1），分屏改造后用于还原上下比例
@@ -1887,15 +1893,14 @@ class MarkdownEditor {
     document.getElementById('set-code-wrap').checked = s.codeWrap;
     document.getElementById('set-code-scroll').checked = s.codeScroll;
     if (this._selects && this._selects.language) this._selects.language.setValue(s.language || 'zh', true);
-    const modeRadio = document.querySelector(`#settings-image-store-mode input[value="${s.imageInsertMode || 'assets'}"]`);
-    if (modeRadio) modeRadio.checked = true;
     document.getElementById('set-soft-breaks').checked = s.softBreaks !== false;
     document.getElementById('set-extended-syntax').checked = s.extendedSyntax !== false;
     document.getElementById('set-show-tray-icon').checked = s.showTrayIcon !== false;
+    document.getElementById('set-show-all-files').checked = s.showAllFiles === true;
     if (this._selects && this._selects.closeAction) this._selects.closeAction.setValue(s.closeAction || 'ask', true);
+    if (this._selects && this._selects.imageInsertMode) this._selects.imageInsertMode.setValue(s.imageInsertMode || 'assets', true);
+    if (this._selects && this._selects.imageAssetPathMode) this._selects.imageAssetPathMode.setValue(s.imageAssetPathMode || 'relative', true);
     document.getElementById('settings-image-asset-path').value = s.imageAssetPath || 'assets';
-    const pathModeRadio = document.querySelector(`#settings-image-asset-path-mode input[value="${s.imageAssetPathMode || 'relative'}"]`);
-    if (pathModeRadio) pathModeRadio.checked = true;
   }
 
   // 最小可见时长：设置保存/应用是本地即时操作（同步落盘），loading 往往一闪而过，
@@ -2016,6 +2021,9 @@ class MarkdownEditor {
     document.getElementById('set-show-tray-icon').addEventListener('change', (e) => {
       this.settings.showTrayIcon = e.target.checked;
     });
+    document.getElementById('set-show-all-files').addEventListener('change', (e) => {
+      this.settings.showAllFiles = e.target.checked;
+    });
     document.getElementById('set-code-line-numbers').addEventListener('change', (e) => {
       this.settings.codeLineNumbers = e.target.checked;
     });
@@ -2025,24 +2033,13 @@ class MarkdownEditor {
     document.getElementById('set-code-scroll').addEventListener('change', (e) => {
       this.settings.codeScroll = e.target.checked;
     });
-    document.querySelectorAll('#settings-image-store-mode input[name="settings-image-store"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        this.settings.imageInsertMode = e.target.value;
-      });
-    });
+    // 图片存储方式 / 路径：已从 radio 升级为自绘下拉（set-image-store-mode / set-image-asset-path-mode），
+    // onChange 在 initSettings 里通过 Select 绑定到 this.settings.imageInsertMode / imageAssetPathMode。
 
     document.getElementById('settings-image-asset-path').addEventListener('change', (e) => {
       this.settings.imageAssetPath = e.target.value.trim() || 'assets';
     });
 
-    document.querySelectorAll('#settings-image-asset-path-mode input[name="settings-image-asset-path"]').forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        this.settings.imageAssetPathMode = e.target.value;
-        this.settings.imageAssetPath = e.target.value === 'absolute' ? 'D:/images' : 'assets';
-        document.getElementById('settings-image-asset-path').value = this.settings.imageAssetPath;
-        this.updateImageAssetPathHint();
-      });
-    });
     this.updateImageAssetPathHint();
 
     // ====== 字体选择（系统字体全量 + 自定义字体，可搜索 FontPicker） ======
@@ -2175,6 +2172,39 @@ class MarkdownEditor {
           { value: 'minimize', label: t('closeActionMinimize') },
         ]),
         onChange: (v) => { this.settings.closeAction = v; },
+      });
+    }
+    // 图片存储方式 / 路径 —— 从 radio 组升级为自绘下拉，与默认视图/关闭窗口时保持视觉一致
+    const imgModeHost = document.getElementById('set-image-store-mode');
+    if (imgModeHost) {
+      this._selects.imageInsertMode = new Select(imgModeHost, {
+        value: this.settings.imageInsertMode || 'assets',
+        t: this.t.bind(this),
+        ariaLabelKey: 'imageSettingLabel',
+        optionsProvider: (t) => ([
+          { value: 'assets', label: t('imageSettingAssets') },
+          { value: 'base64', label: t('imageSettingBase64') },
+        ]),
+        onChange: (v) => { this.settings.imageInsertMode = v; },
+      });
+    }
+    const pathModeHost = document.getElementById('set-image-asset-path-mode');
+    if (pathModeHost) {
+      this._selects.imageAssetPathMode = new Select(pathModeHost, {
+        value: this.settings.imageAssetPathMode || 'relative',
+        t: this.t.bind(this),
+        ariaLabelKey: 'imageAssetPathLabel',
+        optionsProvider: (t) => ([
+          { value: 'relative', label: t('imageAssetPathModeRelative') },
+          { value: 'absolute', label: t('imageAssetPathModeAbsolute') },
+        ]),
+        onChange: (v) => {
+          this.settings.imageAssetPathMode = v;
+          this.settings.imageAssetPath = v === 'absolute' ? 'D:/images' : 'assets';
+          const pathInput = document.getElementById('settings-image-asset-path');
+          if (pathInput) pathInput.value = this.settings.imageAssetPath;
+          if (typeof this.updateImageAssetPathHint === 'function') this.updateImageAssetPathHint();
+        },
       });
     }
     const retryBtn = document.getElementById('btn-retry-system-fonts');
@@ -3010,6 +3040,9 @@ class MarkdownEditor {
     if (this._hljsCache) this._hljsCache.clear();
     await this.applyThemeMode();
     this.applyCustomFonts();
+    // 「显示所有文件」开关切换后，重渲染文件树让过滤即时生效；
+    // expandedFolders 集合保证展开态不丢
+    if (this.workspaceFolder) this.renderFolderTree();
   }
 
   // ====== 自定义字体 ======
@@ -8020,6 +8053,13 @@ class MarkdownEditor {
     });
   }
 
+  _filterTreeEntries(entries, showAll) {
+    if (showAll) return entries;
+    // 文件夹始终保留：保证树可继续下钻；空文件夹也会显示（避免「目录消失」错觉）
+    if (!window.FileTypes || !window.FileTypes.classifyFile) return entries;
+    return entries.filter((e) => e && e.is_dir ? true : window.FileTypes.classifyFile(e.name) !== 'unsupported');
+  }
+
   async renderFolderTree() {
     const treeEl = document.getElementById('folder-tree');
     if (!treeEl) return;
@@ -8056,7 +8096,10 @@ class MarkdownEditor {
     const rawEntries = Array.isArray(listing)
       ? listing
       : (listing && Array.isArray(listing.entries) ? listing.entries : []);
-    const entries = this.sortFolderEntries(rawEntries, this.settings.fileSortKey, this.settings.fileSortOrder);
+    const sorted = this.sortFolderEntries(rawEntries, this.settings.fileSortKey, this.settings.fileSortOrder);
+    // 默认按「受支持格式」过滤文件（Markdown 7 / 图片 20 / 明文代码 145），
+    // 设置里开启「显示所有文件」时退回原始列表。文件夹始终保留，保证可继续下钻。
+    const entries = this._filterTreeEntries(sorted, this.settings.showAllFiles);
     const truncated = !!(listing && listing.truncated);
     for (const entry of entries) {
       const node = document.createElement('div');
