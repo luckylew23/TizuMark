@@ -5550,6 +5550,9 @@ class MarkdownEditor {
           return;
         }
         if (e.button === 0) {
+          // 阻止冒泡到 document，避免 Tauri 注入的 drag.js（data-tauri-drag-region）
+          // 与这里调用同一个 start_dragging IPC 造成重复触发
+          e.stopPropagation();
           if (e.detail === 2) {
             this.toggleMaximize();
             return;
