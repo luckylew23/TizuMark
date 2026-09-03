@@ -849,6 +849,63 @@ fn load_windows_registry_fonts(db: &mut fontdb::Database) {
     }
 }
 
+// Windows：启动时自愈 .md / .markdown 文件关联的「打开方式」（OpenWithProgids / Applications）。
+// 背景：NSIS 安装器每次安装/更新都会注册文件关联，但 Windows 偶发在应用更新后清掉
+// per-user 的 OpenWithProgids，导致右键「打开方式」里看不到 TizuMark。
+// 这里仅检查缺失才补，只写 HKCU\Software\Classes 下最小键（与安装器同源），失败静默，不阻塞启动。
+#[cfg(target_os = "windows")]
+fn repair_file_association() {
+    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::RegKey;
+
+    const PROGID: &str = "Markdown";
+    const EXTS: [&str; 2] = [".md", ".markdown"];
+
+    // 当前可执行文件路径（例如 C:\...\TizuMark\tizumark.exe）
+    let Ok(exe) = std::env::current_exe().map(|p| p.to_string_lossy().to_string()) else {
+        return;
+    };
+    let exe_name = std::path::Path::new(&exe)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "tizumark.exe".to_string());
+    let open_cmd = format!("\"{}\" \"%1\"", exe);
+
+    let root = RegKey::predef(HKEY_CURRENT_USER);
+
+    for ext in EXTS {
+        // 1) HKCU\Software\Classes\<ext>\OpenWithProgids\Markdown —— 缺失才补空值
+        let owp = format!(r"Software\Classes\{}\OpenWithProgids", ext);
+        match root.open_subkey_with_flags(&owp, winreg::enums::KEY_WRITE) {
+            Ok(key) => {
+                if key.get_value::<String, _>(PROGID).is_err() {
+                    let _ = key.set_value(PROGID, &"");
+                }
+            }
+            Err(_) => {
+                if let Ok((new_key, _)) = root.create_subkey(&owp) {
+                    let _ = new_key.set_value(PROGID, &"");
+                }
+            }
+        }
+
+        // 2) HKCU\Software\Classes\Applications\<exe>\shell\open\command —— 缺失才补
+        let app = format!(r"Software\Classes\Applications\{}\shell\open\command", exe_name);
+        match root.open_subkey_with_flags(&app, winreg::enums::KEY_WRITE) {
+            Ok(key) => {
+                if key.get_value::<String, _>("").is_err() {
+                    let _ = key.set_value("", &open_cmd);
+                }
+            }
+            Err(_) => {
+                if let Ok((new_key, _)) = root.create_subkey(&app) {
+                    let _ = new_key.set_value("", &open_cmd);
+                }
+            }
+        }
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn reg_value_string(v: &winreg::RegValue) -> Option<String> {
     use winreg::enums::{REG_EXPAND_SZ, REG_SZ};
@@ -1095,6 +1152,9 @@ pub fn run() {
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             window.show()?;
+            // Windows 启动时自愈 .md/.markdown 文件关联「打开方式」，后台异步、失败静默
+            #[cfg(target_os = "windows")]
+            std::thread::spawn(repair_file_association);
             let tray = build_tray(app.handle())?;
             app.manage(TrayState(Mutex::new(Some(tray))));
             app.manage(WindowBehavior::default());
