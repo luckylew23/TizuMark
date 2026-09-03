@@ -28,6 +28,10 @@
 
 <p align="center" style="font-size:1.15em"><b>~7MB installer · &lt;50MB RAM · Double-click to launch</b></p>
 
+<p align="center">
+  <img src="demo.gif" alt="TizuMark Feature Demo" width="880">
+</p>
+
 ---
 
 ## Why TizuMark?

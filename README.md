@@ -28,6 +28,10 @@
 
 <p align="center" style="font-size:1.15em"><b>安装包仅 ~7MB · 内存占用 < 50MB · 双击即开</b></p>
 
+<p align="center">
+  <img src="demo.gif" alt="TizuMark 功能演示" width="880">
+</p>
+
 ---
 
 ## 为什么你需要 TizuMark？
