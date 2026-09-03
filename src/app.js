@@ -5182,6 +5182,7 @@ class MarkdownEditor {
     const trigger = document.getElementById('btn-recent');
     const submenu = document.getElementById('recent-files-submenu');
     if (!trigger || !submenu) return;
+    this.hideRecentWorkspacesSubmenu(); // 与最近工作区子菜单互斥，避免重叠遮盖
     this.renderRecentFilesSubmenu();
     submenu.classList.remove('hidden');
     this._recentSubmenuVisible = true;
@@ -5243,6 +5244,7 @@ class MarkdownEditor {
     const trigger = document.getElementById('btn-recent-workspaces');
     const submenu = document.getElementById('recent-workspaces-submenu');
     if (!trigger || !submenu) return;
+    this.hideRecentSubmenu(); // 与最近文件子菜单互斥，避免重叠遮盖
     this.renderRecentWorkspacesSubmenu();
     submenu.classList.remove('hidden');
     this._recentWorkspacesSubmenuVisible = true;
