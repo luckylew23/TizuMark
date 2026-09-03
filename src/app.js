@@ -229,6 +229,9 @@ const I18N = {
     recentFiles: '打开最近的文件',
     noRecentFiles: '暂无最近文件',
     clearRecentFiles: '清空最近文件',
+    recentWorkspaces: '打开最近的工作区',
+    noRecentWorkspaces: '暂无最近工作区',
+    clearRecentWorkspaces: '清空最近工作区',
     newFileCreated: '新文件已创建',
     opened: '已打开',
     openedFiles: '已打开 {n} 个文件',
@@ -614,6 +617,9 @@ const I18N = {
     recentFiles: 'Open Recent',
     noRecentFiles: 'No recent files',
     clearRecentFiles: 'Clear Recent Files',
+    recentWorkspaces: 'Open Recent Workspaces',
+    noRecentWorkspaces: 'No recent workspaces',
+    clearRecentWorkspaces: 'Clear Recent Workspaces',
     save: 'Save',
     saveAs: 'Save As',
     exportHTML: 'Export HTML',
@@ -1124,6 +1130,8 @@ class MarkdownEditor {
     this._recentFiles = [];
     this._recentSubmenuVisible = false;
     this.loadRecentFiles();
+    this._recentWorkspaces = [];
+    this.loadRecentWorkspaces();
     this.recordingAction = null;
     this.tabs.push(new Tab(this.t('untitled') + this.untitledCounter++));
 
@@ -1286,6 +1294,7 @@ class MarkdownEditor {
     updateMenuText('btn-new', t('new'));
     updateMenuText('btn-open', t('open'));
     updateMenuText('btn-recent', t('recentFiles'));
+    updateMenuText('btn-recent-workspaces', t('recentWorkspaces'));
     updateMenuText('btn-save', t('save'));
     updateMenuText('btn-save-as', t('saveAs'));
     updateMenuText('btn-export-html', t('exportHTML'));
@@ -5107,6 +5116,39 @@ class MarkdownEditor {
     if (this._recentSubmenuVisible) this.renderRecentFilesSubmenu();
   }
 
+  loadRecentWorkspaces() {
+    try {
+      const raw = localStorage.getItem('tizumark-recent-workspaces');
+      const arr = raw ? JSON.parse(raw) : [];
+      this._recentWorkspaces = Array.isArray(arr) ? arr.filter(p => typeof p === 'string') : [];
+    } catch {
+      this._recentWorkspaces = [];
+    }
+  }
+
+  saveRecentWorkspaces() {
+    try {
+      localStorage.setItem('tizumark-recent-workspaces', JSON.stringify(this._recentWorkspaces || []));
+    } catch {}
+  }
+
+  addRecentWorkspace(folderPath) {
+    if (!folderPath) return;
+    const list = this._recentWorkspaces || (this._recentWorkspaces = []);
+    const idx = list.indexOf(folderPath);
+    if (idx !== -1) list.splice(idx, 1);
+    list.unshift(folderPath);
+    if (list.length > 10) list.length = 10;
+    this.saveRecentWorkspaces();
+    if (this._recentWorkspacesSubmenuVisible) this.renderRecentWorkspacesSubmenu();
+  }
+
+  clearRecentWorkspaces() {
+    this._recentWorkspaces = [];
+    this.saveRecentWorkspaces();
+    if (this._recentWorkspacesSubmenuVisible) this.renderRecentWorkspacesSubmenu();
+  }
+
   async refreshRecentFiles() {
     if (!this._recentFiles || this._recentFiles.length === 0) return;
     const fileMenu = document.getElementById('file-menu');
@@ -5143,6 +5185,11 @@ class MarkdownEditor {
     this.renderRecentFilesSubmenu();
     submenu.classList.remove('hidden');
     this._recentSubmenuVisible = true;
+    this.positionSubmenu(trigger, submenu);
+  }
+
+  positionSubmenu(trigger, submenu) {
+    if (!trigger || !submenu) return;
     const rect = trigger.getBoundingClientRect();
     submenu.style.left = (rect.right - 1) + 'px';
     submenu.style.top = rect.top + 'px';
@@ -5151,6 +5198,61 @@ class MarkdownEditor {
       if (sr.right > window.innerWidth) submenu.style.left = (rect.left - sr.width + 1) + 'px';
       if (sr.bottom > window.innerHeight) submenu.style.top = (window.innerHeight - sr.height - 4) + 'px';
     });
+  }
+
+  renderRecentWorkspacesSubmenu() {
+    const submenu = document.getElementById('recent-workspaces-submenu');
+    if (!submenu) return;
+    const list = this._recentWorkspaces || [];
+    submenu.innerHTML = '';
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'dropdown-item disabled';
+      empty.textContent = this.t('noRecentWorkspaces');
+      submenu.appendChild(empty);
+      return;
+    }
+    list.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'dropdown-item recent-file-item recent-workspace-item';
+      item.dataset.path = p;
+      const name = p.split(/[/\\]/).pop() || p;
+      const dir = p.slice(0, Math.max(0, p.length - name.length)).replace(/[/\\]$/, '');
+      const nameEl = document.createElement('span');
+      nameEl.className = 'recent-file-name recent-workspace-name';
+      nameEl.textContent = name;
+      const dirEl = document.createElement('span');
+      dirEl.className = 'recent-file-dir recent-workspace-dir';
+      dirEl.textContent = dir;
+      item.appendChild(nameEl);
+      item.appendChild(dirEl);
+      item.title = p;
+      submenu.appendChild(item);
+    });
+    const sep = document.createElement('div');
+    sep.className = 'dropdown-separator';
+    submenu.appendChild(sep);
+    const clear = document.createElement('div');
+    clear.className = 'dropdown-item recent-clear recent-workspace-clear';
+    clear.dataset.action = 'clear';
+    clear.textContent = this.t('clearRecentWorkspaces');
+    submenu.appendChild(clear);
+  }
+
+  showRecentWorkspacesSubmenu() {
+    const trigger = document.getElementById('btn-recent-workspaces');
+    const submenu = document.getElementById('recent-workspaces-submenu');
+    if (!trigger || !submenu) return;
+    this.renderRecentWorkspacesSubmenu();
+    submenu.classList.remove('hidden');
+    this._recentWorkspacesSubmenuVisible = true;
+    this.positionSubmenu(trigger, submenu);
+  }
+
+  hideRecentWorkspacesSubmenu() {
+    const sm = document.getElementById('recent-workspaces-submenu');
+    if (sm) sm.classList.add('hidden');
+    this._recentWorkspacesSubmenuVisible = false;
   }
 
   renderRecentFilesSubmenu() {
@@ -5390,7 +5492,10 @@ class MarkdownEditor {
     document.getElementById('file-menu').addEventListener('mouseover', (e) => {
       if (e.target.closest('#recent-files-submenu')) return;
       if (e.target.closest('#btn-recent')) return;
+      if (e.target.closest('#recent-workspaces-submenu')) return;
+      if (e.target.closest('#btn-recent-workspaces')) return;
       this.hideRecentSubmenu();
+      this.hideRecentWorkspacesSubmenu();
     });
     const recentSubmenu = document.getElementById('recent-files-submenu');
     recentSubmenu.addEventListener('click', (e) => {
@@ -5409,6 +5514,34 @@ class MarkdownEditor {
         this.openFilePath(path);
       }
     });
+    // 最近工作区子菜单交互
+    const wsTrigger = document.getElementById('btn-recent-workspaces');
+    if (wsTrigger) {
+      wsTrigger.addEventListener('mouseenter', () => this.showRecentWorkspacesSubmenu());
+      wsTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.showRecentWorkspacesSubmenu();
+      });
+    }
+    const wsSubmenu = document.getElementById('recent-workspaces-submenu');
+    if (wsSubmenu) {
+      wsSubmenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const clearItem = e.target.closest('[data-action="clear"]');
+        if (clearItem) {
+          this.clearRecentWorkspaces();
+          this.hideRecentWorkspacesSubmenu();
+          return;
+        }
+        const item = e.target.closest('.recent-workspace-item');
+        if (item && item.dataset.path) {
+          const path = item.dataset.path;
+          document.getElementById('file-menu').classList.add('hidden');
+          this.hideRecentWorkspacesSubmenu();
+          this.maybeOpenFolderPath(path, { confirm: true });
+        }
+      });
+    }
     document.getElementById('folder-close').addEventListener('click', () => {
       this.closeFolder();
     });
@@ -7618,6 +7751,7 @@ class MarkdownEditor {
       this.showSidebar();
       this.startFolderWatch();
       this.saveSession();
+      this.addRecentWorkspace(folderPath);
       this.setStatus(this.t('folderOpened', { path: folderPath }));
     } catch (e) {
       this.setStatus(this.t('openFailed') + ': ' + e);
